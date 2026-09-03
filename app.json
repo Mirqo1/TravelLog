@@ -6,14 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "plugins": [
-      [
-        "react-native-maps",
-        {
-          "googleMapsApiKey": "AIzaSyAuIE9NaSo5HfXp_ZFRE2K6Y5ypPXq6vHU"
-        }
-      ]
-    ],
     "ios": {
       "supportsTablet": true
     },
@@ -27,9 +19,6 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    },
-    "extra": {
-      "expo_public_google_maps_api_key": "AIzaSyAuIE9NaSo5HfXp_ZFRE2K6Y5ypPXq6vHU"
     }
   }
 }
