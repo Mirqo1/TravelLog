@@ -9,7 +9,12 @@ const sortTrips = (trips) => [...trips].sort((left, right) => String(right.date)
 const buildStats = (trips) => {
   const totalTrips = trips.length;
   const countriesVisited = new Set(
-    trips.map((trip) => trip.locationName.split(',').at(-1)?.trim()).filter(Boolean),
+    trips
+      .map((trip) => {
+        const parts = String(trip.locationName || '').split(',');
+        return parts[parts.length - 1]?.trim();
+      })
+      .filter(Boolean),
   ).size;
   const averageRating = totalTrips
     ? (trips.reduce((total, trip) => total + Number(trip.rating || 0), 0) / totalTrips).toFixed(1)
