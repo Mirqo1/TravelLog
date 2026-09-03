@@ -102,6 +102,9 @@ export default function Navigation() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
+        tabBarShowIcon: true,
+        tabBarActiveTintColor: '#2563eb',
+        tabBarInactiveTintColor: '#6b7280',
         tabBarIcon: ({ color, size }) => (
           <MaterialIcons name={TAB_ICONS[route.name] || 'circle'} size={size} color={color} />
         ),
