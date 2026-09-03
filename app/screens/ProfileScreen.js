@@ -25,22 +25,24 @@ export default function ProfileScreen() {
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.hero}>
         <Text style={styles.header}>Profil</Text>
-        <Text style={styles.heroName}>{name}</Text>
-        <Text style={styles.heroMeta}>{email}</Text>
+        <View style={styles.heroIdentity}>
+          <Text style={styles.heroName}>{name}</Text>
+          <Text style={styles.heroMeta}>{email}</Text>
+        </View>
       </View>
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Účet</Text>
-        <View style={styles.infoRow}>
+        <View style={styles.infoBlock}>
           <Text style={styles.label}>Meno</Text>
           <Text style={styles.value}>{name}</Text>
         </View>
-        <View style={styles.infoRow}>
+        <View style={styles.infoBlock}>
           <Text style={styles.label}>Email</Text>
           <Text style={styles.value}>{email}</Text>
         </View>
         {profile?.homeBase ? (
-          <View style={styles.infoRow}>
+          <View style={styles.infoBlock}>
             <Text style={styles.label}>Domovská lokalita</Text>
             <Text style={styles.value}>{profile.homeBase}</Text>
           </View>
@@ -48,7 +50,7 @@ export default function ProfileScreen() {
         {profile?.bio ? <Text style={styles.note}>{profile.bio}</Text> : null}
       </View>
 
-      <View style={styles.card}>
+      <View style={[styles.card, styles.planCard]}>
         <View style={styles.planHeader}>
           <View style={styles.planContent}>
             <Text style={styles.sectionTitle}>Plan {isPremium ? 'Premium' : 'Free'}</Text>
@@ -93,7 +95,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    paddingTop: 20,
+    paddingTop: 18,
     paddingBottom: 28,
     gap: 14,
   },
@@ -101,16 +103,19 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     backgroundColor: APP_COLORS.accent,
     paddingHorizontal: 22,
-    paddingVertical: 26,
+    paddingVertical: 28,
   },
   header: {
     fontSize: 16,
     fontWeight: '700',
     color: APP_COLORS.accentDark,
-    marginBottom: 12,
+    marginBottom: 10,
+  },
+  heroIdentity: {
+    gap: 4,
   },
   heroName: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: '700',
     color: APP_COLORS.text,
   },
@@ -126,29 +131,32 @@ const styles = StyleSheet.create({
     borderColor: APP_COLORS.border,
     gap: 12,
   },
+  infoBlock: {
+    gap: 4,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: APP_COLORS.text,
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
   label: {
-    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
     color: APP_COLORS.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   value: {
-    flex: 1,
     color: APP_COLORS.text,
     fontWeight: '600',
-    textAlign: 'right',
   },
   note: {
     color: APP_COLORS.muted,
     lineHeight: 20,
+  },
+  planCard: {
+    borderColor: 'rgba(124, 90, 0, 0.2)',
+    backgroundColor: APP_COLORS.accentSoft,
   },
   planHeader: {
     flexDirection: 'row',

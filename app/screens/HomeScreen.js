@@ -24,12 +24,14 @@ export default function HomeScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.hero}>
-        <Image source={require('../../assets/icon.png')} style={styles.logo} />
-        <Text style={styles.heroEyebrow}>Travel memories in one place</Text>
-        <Text style={styles.heroTitle}>TravelLog</Text>
+        <View style={styles.heroBrand}>
+          <Image source={require('../../assets/icon.png')} style={styles.logo} />
+          <Text style={styles.heroTitle}>TravelLog</Text>
+        </View>
       </View>
 
       <View style={styles.introCard}>
+        <Text style={styles.heroEyebrow}>Travel memories in one place</Text>
         <Text style={styles.subheader}>Prehľad tvojich výletov, krajín a obľúbených miest.</Text>
       </View>
 
@@ -85,27 +87,31 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   hero: {
-    minHeight: 220,
+    minHeight: 260,
     borderRadius: 28,
     backgroundColor: APP_COLORS.accent,
     paddingHorizontal: 24,
     paddingVertical: 28,
     justifyContent: 'center',
   },
+  heroBrand: {
+    alignItems: 'center',
+  },
   logo: {
-    width: 72,
-    height: 72,
+    width: 84,
+    height: 84,
     marginBottom: 18,
-    borderRadius: 16,
+    borderRadius: 20,
   },
   heroEyebrow: {
-    color: APP_COLORS.accentDark,
+    color: '#7C5A00',
     fontSize: 14,
     fontWeight: '600',
     letterSpacing: 0.6,
+    marginBottom: 8,
   },
   heroTitle: {
-    fontSize: 34,
+    fontSize: 38,
     fontWeight: '700',
     color: APP_COLORS.text,
   },
