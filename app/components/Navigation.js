@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import HomeScreen from '../screens/HomeScreen';
+import TripsScreen from '../screens/TripsScreen';
+import AddTripScreen from '../screens/AddTripScreen';
 import MapScreen from '../screens/MapScreen';
-import ListScreen from '../screens/ListScreen';
-import HeatMapScreen from '../screens/HeatMapScreen';
-import StatsScreen from '../screens/StatsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { useAuth } from '../context/AuthContext';
 
@@ -37,7 +37,8 @@ function AuthScreen() {
 
   return (
     <View style={styles.authContainer}>
-      <Text style={styles.authHeader}>Prihlásenie</Text>
+      <Text style={styles.authHeader}>TravelLog</Text>
+      <Text style={styles.authSubheader}>Prihlás sa a spravuj svoje výlety na mape aj offline.</Text>
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -91,11 +92,11 @@ export default function Navigation() {
 
   return (
     <Tab.Navigator screenOptions={{ headerShown: false }}>
-      <Tab.Screen name="Mapa" component={MapScreen} />
-      <Tab.Screen name="Zoznam" component={ListScreen} />
-      <Tab.Screen name="Heat Mapa" component={HeatMapScreen} />
-      <Tab.Screen name="Štatistiky" component={StatsScreen} />
-      <Tab.Screen name="Profil" component={ProfileScreen} />
+      <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Trips" component={TripsScreen} />
+      <Tab.Screen name="Add Trip" component={AddTripScreen} />
+      <Tab.Screen name="Map" component={MapScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }
@@ -113,9 +114,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
   },
   authHeader: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '700',
-    marginBottom: 12,
+    marginBottom: 8,
+  },
+  authSubheader: {
+    color: '#4b5563',
+    marginBottom: 16,
   },
   input: {
     borderWidth: 1,
