@@ -109,8 +109,9 @@ export default function MapScreen() {
 
   console.log('MapScreen initialRegion:', initialRegion);
 
-  const mapProvider = Platform.OS === 'android' && hasGoogleMapsApiKey ? PROVIDER_GOOGLE : undefined;
-  console.log('MapScreen mapProvider:', mapProvider, 'platform:', Platform.OS);
+  // Testing without PROVIDER_GOOGLE first
+  const mapProvider = undefined;
+  console.log('MapScreen mapProvider: undefined (testing default map)');
 
   const searchMarker = searchResult
     ? { latitude: Number(searchResult.lat), longitude: Number(searchResult.lng) }
