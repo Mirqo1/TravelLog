@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import MapboxGL from '@react-native-mapbox-gl/maps';
 import TripForm from '../components/TripForm';
 import { useTrips } from '../context/TripsContext';
 
@@ -12,12 +12,10 @@ export default function AddTripScreen() {
     longitude: 17.1077,
   });
 
-  const initialRegion = useMemo(
+  const initialCamera = useMemo(
     () => ({
-      latitude: selectedLocation.latitude,
-      longitude: selectedLocation.longitude,
-      latitudeDelta: 10,
-      longitudeDelta: 10,
+      centerCoordinate: [selectedLocation.longitude, selectedLocation.latitude],
+      zoomLevel: 5,
     }),
     [selectedLocation.latitude, selectedLocation.longitude],
   );
@@ -33,13 +31,31 @@ export default function AddTripScreen() {
       <Text style={styles.header}>Add Trip</Text>
       <Text style={styles.helper}>Ťukni na mapu pre výber polohy alebo uprav súradnice vo formulári.</Text>
       <View style={styles.mapCard}>
-        <MapView
+        <MapboxGL.MapView
           style={styles.map}
-          initialRegion={initialRegion}
-          onPress={(event) => setSelectedLocation(event.nativeEvent.coordinate)}
+          onPress={(event) => {
+            const coordinates = event?.geometry?.coordinates;
+            if (!Array.isArray(coordinates) || coordinates.length < 2) {
+              return;
+            }
+
+            const [longitude, latitude] = coordinates;
+            setSelectedLocation({ latitude, longitude });
+          }}
         >
-          <Marker coordinate={selectedLocation} />
-        </MapView>
+          <MapboxGL.Camera
+            defaultSettings={initialCamera}
+            centerCoordinate={[selectedLocation.longitude, selectedLocation.latitude]}
+            zoomLevel={initialCamera.zoomLevel}
+            animationDuration={500}
+          />
+          <MapboxGL.PointAnnotation
+            id="selected-location"
+            coordinate={[selectedLocation.longitude, selectedLocation.latitude]}
+          >
+            <View style={styles.locationMarker} />
+          </MapboxGL.PointAnnotation>
+        </MapboxGL.MapView>
       </View>
       <TripForm
         key={formKey}
@@ -75,5 +91,13 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  locationMarker: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: 'rgba(37, 99, 235, 1)',
+    borderWidth: 2,
+    borderColor: '#ffffff',
   },
 });

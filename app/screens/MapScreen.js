@@ -6,10 +6,6 @@ import TripDetailsModal from '../components/TripDetailsModal';
 import { useTrips } from '../context/TripsContext';
 import { searchPlaces } from '../services/geonamesService';
 
-const MAPBOX_ACCESS_TOKEN =
-  'pk.eyJ1IjoibWlydWxpIiwiYSI6ImNtdGx0amo3ajAwZXMyeHIzdHllYWN4Z3oifQ.vswbqwimIIjtF7PRxd-h6A';
-MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
-
 export default function MapScreen() {
   const { trips, addTrip, updateTrip, deleteTrip } = useTrips();
   const [modalVisible, setModalVisible] = useState(false);
