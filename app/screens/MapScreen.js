@@ -15,6 +15,8 @@ export default function MapScreen() {
   const [searchResult, setSearchResult] = useState(null);
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [editingTrip, setEditingTrip] = useState(null);
+  const [mapReady, setMapReady] = useState(false);
+  const [mapError, setMapError] = useState(null);
 
   const googleMapsApiKey = Constants.expoConfig?.extra?.expo_public_google_maps_api_key;
   const hasGoogleMapsApiKey = Boolean(googleMapsApiKey);
@@ -24,12 +26,23 @@ export default function MapScreen() {
     googleMapsApiKey: googleMapsApiKey ? 'SET' : 'NOT SET',
     tripsCount: trips.length,
     platform: Platform.OS,
+    mapReady,
   });
 
   const handleMapPress = (event) => {
     const coordinate = event.nativeEvent.coordinate;
     setSelectedCoordinate({ latitude: coordinate.latitude, longitude: coordinate.longitude });
     setModalVisible(true);
+  };
+
+  const handleMapReady = () => {
+    console.log('MapView ready!');
+    setMapReady(true);
+  };
+
+  const handleMapError = (e) => {
+    console.error('MapView error:', e);
+    setMapError(e.toString());
   };
 
   const handleSearch = async () => {
@@ -97,6 +110,7 @@ export default function MapScreen() {
   console.log('MapScreen initialRegion:', initialRegion);
 
   const mapProvider = Platform.OS === 'android' && hasGoogleMapsApiKey ? PROVIDER_GOOGLE : undefined;
+  console.log('MapScreen mapProvider:', mapProvider, 'platform:', Platform.OS);
 
   const searchMarker = searchResult
     ? { latitude: Number(searchResult.lat), longitude: Number(searchResult.lng) }
@@ -142,11 +156,16 @@ export default function MapScreen() {
           Google Maps API key nie je nastavený. Pre Android build nastav EXPO_PUBLIC_GOOGLE_MAPS_API_KEY.
         </Text>
       ) : null}
+      {mapError ? (
+        <Text style={styles.errorText}>Map Error: {mapError}</Text>
+      ) : null}
       <MapView
         style={styles.map}
         initialRegion={initialRegion}
         onPress={handleMapPress}
         provider={mapProvider}
+        onMapReady={handleMapReady}
+        onError={handleMapError}
       >
         {Heatmap && heatPoints.length ? <Heatmap points={heatPoints} radius={28} opacity={0.55} /> : null}
         {tripMarkers.map((trip) => (
@@ -246,6 +265,11 @@ const styles = StyleSheet.create({
   apiKeyHint: {
     marginBottom: 10,
     color: '#b45309',
+  },
+  errorText: {
+    marginBottom: 10,
+    color: '#dc2626',
+    fontWeight: '600',
   },
   map: {
     flex: 1,
