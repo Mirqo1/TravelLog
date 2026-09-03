@@ -19,6 +19,13 @@ export default function MapScreen() {
   const googleMapsApiKey = Constants.expoConfig?.extra?.expo_public_google_maps_api_key;
   const hasGoogleMapsApiKey = Boolean(googleMapsApiKey);
 
+  console.log('MapScreen render', {
+    hasGoogleMapsApiKey,
+    googleMapsApiKey: googleMapsApiKey ? 'SET' : 'NOT SET',
+    tripsCount: trips.length,
+    platform: Platform.OS,
+  });
+
   const handleMapPress = (event) => {
     const coordinate = event.nativeEvent.coordinate;
     setSelectedCoordinate({ latitude: coordinate.latitude, longitude: coordinate.longitude });
@@ -86,6 +93,9 @@ export default function MapScreen() {
       longitudeDelta: Math.max(3, (maxLongitude - minLongitude) * 1.6),
     };
   }, [tripMarkers]);
+
+  console.log('MapScreen initialRegion:', initialRegion);
+
   const mapProvider = Platform.OS === 'android' && hasGoogleMapsApiKey ? PROVIDER_GOOGLE : undefined;
 
   const searchMarker = searchResult
