@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import MapView, { Heatmap, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import Constants from 'expo-constants';
@@ -17,6 +17,7 @@ export default function MapScreen() {
   const [editingTrip, setEditingTrip] = useState(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState(null);
+  const mapRef = useRef(null);
 
   const googleMapsApiKey = Constants.expoConfig?.extra?.expo_public_google_maps_api_key;
   const hasGoogleMapsApiKey = Boolean(googleMapsApiKey);
@@ -107,7 +108,25 @@ export default function MapScreen() {
     };
   }, [tripMarkers]);
 
+  // Auto-fit map to markers when ready
+  useEffect(() => {
+    if (mapReady && mapRef.current && tripMarkers.length > 0) {
+      const coordinates = tripMarkers.map((trip) => ({
+        latitude: trip.location.latitude,
+        longitude: trip.location.longitude,
+      }));
+      
+      console.log('Fitting map to coordinates:', coordinates);
+      
+      mapRef.current.fitToCoordinates(coordinates, {
+        edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+        animated: true,
+      });
+    }
+  }, [mapReady, tripMarkers]);
+
   console.log('MapScreen initialRegion:', initialRegion);
+  console.log('MapScreen tripMarkers count:', tripMarkers.length);
 
   // Testing without PROVIDER_GOOGLE first
   const mapProvider = undefined;
@@ -161,13 +180,14 @@ export default function MapScreen() {
         <Text style={styles.errorText}>Map Error: {mapError}</Text>
       ) : null}
       <MapView
+        ref={mapRef}
         style={styles.map}
         initialRegion={initialRegion}
         onPress={handleMapPress}
         provider={mapProvider}
         onMapReady={handleMapReady}
         onError={handleMapError}
-        scrollEnabled={false}
+        scrollEnabled={true}
         zoomEnabled={true}
       >
         {Heatmap && heatPoints.length ? <Heatmap points={heatPoints} radius={28} opacity={0.55} /> : null}
