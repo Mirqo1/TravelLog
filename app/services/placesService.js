@@ -1,17 +1,6 @@
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-} from 'firebase/firestore';
-import { db } from './firebaseConfig';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const PLACES_STORAGE_PREFIX = 'travellog/mock-places/';
 
 /**
  * @readonly
@@ -40,64 +29,143 @@ export const PlaceType = {
  * @property {string[]} photos
  */
 
-const placesCollection = collection(db, 'places');
+const storageKey = (userId) => `${PLACES_STORAGE_PREFIX}${userId || 'guest'}`;
+const todayDate = () => new Date().toISOString().slice(0, 10);
+const byVisitDateDesc = (left, right) => String(right.visitDate || '').localeCompare(String(left.visitDate || ''));
+
+const toNumber = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const normalizePlace = (place = {}, id = place.id) => ({
+  id: String(id || `mock-place-${Date.now()}`),
+  userId: String(place.userId || ''),
+  name: String(place.name || '').trim(),
+  type: String(place.type || PlaceType.INE),
+  coordinates: {
+    lat: toNumber(place.coordinates?.lat ?? place.coordinates?.latitude),
+    lng: toNumber(place.coordinates?.lng ?? place.coordinates?.longitude),
+  },
+  country: String(place.country || '').trim(),
+  visitDate: String(place.visitDate || todayDate()),
+  notes: String(place.notes || '').trim(),
+  photos: Array.isArray(place.photos) ? place.photos : [],
+});
+
+const samplePlaces = (userId) =>
+  [
+    {
+      id: 'mock-place-1',
+      userId,
+      name: 'Bratislava',
+      type: PlaceType.MESTO,
+      coordinates: { lat: 48.1486, lng: 17.1077 },
+      country: 'Slovensko',
+      visitDate: '2026-08-10',
+      notes: 'Historické centrum',
+      photos: [],
+    },
+    {
+      id: 'mock-place-2',
+      userId,
+      name: 'Karlštejn',
+      type: PlaceType.HRAD,
+      coordinates: { lat: 49.9399, lng: 14.1887 },
+      country: 'Česko',
+      visitDate: '2026-07-01',
+      notes: 'Skvelý výhľad',
+      photos: [],
+    },
+  ].map((place) => normalizePlace(place, place.id));
+
+const readPlaces = async (userId) => {
+  const raw = await AsyncStorage.getItem(storageKey(userId));
+  if (!raw) {
+    const seeded = samplePlaces(userId);
+    await AsyncStorage.setItem(storageKey(userId), JSON.stringify(seeded));
+    return seeded;
+  }
+
+  try {
+    return JSON.parse(raw).map((place) => normalizePlace(place, place.id));
+  } catch (error) {
+    const seeded = samplePlaces(userId);
+    await AsyncStorage.setItem(storageKey(userId), JSON.stringify(seeded));
+    return seeded;
+  }
+};
+
+const savePlaces = async (userId, places) => {
+  const normalized = places.map((place) => normalizePlace(place, place.id)).sort(byVisitDateDesc);
+  await AsyncStorage.setItem(storageKey(userId), JSON.stringify(normalized));
+  return normalized;
+};
 
 export const addPlace = async (place) => {
-  const payload = {
-    userId: place.userId,
-    name: place.name,
-    type: place.type,
-    coordinates: place.coordinates,
-    country: place.country,
-    visitDate: place.visitDate,
-    notes: place.notes || '',
-    photos: [],
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  };
+  const userId = String(place?.userId || '');
+  const places = await readPlaces(userId);
+  const created = normalizePlace(
+    {
+      ...place,
+      userId,
+      photos: Array.isArray(place?.photos) ? place.photos : [],
+    },
+    `mock-place-${Date.now()}`,
+  );
 
-  const docRef = await addDoc(placesCollection, payload);
-  return docRef.id;
+  await savePlaces(userId, [...places, created]);
+  return created.id;
 };
 
 export const listPlacesByUser = async (userId) => {
-  const q = query(placesCollection, where('userId', '==', userId), orderBy('visitDate', 'desc'));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+  const places = await readPlaces(String(userId || ''));
+  return [...places].sort(byVisitDateDesc);
 };
 
 export const updatePlaceVisit = async (placeId, userId, changes) => {
-  const placeRef = doc(db, 'places', placeId);
-  const existing = await getDoc(placeRef);
+  const normalizedUserId = String(userId || '');
+  const places = await readPlaces(normalizedUserId);
+  const existing = places.find((place) => place.id === placeId);
 
-  if (!existing.exists()) {
+  if (!existing) {
     throw new Error('Place not found.');
   }
 
-  if (existing.data().userId !== userId) {
+  if (existing.userId !== normalizedUserId) {
     throw new Error('You can only edit your own visit.');
   }
 
-  const allowedChanges = {
-    ...(changes.visitDate ? { visitDate: changes.visitDate } : {}),
-    ...(typeof changes.notes === 'string' ? { notes: changes.notes } : {}),
-    updatedAt: serverTimestamp(),
-  };
+  const updated = normalizePlace(
+    {
+      ...existing,
+      ...(changes.visitDate ? { visitDate: changes.visitDate } : {}),
+      ...(typeof changes.notes === 'string' ? { notes: changes.notes } : {}),
+    },
+    placeId,
+  );
 
-  await updateDoc(placeRef, allowedChanges);
+  await savePlaces(
+    normalizedUserId,
+    places.map((place) => (place.id === placeId ? updated : place)),
+  );
 };
 
 export const deletePlaceVisit = async (placeId, userId) => {
-  const placeRef = doc(db, 'places', placeId);
-  const existing = await getDoc(placeRef);
+  const normalizedUserId = String(userId || '');
+  const places = await readPlaces(normalizedUserId);
+  const existing = places.find((place) => place.id === placeId);
 
-  if (!existing.exists()) {
+  if (!existing) {
     return;
   }
 
-  if (existing.data().userId !== userId) {
+  if (existing.userId !== normalizedUserId) {
     throw new Error('You can only delete your own visit.');
   }
 
-  await deleteDoc(placeRef);
+  await savePlaces(
+    normalizedUserId,
+    places.filter((place) => place.id !== placeId),
+  );
 };

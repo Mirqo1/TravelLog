@@ -56,7 +56,7 @@ export default function HomeScreen() {
         <Text style={styles.panelTitle}>Offline stav</Text>
         <Text style={styles.panelValue}>
           {trips.some((trip) => trip.syncStatus && trip.syncStatus !== 'synced')
-            ? 'Niektoré zmeny čakajú na synchronizáciu s Firebase.'
+            ? 'Niektoré zmeny čakajú na synchronizáciu.'
             : 'Všetky zmeny sú synchronizované alebo uložené v cache.'}
         </Text>
       </View>

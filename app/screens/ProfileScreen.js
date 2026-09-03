@@ -20,7 +20,7 @@ export default function ProfileScreen() {
       <Text style={styles.note}>{isPremium ? 'Bez reklám' : 'Reklamy sú aktívne vo free verzii.'}</Text>
       <Text style={styles.note}>
         {trips.some((trip) => trip.syncStatus && trip.syncStatus !== 'synced')
-          ? 'Niektoré zmeny čakajú na online synchronizáciu.'
+          ? 'Niektoré zmeny čakajú na synchronizáciu.'
           : 'Dáta sú pripravené aj pre offline použitie cez lokálnu cache.'}
       </Text>
       <Pressable style={styles.button} onPress={logout}>
