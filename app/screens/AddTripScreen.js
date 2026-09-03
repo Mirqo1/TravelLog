@@ -72,7 +72,6 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
     gap: 14,
-    backgroundColor: '#f9fafb',
   },
   header: {
     fontSize: 22,

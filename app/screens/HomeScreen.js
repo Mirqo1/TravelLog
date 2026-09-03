@@ -1,5 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { APP_COLORS } from '../components/AppBackground';
 import { useTrips } from '../context/TripsContext';
 
 const StatCard = ({ label, value }) => (
@@ -22,8 +23,15 @@ export default function HomeScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.header}>TravelLog Dashboard</Text>
-      <Text style={styles.subheader}>Prehľad tvojich výletov, krajín a obľúbených miest.</Text>
+      <View style={styles.hero}>
+        <Image source={require('../../assets/icon.png')} style={styles.logo} />
+        <Text style={styles.heroEyebrow}>Travel memories in one place</Text>
+        <Text style={styles.heroTitle}>TravelLog</Text>
+      </View>
+
+      <View style={styles.introCard}>
+        <Text style={styles.subheader}>Prehľad tvojich výletov, krajín a obľúbených miest.</Text>
+      </View>
 
       <View style={styles.statsGrid}>
         <StatCard label="Výlety" value={stats.totalTrips} />
@@ -72,16 +80,45 @@ const styles = StyleSheet.create({
   },
   container: {
     padding: 16,
+    paddingTop: 20,
+    paddingBottom: 28,
     gap: 14,
-    backgroundColor: '#f9fafb',
   },
-  header: {
-    fontSize: 24,
+  hero: {
+    minHeight: 220,
+    borderRadius: 28,
+    backgroundColor: APP_COLORS.accent,
+    paddingHorizontal: 24,
+    paddingVertical: 28,
+    justifyContent: 'center',
+  },
+  logo: {
+    width: 72,
+    height: 72,
+    marginBottom: 18,
+    borderRadius: 16,
+  },
+  heroEyebrow: {
+    color: APP_COLORS.accentDark,
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 0.6,
+  },
+  heroTitle: {
+    fontSize: 34,
     fontWeight: '700',
-    color: '#111827',
+    color: APP_COLORS.text,
+  },
+  introCard: {
+    backgroundColor: APP_COLORS.surface,
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: APP_COLORS.border,
   },
   subheader: {
-    color: '#4b5563',
+    color: APP_COLORS.muted,
+    lineHeight: 22,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -89,32 +126,32 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: APP_COLORS.surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: APP_COLORS.border,
   },
   statValue: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#2563eb',
+    color: APP_COLORS.accentDark,
   },
   statLabel: {
     marginTop: 4,
-    color: '#6b7280',
+    color: '#6B7280',
   },
   panel: {
-    backgroundColor: '#fff',
+    backgroundColor: APP_COLORS.surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: APP_COLORS.border,
     gap: 10,
   },
   panelTitle: {
     fontWeight: '700',
-    color: '#111827',
+    color: APP_COLORS.text,
   },
   panelValue: {
     color: '#374151',
@@ -127,13 +164,13 @@ const styles = StyleSheet.create({
   },
   tripName: {
     fontWeight: '600',
-    color: '#111827',
+    color: APP_COLORS.text,
   },
   tripMeta: {
-    color: '#6b7280',
+    color: '#6B7280',
     marginTop: 2,
   },
   empty: {
-    color: '#6b7280',
+    color: '#6B7280',
   },
 });
