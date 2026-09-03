@@ -1,6 +1,6 @@
 const appJson = require('./app.json');
 
-const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || appJson.expo.extra?.expo_public_google_maps_api_key || '';
 const config = appJson.expo ?? appJson;
 const plugins = [...(config.plugins || [])];
 
