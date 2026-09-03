@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import MapView, { Heatmap, Marker } from 'react-native-maps';
+import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import MapView, { Heatmap, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import AddPlaceModal from '../components/AddPlaceModal';
 import TripDetailsModal from '../components/TripDetailsModal';
 import { useTrips } from '../context/TripsContext';
@@ -14,6 +14,8 @@ export default function MapScreen() {
   const [searchResult, setSearchResult] = useState(null);
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [editingTrip, setEditingTrip] = useState(null);
+
+  const hasGoogleMapsApiKey = Boolean(process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY);
 
   const initialRegion = useMemo(
     () => ({
@@ -61,6 +63,13 @@ export default function MapScreen() {
         })),
     [trips],
   );
+  const tripMarkers = useMemo(
+    () =>
+      trips.filter(
+        (trip) => Number.isFinite(trip.location?.latitude) && Number.isFinite(trip.location?.longitude),
+      ),
+    [trips],
+  );
 
   const searchMarker = searchResult
     ? { latitude: Number(searchResult.lat), longitude: Number(searchResult.lng) }
@@ -101,9 +110,20 @@ export default function MapScreen() {
       ) : (
         <Text style={styles.searchHint}>Klikni na mapu pre nový výlet alebo otvor marker pre detail.</Text>
       )}
-      <MapView style={styles.map} initialRegion={initialRegion} onPress={handleMapPress}>
+      {Platform.OS === 'android' && !hasGoogleMapsApiKey ? (
+        <Text style={styles.apiKeyHint}>
+          Google Maps API key nie je nastavený. Pre Android build nastav
+          EXPO_PUBLIC_GOOGLE_MAPS_API_KEY.
+        </Text>
+      ) : null}
+      <MapView
+        style={styles.map}
+        initialRegion={initialRegion}
+        onPress={handleMapPress}
+        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+      >
         {Heatmap && heatPoints.length ? <Heatmap points={heatPoints} radius={28} opacity={0.55} /> : null}
-        {trips.map((trip) => (
+        {tripMarkers.map((trip) => (
           <Marker
             key={trip.id}
             coordinate={{
@@ -196,6 +216,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 10,
     color: '#4b5563',
+  },
+  apiKeyHint: {
+    marginBottom: 10,
+    color: '#b45309',
   },
   map: {
     flex: 1,

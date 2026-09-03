@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import HomeScreen from '../screens/HomeScreen';
 import TripsScreen from '../screens/TripsScreen';
 import AddTripScreen from '../screens/AddTripScreen';
@@ -9,6 +10,13 @@ import ProfileScreen from '../screens/ProfileScreen';
 import { useAuth } from '../context/AuthContext';
 
 const Tab = createBottomTabNavigator();
+const TAB_ICONS = {
+  Home: 'home',
+  Trips: 'format-list-bulleted',
+  'Add Trip': 'add-circle-outline',
+  Map: 'map',
+  Profile: 'person',
+};
 
 function AuthScreen() {
   const { loginWithEmail, registerWithEmail, signInWithGoogleIdToken } = useAuth();
@@ -91,7 +99,14 @@ export default function Navigation() {
   }
 
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false }}>
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name={TAB_ICONS[route.name] || 'circle'} size={size} color={color} />
+        ),
+      })}
+    >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Trips" component={TripsScreen} />
       <Tab.Screen name="Add Trip" component={AddTripScreen} />
