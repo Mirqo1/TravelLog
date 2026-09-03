@@ -167,6 +167,8 @@ export default function MapScreen() {
         provider={mapProvider}
         onMapReady={handleMapReady}
         onError={handleMapError}
+        scrollEnabled={false}
+        zoomEnabled={true}
       >
         {Heatmap && heatPoints.length ? <Heatmap points={heatPoints} radius={28} opacity={0.55} /> : null}
         {tripMarkers.map((trip) => (
