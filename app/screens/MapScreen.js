@@ -1,31 +1,33 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Heatmap, Marker } from 'react-native-maps';
 import AddPlaceModal from '../components/AddPlaceModal';
-import { addPlace } from '../services/placesService';
+import TripDetailsModal from '../components/TripDetailsModal';
+import { useTrips } from '../context/TripsContext';
 import { searchPlaces } from '../services/geonamesService';
-import { useAuth } from '../context/AuthContext';
 
 export default function MapScreen() {
-  const { user } = useAuth();
+  const { trips, addTrip, updateTrip, deleteTrip } = useTrips();
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedCoordinate, setSelectedCoordinate] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResult, setSearchResult] = useState(null);
+  const [selectedTrip, setSelectedTrip] = useState(null);
+  const [editingTrip, setEditingTrip] = useState(null);
 
   const initialRegion = useMemo(
     () => ({
-      latitude: 48.669,
-      longitude: 19.699,
-      latitudeDelta: 15,
-      longitudeDelta: 15,
+      latitude: trips[0]?.location?.latitude || 48.669,
+      longitude: trips[0]?.location?.longitude || 19.699,
+      latitudeDelta: 12,
+      longitudeDelta: 12,
     }),
-    [],
+    [trips],
   );
 
   const handleMapPress = (event) => {
     const coordinate = event.nativeEvent.coordinate;
-    setSelectedCoordinate({ lat: coordinate.latitude, lng: coordinate.longitude });
+    setSelectedCoordinate({ latitude: coordinate.latitude, longitude: coordinate.longitude });
     setModalVisible(true);
   };
 
@@ -41,23 +43,46 @@ export default function MapScreen() {
     }
   };
 
-  const handleSave = async (place) => {
-    try {
-      if (!user) {
-        Alert.alert('Prihlásenie', 'Pre uloženie miesta sa prihlás.');
-        return;
-      }
-      await addPlace({ ...place, userId: user.uid });
-      setModalVisible(false);
-      Alert.alert('Hotovo', 'Miesto bolo uložené.');
-    } catch (error) {
-      Alert.alert('Ukladanie zlyhalo', error.message);
-    }
+  const handleSave = async (trip) => {
+    await addTrip(trip);
+    setModalVisible(false);
+    setSelectedCoordinate(null);
+    Alert.alert('Hotovo', 'Výlet bol uložený.');
+  };
+
+  const heatPoints = useMemo(
+    () =>
+      trips
+        .filter((trip) => Number.isFinite(trip.location?.latitude) && Number.isFinite(trip.location?.longitude))
+        .map((trip) => ({
+          latitude: trip.location.latitude,
+          longitude: trip.location.longitude,
+          weight: Math.max(1, Number(trip.rating || 1)),
+        })),
+    [trips],
+  );
+
+  const searchMarker = searchResult
+    ? { latitude: Number(searchResult.lat), longitude: Number(searchResult.lng) }
+    : null;
+
+  const handleDelete = async () => {
+    Alert.alert('Zmazať výlet?', `Naozaj chceš vymazať ${selectedTrip.name}?`, [
+      { text: 'Zrušiť', style: 'cancel' },
+      {
+        text: 'Zmazať',
+        style: 'destructive',
+        onPress: async () => {
+          await deleteTrip(selectedTrip.id);
+          setSelectedTrip(null);
+        },
+      },
+    ]);
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Mapa & Pridať Miesto</Text>
+      <Text style={styles.header}>Map</Text>
       <View style={styles.searchRow}>
         <TextInput
           style={styles.searchInput}
@@ -74,23 +99,59 @@ export default function MapScreen() {
           Výsledok: {searchResult.name}, {searchResult.countryName}
         </Text>
       ) : (
-        <Text style={styles.searchHint}>Klikni na mapu alebo vyhľadaj miesto.</Text>
+        <Text style={styles.searchHint}>Klikni na mapu pre nový výlet alebo otvor marker pre detail.</Text>
       )}
       <MapView style={styles.map} initialRegion={initialRegion} onPress={handleMapPress}>
-        {selectedCoordinate ? (
+        {Heatmap && heatPoints.length ? <Heatmap points={heatPoints} radius={28} opacity={0.55} /> : null}
+        {trips.map((trip) => (
           <Marker
+            key={trip.id}
             coordinate={{
-              latitude: selectedCoordinate.lat,
-              longitude: selectedCoordinate.lng,
+              latitude: trip.location.latitude,
+              longitude: trip.location.longitude,
             }}
+            title={trip.name}
+            description={trip.locationName}
+            onPress={() => setSelectedTrip(trip)}
           />
-        ) : null}
+        ))}
+        {selectedCoordinate ? <Marker coordinate={selectedCoordinate} pinColor="#2563eb" /> : null}
+        {searchMarker ? <Marker coordinate={searchMarker} pinColor="#16a34a" /> : null}
       </MapView>
+      <View style={styles.actions}>
+        <Pressable style={styles.quickButton} onPress={() => setModalVisible(true)}>
+          <Text style={styles.quickButtonText}>Pridať nový výlet</Text>
+        </Pressable>
+      </View>
       <AddPlaceModal
         visible={modalVisible}
         coordinates={selectedCoordinate}
-        onClose={() => setModalVisible(false)}
+        onClose={() => {
+          setModalVisible(false);
+          setSelectedCoordinate(null);
+        }}
         onSave={handleSave}
+      />
+      <AddPlaceModal
+        visible={Boolean(editingTrip)}
+        initialTrip={editingTrip}
+        onClose={() => setEditingTrip(null)}
+        onSave={async (trip) => {
+          await updateTrip(editingTrip.id, trip);
+          setEditingTrip(null);
+        }}
+        title="Upraviť výlet"
+        submitLabel="Uložiť zmeny"
+      />
+      <TripDetailsModal
+        visible={Boolean(selectedTrip)}
+        trip={selectedTrip}
+        onClose={() => setSelectedTrip(null)}
+        onEdit={() => {
+          setEditingTrip(selectedTrip);
+          setSelectedTrip(null);
+        }}
+        onDelete={handleDelete}
       />
     </View>
   );
@@ -139,5 +200,18 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
     borderRadius: 12,
+  },
+  actions: {
+    marginTop: 10,
+  },
+  quickButton: {
+    backgroundColor: '#2563eb',
+    borderRadius: 10,
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  quickButtonText: {
+    color: '#fff',
+    fontWeight: '700',
   },
 });

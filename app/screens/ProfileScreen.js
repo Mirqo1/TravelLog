@@ -1,18 +1,28 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useTrips } from '../context/TripsContext';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
-  const isPremium = Boolean(user?.isPremium);
+  const { profile, stats, trips } = useTrips();
+  const isPremium = Boolean(profile?.isPremium || user?.isPremium);
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Profil</Text>
-      <Text style={styles.row}>Meno: {user?.displayName || 'Hosť'}</Text>
+      <Text style={styles.row}>Meno: {profile?.name || user?.displayName || 'Hosť'}</Text>
       <Text style={styles.row}>Email: {user?.email || 'neprihlásený'}</Text>
       <Text style={styles.row}>Plán: {isPremium ? 'Premium' : 'Free'}</Text>
+      <Text style={styles.row}>Celkom výletov: {stats.totalTrips}</Text>
+      <Text style={styles.row}>Navštívené krajiny: {stats.countriesVisited}</Text>
+      <Text style={styles.row}>Obľúbená lokalita: {stats.favoriteLocation}</Text>
       <Text style={styles.note}>{isPremium ? 'Bez reklám' : 'Reklamy sú aktívne vo free verzii.'}</Text>
+      <Text style={styles.note}>
+        {trips.some((trip) => trip.syncStatus && trip.syncStatus !== 'synced')
+          ? 'Niektoré zmeny čakajú na online synchronizáciu.'
+          : 'Dáta sú pripravené aj pre offline použitie cez lokálnu cache.'}
+      </Text>
       <Pressable style={styles.button} onPress={logout}>
         <Text style={styles.buttonText}>Odhlásiť sa</Text>
       </Pressable>
@@ -38,6 +48,7 @@ const styles = StyleSheet.create({
   note: {
     marginTop: 6,
     color: '#4b5563',
+    lineHeight: 20,
   },
   button: {
     marginTop: 14,

@@ -1,26 +1,45 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 
-export default function PlaceListItem({ place, onDetail, onEdit, onDelete }) {
-  return (
-    <View style={styles.card}>
-      <Text style={styles.name}>{place.name}</Text>
-      <Text style={styles.meta}>
-        {place.type} • {place.country} • {place.visitDate}
-      </Text>
-      <Text style={styles.notes}>{place.notes || 'Bez poznámky'}</Text>
-      <View style={styles.actions}>
-        <Pressable onPress={onDetail} style={styles.actionBtn}>
-          <Text>Detail</Text>
-        </Pressable>
-        <Pressable onPress={onEdit} style={styles.actionBtn}>
-          <Text>Editovať</Text>
-        </Pressable>
-        <Pressable onPress={onDelete} style={styles.actionBtn}>
-          <Text>Zmazať</Text>
-        </Pressable>
-      </View>
+const renderRating = (rating) => {
+  if (!rating) {
+    return 'Bez hodnotenia';
+  }
+
+  return `${'★'.repeat(rating)}${'☆'.repeat(Math.max(0, 5 - rating))}`;
+};
+
+export default function PlaceListItem({ trip, onDetail, onEdit, onDelete }) {
+  const renderLeftActions = () => (
+    <Pressable style={[styles.swipeAction, styles.detailAction]} onPress={onDetail}>
+      <Text style={styles.swipeText}>Detail</Text>
+    </Pressable>
+  );
+
+  const renderRightActions = () => (
+    <View style={styles.rightActions}>
+      <Pressable style={[styles.swipeAction, styles.editAction]} onPress={onEdit}>
+        <Text style={styles.swipeText}>Edit</Text>
+      </Pressable>
+      <Pressable style={[styles.swipeAction, styles.deleteAction]} onPress={onDelete}>
+        <Text style={styles.swipeText}>Delete</Text>
+      </Pressable>
     </View>
+  );
+
+  return (
+    <Swipeable renderLeftActions={renderLeftActions} renderRightActions={renderRightActions}>
+      <Pressable style={styles.card} onPress={onDetail}>
+        <Text style={styles.name}>{trip.name}</Text>
+        <Text style={styles.meta}>{trip.locationName || 'Bez lokality'}</Text>
+        <Text style={styles.meta}>
+          {trip.date} • {renderRating(trip.rating)}
+        </Text>
+        <Text style={styles.notes}>{trip.description || trip.notes || 'Bez poznámky'}</Text>
+        {trip.syncStatus && trip.syncStatus !== 'synced' ? <Text style={styles.pending}>Čaká na synchronizáciu</Text> : null}
+      </Pressable>
+    </Swipeable>
   );
 }
 
@@ -45,15 +64,32 @@ const styles = StyleSheet.create({
     color: '#4b5563',
     marginTop: 6,
   },
-  actions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 10,
+  pending: {
+    marginTop: 6,
+    color: '#b45309',
+    fontWeight: '600',
   },
-  actionBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#f3f4f6',
+  rightActions: {
+    flexDirection: 'row',
+  },
+  swipeAction: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 88,
+    marginBottom: 10,
+    borderRadius: 12,
+  },
+  detailAction: {
+    backgroundColor: '#2563eb',
+  },
+  editAction: {
+    backgroundColor: '#0f766e',
+  },
+  deleteAction: {
+    backgroundColor: '#dc2626',
+  },
+  swipeText: {
+    color: '#fff',
+    fontWeight: '700',
   },
 });
