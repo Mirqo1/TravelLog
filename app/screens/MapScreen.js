@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import MapView, { Heatmap, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import Constants from 'expo-constants';
 import AddPlaceModal from '../components/AddPlaceModal';
 import TripDetailsModal from '../components/TripDetailsModal';
 import { useTrips } from '../context/TripsContext';
@@ -15,7 +16,8 @@ export default function MapScreen() {
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [editingTrip, setEditingTrip] = useState(null);
 
-  const hasGoogleMapsApiKey = Boolean(process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY);
+  const googleMapsApiKey = Constants.expoConfig?.extra?.expo_public_google_maps_api_key;
+  const hasGoogleMapsApiKey = Boolean(googleMapsApiKey);
 
   const handleMapPress = (event) => {
     const coordinate = event.nativeEvent.coordinate;
@@ -127,8 +129,7 @@ export default function MapScreen() {
       )}
       {Platform.OS === 'android' && !hasGoogleMapsApiKey ? (
         <Text style={styles.apiKeyHint}>
-          Google Maps API key nie je nastavený. Pre Android build nastav
-          EXPO_PUBLIC_GOOGLE_MAPS_API_KEY.
+          Google Maps API key nie je nastavený. Pre Android build nastav EXPO_PUBLIC_GOOGLE_MAPS_API_KEY.
         </Text>
       ) : null}
       <MapView
