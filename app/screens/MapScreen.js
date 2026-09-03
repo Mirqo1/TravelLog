@@ -17,16 +17,6 @@ export default function MapScreen() {
 
   const hasGoogleMapsApiKey = Boolean(process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY);
 
-  const initialRegion = useMemo(
-    () => ({
-      latitude: trips[0]?.location?.latitude || 48.669,
-      longitude: trips[0]?.location?.longitude || 19.699,
-      latitudeDelta: 12,
-      longitudeDelta: 12,
-    }),
-    [trips],
-  );
-
   const handleMapPress = (event) => {
     const coordinate = event.nativeEvent.coordinate;
     setSelectedCoordinate({ latitude: coordinate.latitude, longitude: coordinate.longitude });
@@ -70,6 +60,31 @@ export default function MapScreen() {
       ),
     [trips],
   );
+  const initialRegion = useMemo(() => {
+    if (!tripMarkers.length) {
+      return {
+        latitude: 48.669,
+        longitude: 19.699,
+        latitudeDelta: 12,
+        longitudeDelta: 12,
+      };
+    }
+
+    const latitudes = tripMarkers.map((trip) => trip.location.latitude);
+    const longitudes = tripMarkers.map((trip) => trip.location.longitude);
+    const minLatitude = Math.min(...latitudes);
+    const maxLatitude = Math.max(...latitudes);
+    const minLongitude = Math.min(...longitudes);
+    const maxLongitude = Math.max(...longitudes);
+
+    return {
+      latitude: (minLatitude + maxLatitude) / 2,
+      longitude: (minLongitude + maxLongitude) / 2,
+      latitudeDelta: Math.max(3, (maxLatitude - minLatitude) * 1.6),
+      longitudeDelta: Math.max(3, (maxLongitude - minLongitude) * 1.6),
+    };
+  }, [tripMarkers]);
+  const mapProvider = Platform.OS === 'android' && hasGoogleMapsApiKey ? PROVIDER_GOOGLE : undefined;
 
   const searchMarker = searchResult
     ? { latitude: Number(searchResult.lat), longitude: Number(searchResult.lng) }
@@ -120,7 +135,7 @@ export default function MapScreen() {
         style={styles.map}
         initialRegion={initialRegion}
         onPress={handleMapPress}
-        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+        provider={mapProvider}
       >
         {Heatmap && heatPoints.length ? <Heatmap points={heatPoints} radius={28} opacity={0.55} /> : null}
         {tripMarkers.map((trip) => (
