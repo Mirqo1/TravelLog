@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import MapView, { Heatmap, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import Constants from 'expo-constants';
@@ -39,6 +39,23 @@ export default function MapScreen() {
   const handleMapReady = () => {
     console.log('MapView ready!');
     setMapReady(true);
+    
+    // Fit to markers immediately when map is ready
+    if (mapRef.current && tripMarkers.length > 0) {
+      const coordinates = tripMarkers.map((trip) => ({
+        latitude: trip.location.latitude,
+        longitude: trip.location.longitude,
+      }));
+      
+      console.log('Fitting map to coordinates:', coordinates);
+      
+      setTimeout(() => {
+        mapRef.current?.fitToCoordinates(coordinates, {
+          edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+          animated: true,
+        });
+      }, 500);
+    }
   };
 
   const handleMapError = (e) => {
@@ -107,23 +124,6 @@ export default function MapScreen() {
       longitudeDelta: Math.max(3, (maxLongitude - minLongitude) * 1.6),
     };
   }, [tripMarkers]);
-
-  // Auto-fit map to markers when ready
-  useEffect(() => {
-    if (mapReady && mapRef.current && tripMarkers.length > 0) {
-      const coordinates = tripMarkers.map((trip) => ({
-        latitude: trip.location.latitude,
-        longitude: trip.location.longitude,
-      }));
-      
-      console.log('Fitting map to coordinates:', coordinates);
-      
-      mapRef.current.fitToCoordinates(coordinates, {
-        edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
-        animated: true,
-      });
-    }
-  }, [mapReady, tripMarkers]);
 
   console.log('MapScreen initialRegion:', initialRegion);
   console.log('MapScreen tripMarkers count:', tripMarkers.length);
