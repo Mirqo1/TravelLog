@@ -126,27 +126,64 @@ Užívateľ klikne na miesto, ktoré navštívil → aplikácia zobrazí mapu sv
 
 ## 📅 Development Timeline (MVP)
 
-### Fáza 1 (Týždeň 1-2): Základný Setup
-- React Native + Expo setup
-- Firebase projekt
-- Screen 1: Mapa + pridať miesto
-- GeoNames API integrácia
+### ✅ Fáza 1 (HOTOVO!) - Základný Setup
+**Status:** Completed - September 2, 2026
 
-### Fáza 2 (Týždeň 3): Zoznam Miest
+**Čo bolo urobené:**
+- ✅ Expo React Native project bootstrap
+- ✅ Project structure created (screens, components, services, context)
+- ✅ Firebase integration:
+  - `firebaseConfig.js` - Firebase initialization
+  - `authService.js` - Email/Password + Google Sign-In
+  - `placesService.js` - Firestore CRUD operations (add, edit, delete, list)
+  - `firestore.rules` - Security rules (user scoped data)
+- ✅ GeoNames API integration (`geonamesService.js`)
+- ✅ Bottom Tab Navigation (5 screens):
+  - Mapa
+  - Zoznam
+  - Heat Mapa
+  - Štatistiky
+  - Profil
+- ✅ Authentication flow:
+  - Email + Password registration/login
+  - Google Sign-In
+  - Sign-out
+  - User persistence via AuthContext
+- ✅ Placeholder screen implementations (functional shells)
+- ✅ Environment configuration (.env.example)
+- ✅ Data models (User, Place, PlaceType)
+- ✅ Pull Request #1 created: "Bootstrap TravelLog Expo app with Firebase services, auth flow, and 5-screen tab shell"
+
+**Pull Request:** https://github.com/Mirqo1/TravelLog/pull/1
+
+**Next Steps for Fáza 1 (PC):**
+1. Review PR #1
+2. Approve or request changes
+3. Merge to main
+4. Clone repo locally
+5. Setup Firebase project (https://firebase.google.com)
+6. Setup GeoNames account (https://www.geonames.org)
+7. Create `.env` file with credentials
+8. Run `npm install && npm start`
+9. Test in Expo Go app
+
+---
+
+### 📋 Fáza 2 (Týždeň 3): Zoznam Miest
 - Screen 2: Zoznam miest
 - Filtrovanie, sorťovanie
 - Editovať, zmazať, detail
 
-### Fáza 3 (Týždeň 4): Heat Mapa + Štatistiky
+### 📋 Fáza 3 (Týždeň 4): Heat Mapa + Štatistiky
 - Screen 3: Heat mapa
 - Screen 4: Štatistiky
 
-### Fáza 4 (Týždeň 5): Profil + Reklamy
+### 📋 Fáza 4 (Týždeň 5): Profil + Reklamy
 - Screen 5: Profil
 - Google AdMob
 - Premium paywall
 
-### Fáza 5 (Týždeň 6): Testing + Publikácia
+### 📋 Fáza 5 (Týždeň 6): Testing + Publikácia
 - Testing
 - Bug fixing
 - Publikácia na App Store + Play Store
@@ -188,76 +225,29 @@ Užívateľ klikne na miesto, ktoré navštívil → aplikácia zobrazí mapu sv
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Getting Started (PC Setup)
+
+### Prerequisites
+- Node.js 16+ installed
+- npm or yarn
+- GitHub account (máš)
+- Google account (máš)
+
+### Setup Steps
 
 ```bash
-npm install -g expo-cli
+# 1. Clone repo
 git clone https://github.com/Mirqo1/TravelLog.git
 cd TravelLog
+
+# 2. Install dependencies
 npm install
+
+# 3. Setup environment
+cp .env.example .env
+# Edit .env with your Firebase and GeoNames credentials
+
+# 4. Start development server
 npm start
-```
 
-Potom naskenuj QR kód s Expo Go app.
-
----
-
-## 📚 Resources
-
-- React Native: https://reactnative.dev
-- Expo: https://docs.expo.dev
-- Firebase: https://firebase.google.com/docs
-- GeoNames API: https://www.geonames.org/export/web-services.html
-
----
-
-## 📞 Development Notes for Copilot/Agent
-
-**IMPORTANT - Key Reminders:**
-
-### FREE Features
-- ✅ Logovanie miest
-- ✅ Heat mapa na svetovej mape
-- ✅ Zoznam miest
-- ✅ Štatistiky
-- ✅ Profil + Odhlásenie
-- ✅ Autentifikácia (email + Google)
-- ✅ Reklamy (banner dole + medzi položkami)
-- ❌ ŽIADNE fotky
-
-### PREMIUM Features
-- ✅ Všetko z FREE
-- ✅ Fotografie k miestam
-- ✅ Detailný denník
-- ✅ Zdieľanie s priateľmi
-- ✅ Export mapy
-- ✅ Vlastné štítky
-- ❌ BEZ REKLÁM
-
-### Critical Implementation Details
-- ❌ **Editovať = len svoju poznámku + dátum** (NE samotnú definíciu miesta!)
-- ❌ **Zmazať = len svoju návštevu** (NE miesto z databázy!)
-- ✅ **Heat mapa = interaktívna** (klik na krajinu = detaily)
-- ✅ **Žiadny custom server** - Firebase all the way
-- ✅ **Reklamy iba v FREE verzii**
-- ✅ **GeoNames API** pre databázu miest
-
-### UI/UX Guidelines
-- Bottom navigation s 5 tabikami
-- Clean, modern design
-- Reklamy nie extrémne (1-2 na obrazovku)
-- Heat mapa s legendou
-
----
-
-## 👤 Creator Info
-
-**User:** Mirqo1
-**Start Date:** September 2, 2026
-**Available Time:** ~10 hours/week
-**Status:** 🟡 In Planning Phase → Ready for Development
-
----
-
-**License:** MIT
-**GitHub:** https://github.com/Mirqo1/TravelLog
+# 5. Scan QR code with Expo Go app
