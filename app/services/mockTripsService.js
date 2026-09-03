@@ -200,3 +200,15 @@ export const getUserProfile = async (userId) => {
   await AsyncStorage.setItem(profileKey(userId), JSON.stringify(profile));
   return profile;
 };
+
+export const updateUserProfile = async (userId, updates = {}) => {
+  const currentProfile = await getUserProfile(userId);
+  const nextProfile = {
+    ...currentProfile,
+    ...updates,
+    userId,
+  };
+
+  await AsyncStorage.setItem(profileKey(userId), JSON.stringify(nextProfile));
+  return nextProfile;
+};
