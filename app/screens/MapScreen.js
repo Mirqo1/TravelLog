@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import MapView, { Heatmap, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Heatmap, Marker, Circle, PROVIDER_GOOGLE } from 'react-native-maps';
 import Constants from 'expo-constants';
 import AddPlaceModal from '../components/AddPlaceModal';
 import TripDetailsModal from '../components/TripDetailsModal';
@@ -191,20 +191,41 @@ export default function MapScreen() {
         zoomEnabled={true}
       >
         {Heatmap && heatPoints.length ? <Heatmap points={heatPoints} radius={28} opacity={0.55} /> : null}
+        
+        {/* TEST: Using Circles instead of Markers */}
         {tripMarkers.map((trip) => (
-          <Marker
+          <Circle
             key={trip.id}
-            coordinate={{
+            center={{
               latitude: trip.location.latitude,
               longitude: trip.location.longitude,
             }}
-            title={trip.name}
-            description={trip.locationName}
-            onPress={() => setSelectedTrip(trip)}
+            radius={1000}
+            fillColor="rgba(37, 99, 235, 0.3)"
+            strokeColor="rgba(37, 99, 235, 0.8)"
+            strokeWidth={2}
           />
         ))}
-        {selectedCoordinate ? <Marker coordinate={selectedCoordinate} pinColor="#2563eb" /> : null}
-        {searchMarker ? <Marker coordinate={searchMarker} pinColor="#16a34a" /> : null}
+        
+        {selectedCoordinate ? (
+          <Circle
+            center={selectedCoordinate}
+            radius={500}
+            fillColor="rgba(37, 99, 235, 0.5)"
+            strokeColor="rgba(37, 99, 235, 1)"
+            strokeWidth={2}
+          />
+        ) : null}
+        
+        {searchMarker ? (
+          <Circle
+            center={searchMarker}
+            radius={500}
+            fillColor="rgba(22, 163, 74, 0.5)"
+            strokeColor="rgba(22, 163, 74, 1)"
+            strokeWidth={2}
+          />
+        ) : null}
       </MapView>
       <View style={styles.actions}>
         <Pressable style={styles.quickButton} onPress={() => setModalVisible(true)}>
