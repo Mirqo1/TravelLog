@@ -23,6 +23,27 @@ module.exports = ({ config }) => {
     plugins.push(['react-native-maps', { androidGoogleMapsApiKey: googleMapsApiKey }]);
   }
 
+  // Google Mobile Ads 25.4 uses Kotlin 2.3 metadata.
+  const buildPropertiesIndex = plugins.findIndex((plugin) =>
+    (Array.isArray(plugin) ? plugin[0] : plugin) === 'expo-build-properties'
+  );
+  const existingBuildProperties = buildPropertiesIndex >= 0 &&
+    Array.isArray(plugins[buildPropertiesIndex])
+    ? plugins[buildPropertiesIndex][1] || {}
+    : {};
+  const buildProperties = ['expo-build-properties', {
+    ...existingBuildProperties,
+    android: {
+      ...existingBuildProperties.android,
+      kotlinVersion: '2.3.21',
+    },
+  }];
+  if (buildPropertiesIndex >= 0) {
+    plugins[buildPropertiesIndex] = buildProperties;
+  } else {
+    plugins.push(buildProperties);
+  }
+
   return {
     ...config,
     plugins,
