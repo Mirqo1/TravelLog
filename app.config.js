@@ -24,6 +24,7 @@ module.exports = ({ config }) => {
   }
 
   // Google Mobile Ads 25.4 uses Kotlin 2.3 metadata.
+  const kotlinVersion = '2.3.21';
   const buildPropertiesIndex = plugins.findIndex((plugin) =>
     (Array.isArray(plugin) ? plugin[0] : plugin) === 'expo-build-properties'
   );
@@ -35,7 +36,7 @@ module.exports = ({ config }) => {
     ...existingBuildProperties,
     android: {
       ...existingBuildProperties.android,
-      kotlinVersion: '2.3.21',
+      kotlinVersion,
     },
   }];
   if (buildPropertiesIndex >= 0) {
@@ -43,6 +44,8 @@ module.exports = ({ config }) => {
   } else {
     plugins.push(buildProperties);
   }
+
+  plugins.push(['./plugins/withKotlinCompiler', { kotlinVersion }]);
 
   return {
     ...config,
