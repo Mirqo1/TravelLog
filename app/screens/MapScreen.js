@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import MapboxGL from '@react-native-mapbox-gl/maps';
+import React, { useMemo, useState, useRef } from 'react';
+import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import MapView, { Heatmap, Marker, Circle, PROVIDER_GOOGLE } from 'react-native-maps';
+import Constants from 'expo-constants';
 import AddPlaceModal from '../components/AddPlaceModal';
 import TripDetailsModal from '../components/TripDetailsModal';
 import { useTrips } from '../context/TripsContext';
@@ -16,26 +17,50 @@ export default function MapScreen() {
   const [editingTrip, setEditingTrip] = useState(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState(null);
+  const mapRef = useRef(null);
+
+  const googleMapsApiKey = Constants.expoConfig?.extra?.expo_public_google_maps_api_key;
+  const hasGoogleMapsApiKey = Boolean(googleMapsApiKey);
+
+  console.log('MapScreen render', {
+    hasGoogleMapsApiKey,
+    googleMapsApiKey: googleMapsApiKey ? 'SET' : 'NOT SET',
+    tripsCount: trips.length,
+    platform: Platform.OS,
+    mapReady,
+  });
 
   const handleMapPress = (event) => {
-    const coordinates = event?.geometry?.coordinates;
-    if (!Array.isArray(coordinates) || coordinates.length < 2) {
-      return;
-    }
-
-    const [longitude, latitude] = coordinates;
-    setSelectedCoordinate({ latitude, longitude });
+    const coordinate = event.nativeEvent.coordinate;
+    setSelectedCoordinate({ latitude: coordinate.latitude, longitude: coordinate.longitude });
     setModalVisible(true);
   };
 
   const handleMapReady = () => {
+    console.log('MapView ready!');
     setMapReady(true);
+    
+    // Fit to markers immediately when map is ready
+    if (mapRef.current && tripMarkers.length > 0) {
+      const coordinates = tripMarkers.map((trip) => ({
+        latitude: trip.location.latitude,
+        longitude: trip.location.longitude,
+      }));
+      
+      console.log('Fitting map to coordinates:', coordinates);
+      
+      setTimeout(() => {
+        mapRef.current?.fitToCoordinates(coordinates, {
+          edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+          animated: true,
+        });
+      }, 500);
+    }
   };
 
   const handleMapError = (e) => {
-    const errorMessage =
-      e?.nativeEvent?.payload || e?.message || (typeof e === 'string' ? e : 'Nepodarilo sa načítať mapu.');
-    setMapError(String(errorMessage));
+    console.error('MapView error:', e);
+    setMapError(e.toString());
   };
 
   const handleSearch = async () => {
@@ -57,6 +82,17 @@ export default function MapScreen() {
     Alert.alert('Hotovo', 'Výlet bol uložený.');
   };
 
+  const heatPoints = useMemo(
+    () =>
+      trips
+        .filter((trip) => Number.isFinite(trip.location?.latitude) && Number.isFinite(trip.location?.longitude))
+        .map((trip) => ({
+          latitude: trip.location.latitude,
+          longitude: trip.location.longitude,
+          weight: Math.max(1, Number(trip.rating || 1)),
+        })),
+    [trips],
+  );
   const tripMarkers = useMemo(
     () =>
       trips.filter(
@@ -64,11 +100,13 @@ export default function MapScreen() {
       ),
     [trips],
   );
-  const initialCamera = useMemo(() => {
+  const initialRegion = useMemo(() => {
     if (!tripMarkers.length) {
       return {
-        centerCoordinate: [19.699, 48.669],
-        zoomLevel: 5,
+        latitude: 48.669,
+        longitude: 19.699,
+        latitudeDelta: 12,
+        longitudeDelta: 12,
       };
     }
 
@@ -80,27 +118,23 @@ export default function MapScreen() {
     const maxLongitude = Math.max(...longitudes);
 
     return {
-      centerCoordinate: [(minLongitude + maxLongitude) / 2, (minLatitude + maxLatitude) / 2],
-      zoomLevel: 5,
-      bounds: {
-        ne: [maxLongitude, maxLatitude],
-        sw: [minLongitude, minLatitude],
-      },
+      latitude: (minLatitude + maxLatitude) / 2,
+      longitude: (minLongitude + maxLongitude) / 2,
+      latitudeDelta: Math.max(3, (maxLatitude - minLatitude) * 1.6),
+      longitudeDelta: Math.max(3, (maxLongitude - minLongitude) * 1.6),
     };
   }, [tripMarkers]);
-  const searchMarker = useMemo(() => {
-    if (!searchResult) {
-      return null;
-    }
 
-    const latitude = Number(searchResult.lat);
-    const longitude = Number(searchResult.lng);
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-      return null;
-    }
+  console.log('MapScreen initialRegion:', initialRegion);
+  console.log('MapScreen tripMarkers count:', tripMarkers.length);
 
-    return [longitude, latitude];
-  }, [searchResult]);
+  // Testing without PROVIDER_GOOGLE first
+  const mapProvider = undefined;
+  console.log('MapScreen mapProvider: undefined (testing default map)');
+
+  const searchMarker = searchResult
+    ? { latitude: Number(searchResult.lat), longitude: Number(searchResult.lng) }
+    : null;
 
   const handleDelete = async () => {
     Alert.alert('Zmazať výlet?', `Naozaj chceš vymazať ${selectedTrip.name}?`, [
@@ -137,59 +171,62 @@ export default function MapScreen() {
       ) : (
         <Text style={styles.searchHint}>Klikni na mapu pre nový výlet alebo otvor marker pre detail.</Text>
       )}
+      {Platform.OS === 'android' && !hasGoogleMapsApiKey ? (
+        <Text style={styles.apiKeyHint}>
+          Google Maps API key nie je nastavený. Pre Android build nastav EXPO_PUBLIC_GOOGLE_MAPS_API_KEY.
+        </Text>
+      ) : null}
       {mapError ? (
         <Text style={styles.errorText}>Map Error: {mapError}</Text>
       ) : null}
-      <MapboxGL.MapView
+      <MapView
+        ref={mapRef}
         style={styles.map}
+        initialRegion={initialRegion}
         onPress={handleMapPress}
-        onDidFinishLoadingMap={handleMapReady}
-        onDidFailLoadingMap={handleMapError}
+        provider={mapProvider}
+        onMapReady={handleMapReady}
+        onError={handleMapError}
+        scrollEnabled={true}
+        zoomEnabled={true}
       >
-        <MapboxGL.Camera
-          defaultSettings={{
-            centerCoordinate: initialCamera.centerCoordinate,
-            zoomLevel: initialCamera.zoomLevel,
-          }}
-          bounds={
-            initialCamera.bounds
-              ? {
-                  ...initialCamera.bounds,
-                  paddingTop: 50,
-                  paddingRight: 50,
-                  paddingBottom: 50,
-                  paddingLeft: 50,
-                }
-              : undefined
-          }
-          animationDuration={mapReady ? 600 : 0}
-        />
+        {Heatmap && heatPoints.length ? <Heatmap points={heatPoints} radius={28} opacity={0.55} /> : null}
+        
+        {/* TEST: Using Circles instead of Markers */}
         {tripMarkers.map((trip) => (
-          <MapboxGL.PointAnnotation
+          <Circle
             key={trip.id}
-            id={`trip-${trip.id}`}
-            coordinate={[trip.location.longitude, trip.location.latitude]}
-            onSelected={() => setSelectedTrip(trip)}
-          >
-            <View style={styles.tripMarker} />
-          </MapboxGL.PointAnnotation>
+            center={{
+              latitude: trip.location.latitude,
+              longitude: trip.location.longitude,
+            }}
+            radius={1000}
+            fillColor="rgba(37, 99, 235, 0.3)"
+            strokeColor="rgba(37, 99, 235, 0.8)"
+            strokeWidth={2}
+          />
         ))}
-
+        
         {selectedCoordinate ? (
-          <MapboxGL.PointAnnotation
-            id="selected-coordinate"
-            coordinate={[selectedCoordinate.longitude, selectedCoordinate.latitude]}
-          >
-            <View style={styles.selectedMarker} />
-          </MapboxGL.PointAnnotation>
+          <Circle
+            center={selectedCoordinate}
+            radius={500}
+            fillColor="rgba(37, 99, 235, 0.5)"
+            strokeColor="rgba(37, 99, 235, 1)"
+            strokeWidth={2}
+          />
         ) : null}
-
+        
         {searchMarker ? (
-          <MapboxGL.PointAnnotation id="search-result" coordinate={searchMarker}>
-            <View style={styles.searchMarker} />
-          </MapboxGL.PointAnnotation>
+          <Circle
+            center={searchMarker}
+            radius={500}
+            fillColor="rgba(22, 163, 74, 0.5)"
+            strokeColor="rgba(22, 163, 74, 1)"
+            strokeWidth={2}
+          />
         ) : null}
-      </MapboxGL.MapView>
+      </MapView>
       <View style={styles.actions}>
         <Pressable style={styles.quickButton} onPress={() => setModalVisible(true)}>
           <Text style={styles.quickButtonText}>Pridať nový výlet</Text>
@@ -233,6 +270,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    backgroundColor: '#f9fafb',
   },
   header: {
     fontSize: 20,
@@ -268,6 +306,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: '#4b5563',
   },
+  apiKeyHint: {
+    marginBottom: 10,
+    color: '#b45309',
+  },
   errorText: {
     marginBottom: 10,
     color: '#dc2626',
@@ -276,30 +318,6 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
     borderRadius: 12,
-  },
-  tripMarker: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: 'rgba(37, 99, 235, 0.85)',
-    borderWidth: 2,
-    borderColor: '#ffffff',
-  },
-  selectedMarker: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: 'rgba(37, 99, 235, 1)',
-    borderWidth: 2,
-    borderColor: '#ffffff',
-  },
-  searchMarker: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: 'rgba(22, 163, 74, 1)',
-    borderWidth: 2,
-    borderColor: '#ffffff',
   },
   actions: {
     marginTop: 10,

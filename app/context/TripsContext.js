@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { addTrip, deleteTrip, getTrips, getUserProfile, updateTrip, updateUserProfile } from '../services/tripsService';
+import { addTrip, deleteTrip, getTrips, getUserProfile, updateTrip } from '../services/tripsService';
 import { useAuth } from './AuthContext';
 
 const TripsContext = createContext(null);
@@ -119,19 +119,6 @@ export const TripsProvider = ({ children }) => {
     [user?.uid],
   );
 
-  const editProfile = useCallback(
-    async (updates) => {
-      if (!user?.uid) {
-        throw new Error('Musíš byť prihlásený.');
-      }
-
-      const updatedProfile = await updateUserProfile(user.uid, updates);
-      setProfile(updatedProfile);
-      return updatedProfile;
-    },
-    [user?.uid],
-  );
-
   const value = useMemo(
     () => ({
       trips,
@@ -144,9 +131,8 @@ export const TripsProvider = ({ children }) => {
       addTrip: createTrip,
       updateTrip: editTrip,
       deleteTrip: removeTrip,
-      updateProfile: editProfile,
     }),
-    [createTrip, editProfile, editTrip, error, loadTrips, loading, profile, refreshing, removeTrip, trips],
+    [createTrip, editTrip, error, loadTrips, loading, profile, refreshing, removeTrip, trips],
   );
 
   return <TripsContext.Provider value={value}>{children}</TripsContext.Provider>;
