@@ -9,8 +9,12 @@
     "plugins": [
       [
         "react-native-maps",
+        {}
+      ],
+      [
+        "react-native-google-mobile-ads",
         {
-          "googleMapsApiKey": "AIzaSyAuIE9NaSo5HfXp_ZFRE2K6Y5ypPXq6vHU"
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713"
         }
       ]
     ],
@@ -23,13 +27,13 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "package": "com.miroslavu19.travellog.preview"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "extra": {
-      "expo_public_google_maps_api_key": "AIzaSyAuIE9NaSo5HfXp_ZFRE2K6Y5ypPXq6vHU"
-    }
+    "extra": {},
+    "owner": "miroslavu19"
   }
 }
