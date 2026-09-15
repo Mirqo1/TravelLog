@@ -24,7 +24,8 @@ module.exports = ({ config }) => {
   }
 
   // Google Mobile Ads 25.4 uses Kotlin 2.3 metadata.
-  const kotlinVersion = '2.3.21';
+  // Pika 0.3.2 (used by Expo) publishes a compiler for 2.3.20, not 2.3.21.
+  const kotlinVersion = '2.3.20';
   const buildPropertiesIndex = plugins.findIndex((plugin) =>
     (Array.isArray(plugin) ? plugin[0] : plugin) === 'expo-build-properties'
   );
