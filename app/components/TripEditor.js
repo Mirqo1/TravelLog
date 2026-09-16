@@ -30,7 +30,11 @@ export default function TripEditor({ initialValues, coordinates, title = 'Nový 
     }
   };
   useEffect(() => {
-    if (coordinates) selectLocation(coordinates, coordinates.name);
+    if (coordinates?.locationName) {
+      request.current += 1;
+      setSelection({ ...coordinates, selectionId: request.current });
+      setHint('Poloha vybraná. Skontroluj názov a lokalitu pred uložením.');
+    } else if (coordinates) selectLocation(coordinates, coordinates.name);
   }, [coordinates]);
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
