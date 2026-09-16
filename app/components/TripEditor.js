@@ -8,7 +8,9 @@ export default function TripEditor({ initialValues, coordinates, title = 'Nový 
   const [selection, setSelection] = useState(coordinates || null);
   const [hint, setHint] = useState('Ťukni na mapu alebo na názov múzea či iného miesta.');
   const request = useRef(0);
+  const [mapWidth, setMapWidth] = useState(0);
   const { height } = useWindowDimensions();
+  const mapHeight = Math.max(280, Math.min(460, height * 0.45));
   const start = coordinates || initialValues?.location || { latitude: 48.1486, longitude: 17.1077 };
   useEffect(() => () => { request.current += 1; }, []);
   const selectLocation = async (coordinate, name) => {
@@ -21,8 +23,8 @@ export default function TripEditor({ initialValues, coordinates, title = 'Nový 
       if (id !== request.current) return;
       setSelection({ ...next, locationName });
       setHint('Poloha vybraná. Skontroluj názov a lokalitu pred uložením.');
-    } catch {
-      if (id === request.current) setHint('Poloha je vybraná. Lokalitu sa nepodarilo dohľadať; doplň ju ručne.');
+    } catch (error) {
+      if (id === request.current) setHint(`Poloha je vybraná. ${error.message} Lokalitu môžeš doplniť ručne.`);
     }
   };
   useEffect(() => {
@@ -30,11 +32,12 @@ export default function TripEditor({ initialValues, coordinates, title = 'Nový 
   }, [coordinates]);
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+      <ScrollView removeClippedSubviews={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.hint}>{hint}</Text>
-        <View style={[styles.mapCard, { height: Math.max(280, Math.min(460, height * 0.45)) }]}>
-          <MapView style={StyleSheet.absoluteFillObject}
+        <View collapsable={false} onLayout={(event) => setMapWidth(event.nativeEvent.layout.width)}
+          style={[styles.mapCard, { height: mapHeight }]}>
+          {mapWidth > 0 ? <MapView style={{ width: mapWidth, height: mapHeight }}
             initialRegion={{ ...start, latitudeDelta: 0.06, longitudeDelta: 0.06 }}
             onPress={(event) => {
               if (event.nativeEvent.action !== 'marker-press') selectLocation(event.nativeEvent.coordinate);
@@ -44,7 +47,7 @@ export default function TripEditor({ initialValues, coordinates, title = 'Nový 
               <Marker coordinate={selection || initialValues.location} draggable
                 onDragEnd={(event) => selectLocation(event.nativeEvent.coordinate)} />
             ) : null}
-          </MapView>
+          </MapView> : null}
         </View>
         <TripForm initialValues={initialValues} externalLocation={selection}
           title="Údaje o návšteve" submitLabel={submitLabel} onSubmit={onSubmit} onCancel={onCancel} />
