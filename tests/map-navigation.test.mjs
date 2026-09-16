@@ -28,6 +28,14 @@ assert.equal(map.shadeForCount(5), '#2563eb88');
 assert.equal(map.modeForZoom(map.zoomForRegion({ longitudeDelta: 55 }, 360)), 'countries');
 assert.equal(map.modeForZoom(map.zoomForRegion({ longitudeDelta: 5 }, 360)), 'clusters');
 assert.equal(map.modeForZoom(map.zoomForRegion({ longitudeDelta: 0.1 }, 360)), 'places');
+assert.equal(map.stableModeForZoom(5.1, 'countries'), 'countries');
+assert.equal(map.stableModeForZoom(5.4, 'countries'), 'clusters');
+assert.equal(map.stableModeForZoom(4.9, 'clusters'), 'clusters');
+assert.equal(map.stableModeForZoom(4.6, 'clusters'), 'countries');
+assert.equal(map.stableModeForZoom(11.1, 'clusters'), 'clusters');
+assert.equal(map.stableModeForZoom(11.4, 'clusters'), 'places');
+assert.equal(map.stableModeForZoom(10.9, 'places'), 'places');
+assert.equal(map.stableModeForZoom(10.6, 'places'), 'clusters');
 
 const coastal = { location: { latitude: 43.5081, longitude: 16.4402 } };
 assert.equal(map.countryForTrip({ ...coastal, countryCode: 'HR' }).code, 'HR');

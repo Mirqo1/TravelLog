@@ -21,7 +21,11 @@ export default function CloudBackupPanel() {
     if (busy) return;
     setBusy(true); setMessage('');
     try { await action(); }
-    catch (error) { setMessage(error.message || 'Operácia sa nepodarila.'); }
+    catch (error) {
+      const text = error.message || 'Operácia sa nepodarila.';
+      setMessage(text);
+      Alert.alert('Účet a záloha', text);
+    }
     finally { setBusy(false); }
   };
   const confirm = (title, text, action) => Alert.alert(title, text, [
@@ -62,8 +66,14 @@ export default function CloudBackupPanel() {
           keyboardType="email-address" value={email} onChangeText={setEmail} editable={!busy} />
         <TextInput accessibilityLabel="Heslo pre zálohu" style={styles.input} placeholder="Heslo (aspoň 6 znakov)" secureTextEntry
           value={password} onChangeText={setPassword} editable={!busy} />
-        {button('Prihlásiť účet', () => run(async () => { await cloudLogin(email, password); setPassword(''); }))}
-        {button('Vytvoriť účet', () => run(async () => { await cloudLogin(email, password, true); setPassword(''); }))}
+        {button('Prihlásiť účet', () => run(async () => {
+          if (!email.trim() || !password) throw new Error('Vyplň email a heslo.');
+          const result = await cloudLogin(email, password); setAccount(result.user); setPassword('');
+        }))}
+        {button('Vytvoriť účet', () => run(async () => {
+          if (!email.trim() || password.length < 6) throw new Error('Vyplň email a heslo s aspoň 6 znakmi.');
+          const result = await cloudLogin(email, password, true); setAccount(result.user); setPassword('');
+        }))}
         {button('Zabudnuté heslo', () => run(async () => { await cloudResetPassword(email); setMessage('Ak účet existuje, dostaneš email na obnovu hesla.'); }))}
       </>}
     </>}

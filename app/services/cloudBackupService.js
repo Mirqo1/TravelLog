@@ -1,4 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as appSDK from 'firebase/app';
+import * as authSDK from 'firebase/auth';
+import * as firestoreSDK from 'firebase/firestore';
 import { portableTrips, validateBackup } from '../utils/backup';
 
 const config = {
@@ -12,9 +15,6 @@ let services;
 function cloud() {
   if (!cloudConfigured) throw new Error('Cloudová záloha ešte nie je nakonfigurovaná.');
   if (services) return services;
-  const appSDK = require('firebase/app');
-  const authSDK = require('firebase/auth');
-  const firestoreSDK = require('firebase/firestore');
   const app = appSDK.getApps().find((a) => a.name === 'travellog-backup') || appSDK.initializeApp(config, 'travellog-backup');
   let auth;
   try { auth = authSDK.initializeAuth(app, { persistence: authSDK.getReactNativePersistence(AsyncStorage) }); }

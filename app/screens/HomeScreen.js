@@ -27,7 +27,7 @@ export default function HomeScreen({ navigation }) {
   return <>
     <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
       <View style={styles.brand}>
-        <Image source={require('../../assets/compass-icon.png')} style={{ width: 100, height: 100 }} resizeMode="contain" accessibilityLabel="Kompas" />
+        <Image source={require('../../assets/compass-foreground.png')} style={{ width: 100, height: 100 }} resizeMode="contain" accessibilityLabel="Kompas" />
         <Text style={styles.brandName}>TravelLog</Text>
         <Text style={styles.muted}>Tvoje miesta. Tvoje príbehy.</Text>
       </View>

@@ -9,7 +9,7 @@ import TripDetailsModal from '../components/TripDetailsModal';
 import MapTypeToggle from '../components/MapTypeToggle';
 import { useTrips } from '../context/TripsContext';
 import { searchPlaces } from '../services/placeSearchService';
-import { countryMarkers, groupMarkers, modeForZoom, validLocation, zoomForRegion } from '../utils/mapVisits';
+import { countryMarkers, groupMarkers, stableModeForZoom, validLocation, zoomForRegion } from '../utils/mapVisits';
 
 const INITIAL_REGION = { latitude: 49, longitude: 17, latitudeDelta: 35, longitudeDelta: 55 };
 
@@ -32,7 +32,8 @@ export default function MapScreen() {
   useEffect(() => () => searchRequest.current?.abort(), []);
   const mapRef = useRef(null);
   const zoom = zoomForRegion(region, mapWidth);
-  const mode = modeForZoom(zoom);
+  const [mode, setMode] = useState('countries');
+  useEffect(() => setMode((previous) => stableModeForZoom(zoom, previous)), [zoom]);
   const heatPoints = useMemo(() => trips.filter((trip) => validLocation(trip.location))
     .map((trip) => ({ ...trip.location, weight: 1 })), [trips]);
   const countryPins = useMemo(() => countryMarkers(trips), [trips]);
@@ -138,7 +139,7 @@ export default function MapScreen() {
         : mode === 'clusters' ? 'Heat mapa a skupiny miest · ťuknutím ich priblížiš.'
         : 'Heat mapa a návštevy · ťuknutím otvoríš detail.'}</Text>
       <View style={styles.mapContainer} onLayout={(event) => setMapWidth(event.nativeEvent.layout.width)}>
-        {isFocused ? <MapView key={mapType} ref={mapRef} style={styles.map} initialRegion={region}
+        {isFocused ? <MapView ref={mapRef} style={styles.map} initialRegion={region}
           mapType={mapType}
           onRegionChangeComplete={setRegion} onPress={selectPoint}
           onPoiClick={(event) => setSelectedCoordinate({ ...event.nativeEvent.coordinate, name: event.nativeEvent.name })}>
@@ -149,7 +150,7 @@ export default function MapScreen() {
             <View style={styles.cluster}><Text style={styles.clusterText}>{group.trips.length}</Text></View>
           </Marker>) : null}
           {markers.map((group) => (
-            <Marker key={mode + ':' + Math.floor(zoom) + ':' + group.key + ':' + group.trips.length}
+            <Marker key={'visits:' + group.trips.map((trip) => trip.id).sort().join('|')}
               coordinate={group.coordinate} title={group.trips.length === 1 ? group.trips[0].name : undefined}
               onPress={(event) => { event.stopPropagation(); handleCluster(group); }}>
               {group.trips.length > 1 ? <View style={styles.cluster}>

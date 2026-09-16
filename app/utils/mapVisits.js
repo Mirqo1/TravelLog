@@ -74,6 +74,12 @@ export const countryMarkers = (trips) => summarizeCountries(trips).groups.flatMa
   return [{ ...group, coordinate: points.reduce((best, p) => score(p) < score(best) ? p : best) }];
 });
 export const modeForZoom = (zoom) => zoom < 5 ? 'countries' : zoom < 11 ? 'clusters' : 'places';
+export const stableModeForZoom = (zoom, previous) => {
+  if (previous === 'countries' && zoom < 5.35) return 'countries';
+  if (previous === 'clusters' && zoom >= 4.65 && zoom < 11.35) return 'clusters';
+  if (previous === 'places' && zoom >= 10.65) return 'places';
+  return modeForZoom(zoom);
+};
 export const shadeForCount = (count) => count >= 10 ? '#1e40af99' : count >= 5 ? '#2563eb88' : count >= 2 ? '#60a5fa88' : '#bfdbfeaa';
 
 const wrappedDelta = (value) => ((value + 540) % 360) - 180;

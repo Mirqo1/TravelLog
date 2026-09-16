@@ -45,7 +45,7 @@ export default function ProfileScreen({ navigation }) {
     try { if (cloudConfigured) await cloudLogout(); await logout(); }
     catch (error) { Alert.alert('Odhlásenie zlyhalo', error.message); setLoggingOut(false); }
   };
-  return <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
+  return <ScrollView keyboardShouldPersistTaps="handled" style={styles.screen} contentContainerStyle={styles.container}>
     <Text style={styles.title}>Môj profil</Text>
     <View style={styles.identity}>
       <Pressable onPress={chooseAvatar} disabled={choosingPhoto} accessibilityRole="button" accessibilityLabel="Zmeniť profilovú fotografiu">
