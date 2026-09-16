@@ -1,5 +1,6 @@
 import React from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import AddVisitButton from '../components/AddVisitButton';
 import { useTrips } from '../context/TripsContext';
 
 const StatCard = ({ label, value }) => (
@@ -25,6 +26,7 @@ export default function HomeScreen() {
       <Text style={styles.header}>TravelLog Dashboard</Text>
       <Text style={styles.subheader}>Prehľad tvojich výletov, krajín a obľúbených miest.</Text>
 
+      <AddVisitButton />
       <View style={styles.statsGrid}>
         <StatCard label="Výlety" value={stats.totalTrips} />
         <StatCard label="Krajiny" value={stats.countriesVisited} />

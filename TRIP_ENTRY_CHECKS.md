@@ -1,26 +1,23 @@
-# Kontrola pridávania návštev na Android APK
+# Kontrola navigácie a máp na Android APK
 
-Táto úprava rieši bezpečné odsadenie, spoločný formulár s mapou a radenie návštev.
-Redizajn Home/Profil a cloudová synchronizácia zostávajú samostatnými úlohami.
+Automatická kontrola: `node tests/map-navigation.test.mjs`.
+Overuje počítanie krajín, geometriu, pobrežné body, priblíženie, skupiny, dátumovú hranicu a názov pri zmene polohy.
+Celé Android zostavenie a vizuálna kontrola zostávajú na EAS a telefóne.
 
-## Overené pri príprave
+## Čo overiť v APK
 
-- JavaScript/JSX syntax upravených súborov.
-- Radenie podľa dátumu návštevy a následne createdAt zostupne.
-- Zachovanie času vytvorenia a fotografií pri úprave a opätovnom načítaní.
-- Staršie záznamy bez createdAt nedostávajú pri každom načítaní vymyslený nový čas.
+1. Spodné menu má iba Home, Trips, Map a Profile. Samostatné Add Trip už nie je v navigácii.
+2. Home aj Trips majú tlačidlo + Pridať návštevu, ktoré otvorí spoločný formulár s mapou. Uloženie sa prejaví v zozname aj na mape. Zrušenie nič neuloží.
+3. Map má rovnakú akciu. Vybraný bod sa prevezme do formulára; bez výberu možno polohu vybrať až vo formulári.
+4. Pohľad na Európu zobrazuje farebné krajiny bez špendlíkov. Päť návštev Slovenska vyfarbí Slovensko odtieňom 5–9, nezakryje ho päť značiek. Farby závisia od počtu návštev, nie od hodnotenia.
+5. Ťuknutie na vyfarbenú krajinu otvorí zoznam jej návštev. Výber návštevy otvorí detail s úpravou a vymazaním.
+6. Priblíženie na krajinu/región zobrazí skupiny s počtom. Ťuknutie na skupinu mapu priblíži; skupina návštev s rovnakými súradnicami otvorí zoznam.
+7. Pri priblížení na mesto sa zobrazia jednotlivé značky. Oddialením sa opäť zoskupia a pri pohľade na kontinent zmiznú.
+8. Prepínač Mapa/Satelit funguje na hlavnej mape aj vo formulári. Satelit používa hybridný režim s popiskami. Prepnutie nesmie zmeniť výber polohy ani rozpracovaný formulár.
+9. Vyber Nemocnicu, potom nepomenovaný bod: názov musí zostať prázdny a vyžaduje ručné doplnenie. Potom vyber Zoo: názov musí byť Zoo. Otestuj aj presunutie značky.
+10. Po výbere nepomenovaného bodu začni písať vlastný názov. Neskorá odpoveď GeoNames ho nesmie prepísať. Rýchly výber dvoch miest nesmie vrátiť údaje prvého miesta.
+11. Zachované: odsadenie od kamery a systémových tlačidiel, radenie rovnakého dňa podľa času vytvorenia, fotografie pri úprave, validácia polohy/dátumu a ochrana pred dvojitým uložením.
+12. Nainštaluj APK ako aktualizáciu existujúcej aplikácie; neodinštaluj ju. Over zachovanie starších návštev po reštarte.
 
-## Overiť v novom APK
-
-1. Home, Trips, Add Trip, Map a Profile: obsah neprekrýva stavový riadok ani výrez kamery.
-2. Add Trip: vyber polohu na mape, následne ťukni na pomenované Google POI. Over názov a súradnice.
-3. Map: otvor Pridať nový výlet aj bez predchádzajúceho výberu; polohu možno vybrať v otvorenom formulári.
-4. Map: vyber miesto, potom pridaj návštevu. Formulár otvorí mapu pri vybranom bode.
-5. Presuň značku a skontroluj nové súradnice. Rýchlo vyber dve miesta; oneskorená odpoveď pre prvé miesto nesmie nahradiť druhé.
-6. Dohľadanie lokality používa GeoNames findNearbyPlaceNameJSON (najbližšia obec, nie overená adresa POI). Pri nedostupnej službe možno lokalitu doplniť ručne. Demo účet môže mať vyčerpanú kvótu; pre spoľahlivé dohľadanie nastav EXPO_PUBLIC_GEONAMES_USERNAME pre EAS preview.
-7. Otvor klávesnicu, prejdi formulár a skontroluj dostupnosť Uložiť/Zrušiť nad systémovým ovládaním. Skús aj menší displej a otočenie telefónu.
-8. Prázdne/neplatné súradnice a neplatný dátum sa nesmú uložiť. Dvojité stlačenie Uložiť nesmie vytvoriť dva záznamy.
-9. Pridaj ZZZ a potom AAA s rovnakým dátumom návštevy. AAA má byť prvá pri Najnovšie; úprava ZZZ nesmie meniť pôvodný čas vytvorenia. Over aj po reštarte.
-10. Značka uloženého výletu na Map otvorí detail; odtiaľ možno upravovať alebo mazať návštevu.
-
-Úplná Android kompilácia ani vizuálna kontrola na telefóne neboli v pracovnom prostredí vykonané.
+GeoNames vyžaduje aktívny `EXPO_PUBLIC_GEONAMES_USERNAME` v EAS preview. Podrobnosti a obmedzenia hraníc sú v COUNTRY_DATA.md.
+Úprava nemení testovacie prihlasovanie na skutočné účty a nepridáva cloudové zálohovanie.

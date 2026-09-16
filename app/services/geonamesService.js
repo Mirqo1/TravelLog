@@ -49,7 +49,7 @@ export const searchPlaces = async (query) => {
   }));
 };
 
-export const findLocationName = async ({ latitude, longitude }) => {
+export const findLocationDetails = async ({ latitude, longitude }) => {
   requireAccount();
   const response = await geonamesClient.get('/findNearbyPlaceNameJSON', {
     params: { lat: latitude, lng: longitude, username: geonamesUsername, style: 'FULL' },
@@ -57,5 +57,7 @@ export const findLocationName = async ({ latitude, longitude }) => {
   checkResponse(response.data);
   const place = response.data?.geonames?.[0];
   if (!place) throw new Error('Pre tento bod sa nenašla obec ani krajina.');
-  return [place.name, place.countryName].filter(Boolean).join(', ');
+  return { locationName: [place.name, place.countryName].filter(Boolean).join(', '), countryCode: place.countryCode || '' };
 };
+
+export const findLocationName = async (coordinate) => (await findLocationDetails(coordinate)).locationName;

@@ -2,10 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import TripForm from './TripForm';
-import { findLocationName } from '../services/geonamesService';
+import MapTypeToggle from './MapTypeToggle';
+import { findLocationDetails } from '../services/geonamesService';
 
 export default function TripEditor({ initialValues, coordinates, title = 'Nový výlet', submitLabel = 'Uložiť výlet', onSubmit, onCancel }) {
   const [selection, setSelection] = useState(coordinates || null);
+  const [mapType, setMapType] = useState('standard');
   const [hint, setHint] = useState('Ťukni na mapu alebo na názov múzea či iného miesta.');
   const request = useRef(0);
   const [mapWidth, setMapWidth] = useState(0);
@@ -15,13 +17,13 @@ export default function TripEditor({ initialValues, coordinates, title = 'Nový 
   useEffect(() => () => { request.current += 1; }, []);
   const selectLocation = async (coordinate, name) => {
     const id = ++request.current;
-    const next = { ...coordinate, ...(name ? { name } : {}), locationName: '' };
+    const next = { ...coordinate, name: name || '', locationName: '', countryCode: '', selectionId: id };
     setSelection(next);
     setHint('Dohľadávam obec a krajinu…');
     try {
-      const locationName = await findLocationName(coordinate);
+      const details = await findLocationDetails(coordinate);
       if (id !== request.current) return;
-      setSelection({ ...next, locationName });
+      setSelection({ ...next, ...details });
       setHint('Poloha vybraná. Skontroluj názov a lokalitu pred uložením.');
     } catch (error) {
       if (id === request.current) setHint(`Poloha je vybraná. ${error.message} Lokalitu môžeš doplniť ručne.`);
@@ -35,9 +37,11 @@ export default function TripEditor({ initialValues, coordinates, title = 'Nový 
       <ScrollView removeClippedSubviews={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.hint}>{hint}</Text>
+        <MapTypeToggle value={mapType} onChange={setMapType} />
         <View collapsable={false} onLayout={(event) => setMapWidth(event.nativeEvent.layout.width)}
           style={[styles.mapCard, { height: mapHeight }]}>
           {mapWidth > 0 ? <MapView style={{ width: mapWidth, height: mapHeight }}
+            mapType={mapType}
             initialRegion={{ ...start, latitudeDelta: 0.06, longitudeDelta: 0.06 }}
             onPress={(event) => {
               if (event.nativeEvent.action !== 'marker-press') selectLocation(event.nativeEvent.coordinate);

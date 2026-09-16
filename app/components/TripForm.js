@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { applyLocationSelection } from '../utils/locationSelection';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -7,6 +8,7 @@ const toDraft = (trip = {}) => ({
   name: trip.name || '',
   description: trip.description || '',
   locationName: trip.locationName || '',
+  countryCode: trip.countryCode || '',
   latitude:
     trip.location?.latitude === 0 || trip.location?.latitude
       ? String(trip.location.latitude)
@@ -45,16 +47,8 @@ export default function TripForm({
   useEffect(() => {
     if (externalLocation) {
       const previous = lastSelection.current;
-      const samePosition = previous && previous.latitude === externalLocation.latitude && previous.longitude === externalLocation.longitude;
       lastSelection.current = externalLocation;
-      setForm((current) => ({
-        ...current,
-        name: externalLocation.name && (!samePosition || previous.name !== externalLocation.name)
-          ? externalLocation.name : current.name,
-        locationName: samePosition ? current.locationName || externalLocation.locationName || '' : externalLocation.locationName ?? '',
-        latitude: samePosition ? current.latitude : String(externalLocation.latitude),
-        longitude: samePosition ? current.longitude : String(externalLocation.longitude),
-      }));
+      setForm((current) => applyLocationSelection(current, previous, externalLocation));
     }
   }, [externalLocation]);
 
@@ -66,7 +60,9 @@ export default function TripForm({
     return `Lat: ${form.latitude}, Lng: ${form.longitude}`;
   }, [form.latitude, form.longitude]);
 
-  const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+  const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value,
+    ...(['latitude', 'longitude', 'locationName'].includes(field) ? { countryCode: '' } : {}),
+  }));
 
   const handleSubmit = async () => {
     if (submitLock.current || isSubmitting) return;
@@ -92,6 +88,7 @@ export default function TripForm({
         name: form.name.trim(),
         description: form.description.trim(),
         locationName: form.locationName.trim(),
+        countryCode: form.countryCode,
         location: { latitude, longitude },
         date: form.date || today(),
         rating: form.rating,

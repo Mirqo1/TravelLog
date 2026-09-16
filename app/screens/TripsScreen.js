@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import AddVisitButton from '../components/AddVisitButton';
 import AddPlaceModal from '../components/AddPlaceModal';
 import PlaceListItem from '../components/PlaceListItem';
 import TripDetailsModal from '../components/TripDetailsModal';
@@ -91,6 +92,7 @@ export default function TripsScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Trips</Text>
+      <AddVisitButton />
       <TextInput
         style={styles.searchInput}
         placeholder="Vyhľadaj výlet"

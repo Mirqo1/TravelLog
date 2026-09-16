@@ -20,6 +20,7 @@ const normalizeTrip = (trip = {}, id = trip.id) => ({
   name: String(trip.name || '').trim(),
   description: String(trip.description || '').trim(),
   locationName: String(trip.locationName || '').trim(),
+  countryCode: String(trip.countryCode || '').trim().toUpperCase(),
   location: {
     latitude: toNumber(trip.location?.latitude ?? trip.latitude),
     longitude: toNumber(trip.location?.longitude ?? trip.longitude),

@@ -4,7 +4,6 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import HomeScreen from '../screens/HomeScreen';
 import TripsScreen from '../screens/TripsScreen';
-import AddTripScreen from '../screens/AddTripScreen';
 import MapScreen from '../screens/MapScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { useAuth } from '../context/AuthContext';
@@ -13,7 +12,6 @@ const Tab = createBottomTabNavigator();
 const TAB_ICONS = {
   Home: 'home',
   Trips: 'format-list-bulleted',
-  'Add Trip': 'add-circle-outline',
   Map: 'map',
   Profile: 'person',
 };
@@ -112,7 +110,6 @@ export default function Navigation() {
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Trips" component={TripsScreen} />
-      <Tab.Screen name="Add Trip" component={AddTripScreen} />
       <Tab.Screen name="Map" component={MapScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>

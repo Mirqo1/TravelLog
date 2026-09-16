@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { addTrip, deleteTrip, getTrips, getUserProfile, updateTrip } from '../services/tripsService';
 import { useAuth } from './AuthContext';
 
+import { summarizeCountries } from '../utils/mapVisits';
 import { compareTripsNewest } from '../utils/tripOrder';
 
 const TripsContext = createContext(null);
@@ -10,14 +11,7 @@ const sortTrips = (trips) => [...trips].sort(compareTripsNewest);
 
 const buildStats = (trips) => {
   const totalTrips = trips.length;
-  const countriesVisited = new Set(
-    trips
-      .map((trip) => {
-        const parts = String(trip.locationName || '').split(',');
-        return parts[parts.length - 1]?.trim();
-      })
-      .filter(Boolean),
-  ).size;
+  const countriesVisited = summarizeCountries(trips).groups.length;
   const averageRating = totalTrips
     ? (trips.reduce((total, trip) => total + Number(trip.rating || 0), 0) / totalTrips).toFixed(1)
     : '0.0';
