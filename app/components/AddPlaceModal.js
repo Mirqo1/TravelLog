@@ -1,51 +1,18 @@
 import React from 'react';
-import { Alert, Modal, StyleSheet, View } from 'react-native';
-import TripForm from './TripForm';
+import { Modal } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import TripEditor from './TripEditor';
 
-export default function AddPlaceModal({
-  visible,
-  coordinates,
-  initialTrip,
-  title = 'Pridať výlet',
-  submitLabel = 'Uložiť výlet',
-  onClose,
-  onSave,
-}) {
-  const handleSubmit = async (trip) => {
-    try {
-      await onSave(trip);
-    } catch (error) {
-      Alert.alert('Uloženie zlyhalo', error.message);
-    }
-  };
-
+export default function AddPlaceModal({ visible, coordinates, initialTrip, title = 'Pridať výlet', submitLabel = 'Uložiť výlet', onClose, onSave }) {
+  if (!visible) return null;
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.card}>
-          <TripForm
-            title={title}
-            submitLabel={submitLabel}
-            initialValues={initialTrip}
-            externalLocation={coordinates}
-            onCancel={onClose}
-            onSubmit={handleSubmit}
-          />
-        </View>
-      </View>
+    <Modal visible animationType="slide" onRequestClose={onClose}>
+      <SafeAreaProvider>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#f9fafb' }}>
+          <TripEditor initialValues={initialTrip} coordinates={coordinates} title={title}
+            submitLabel={submitLabel} onCancel={onClose} onSubmit={onSave} />
+        </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.35)',
-  },
-  card: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    overflow: 'hidden',
-  },
-});

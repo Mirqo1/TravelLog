@@ -1,11 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { compareTripsNewest } from '../utils/tripOrder';
+
 const TRIPS_STORAGE_PREFIX = 'travellog/mock-trips/';
 const PROFILE_STORAGE_PREFIX = 'travellog/mock-profile/';
 
 const today = () => new Date().toISOString();
 const todayDate = () => today().slice(0, 10);
-const byDateDesc = (left, right) => String(right.date || '').localeCompare(String(left.date || ''));
+const byDateDesc = compareTripsNewest;
 
 const toNumber = (value) => {
   const parsed = Number(value);
@@ -26,7 +28,7 @@ const normalizeTrip = (trip = {}, id = trip.id) => ({
   rating: Math.min(5, Math.max(0, Math.round(toNumber(trip.rating)))),
   photos: Array.isArray(trip.photos) ? trip.photos : [],
   notes: String(trip.notes || '').trim(),
-  createdAt: trip.createdAt || today(),
+  createdAt: trip.createdAt || '',
   updatedAt: trip.updatedAt || today(),
   syncStatus: trip.syncStatus || 'synced',
 });
@@ -154,6 +156,7 @@ export const updateTrip = async (userId, tripId, tripData) => {
     {
       ...existing,
       ...tripData,
+      createdAt: existing.createdAt,
       userId,
       location: {
         latitude: tripData.location?.latitude ?? existing.location?.latitude,

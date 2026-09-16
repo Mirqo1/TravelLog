@@ -1,6 +1,8 @@
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+
 const ratingText = (rating) => (rating ? `${'★'.repeat(rating)}${'☆'.repeat(Math.max(0, 5 - rating))}` : 'Bez hodnotenia');
 
 export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDelete }) {
@@ -10,6 +12,7 @@ export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDel
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <SafeAreaProvider><SafeAreaView style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>{trip.name}</Text>
         <Text style={styles.sectionTitle}>Lokalita</Text>
@@ -45,6 +48,7 @@ export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDel
           </Pressable>
         </View>
       </ScrollView>
+      </SafeAreaView></SafeAreaProvider>
     </Modal>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import MapView, { Heatmap, Marker, Circle, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Heatmap, Marker } from 'react-native-maps';
 import Constants from 'expo-constants';
 import AddPlaceModal from '../components/AddPlaceModal';
 import TripDetailsModal from '../components/TripDetailsModal';
@@ -31,9 +31,9 @@ export default function MapScreen() {
   });
 
   const handleMapPress = (event) => {
+    if (event.nativeEvent.action === 'marker-press') return;
     const coordinate = event.nativeEvent.coordinate;
     setSelectedCoordinate({ latitude: coordinate.latitude, longitude: coordinate.longitude });
-    setModalVisible(true);
   };
 
   const handleMapReady = () => {
@@ -67,6 +67,11 @@ export default function MapScreen() {
     try {
       const results = await searchPlaces(searchQuery);
       setSearchResult(results[0] || null);
+      if (results[0]) {
+        const coordinate = { latitude: Number(results[0].lat), longitude: Number(results[0].lng) };
+        setSelectedCoordinate({ ...coordinate, name: results[0].name });
+        mapRef.current?.animateToRegion({ ...coordinate, latitudeDelta: 0.08, longitudeDelta: 0.08 });
+      }
       if (!results[0]) {
         Alert.alert('Výsledok', 'Nenašli sa žiadne miesta.');
       }
@@ -169,7 +174,7 @@ export default function MapScreen() {
           Výsledok: {searchResult.name}, {searchResult.countryName}
         </Text>
       ) : (
-        <Text style={styles.searchHint}>Klikni na mapu pre nový výlet alebo otvor marker pre detail.</Text>
+        <Text style={styles.searchHint}>Vyber miesto na mape a stlač Pridať výlet. Značky otvoria uložené návštevy.</Text>
       )}
       {Platform.OS === 'android' && !hasGoogleMapsApiKey ? (
         <Text style={styles.apiKeyHint}>
@@ -184,6 +189,7 @@ export default function MapScreen() {
         style={styles.map}
         initialRegion={initialRegion}
         onPress={handleMapPress}
+        onPoiClick={(event) => setSelectedCoordinate({ ...event.nativeEvent.coordinate, name: event.nativeEvent.name })}
         provider={mapProvider}
         onMapReady={handleMapReady}
         onError={handleMapError}
@@ -192,44 +198,20 @@ export default function MapScreen() {
       >
         {Heatmap && heatPoints.length ? <Heatmap points={heatPoints} radius={28} opacity={0.55} /> : null}
         
-        {/* TEST: Using Circles instead of Markers */}
         {tripMarkers.map((trip) => (
-          <Circle
-            key={trip.id}
-            center={{
-              latitude: trip.location.latitude,
-              longitude: trip.location.longitude,
-            }}
-            radius={1000}
-            fillColor="rgba(37, 99, 235, 0.3)"
-            strokeColor="rgba(37, 99, 235, 0.8)"
-            strokeWidth={2}
-          />
+          <Marker key={trip.id} coordinate={trip.location} title={trip.name}
+            onPress={(event) => { event.stopPropagation(); setSelectedTrip(trip); }} />
         ))}
-        
-        {selectedCoordinate ? (
-          <Circle
-            center={selectedCoordinate}
-            radius={500}
-            fillColor="rgba(37, 99, 235, 0.5)"
-            strokeColor="rgba(37, 99, 235, 1)"
-            strokeWidth={2}
-          />
-        ) : null}
-        
-        {searchMarker ? (
-          <Circle
-            center={searchMarker}
-            radius={500}
-            fillColor="rgba(22, 163, 74, 0.5)"
-            strokeColor="rgba(22, 163, 74, 1)"
-            strokeWidth={2}
-          />
-        ) : null}
+        {selectedCoordinate ? <Marker coordinate={selectedCoordinate} pinColor="#16a34a" /> : null}
+        {searchMarker ? <Marker coordinate={searchMarker} title={searchResult.name}
+          onPress={(event) => {
+            event.stopPropagation();
+            setSelectedCoordinate({ ...searchMarker, name: searchResult.name });
+          }} /> : null}
       </MapView>
       <View style={styles.actions}>
         <Pressable style={styles.quickButton} onPress={() => setModalVisible(true)}>
-          <Text style={styles.quickButtonText}>Pridať nový výlet</Text>
+          <Text style={styles.quickButtonText}>{selectedCoordinate ? 'Pridať výlet na vybranom mieste' : 'Pridať nový výlet'}</Text>
         </Pressable>
       </View>
       <AddPlaceModal

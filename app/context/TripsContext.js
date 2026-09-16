@@ -2,9 +2,11 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { addTrip, deleteTrip, getTrips, getUserProfile, updateTrip } from '../services/tripsService';
 import { useAuth } from './AuthContext';
 
+import { compareTripsNewest } from '../utils/tripOrder';
+
 const TripsContext = createContext(null);
 
-const sortTrips = (trips) => [...trips].sort((left, right) => String(right.date).localeCompare(String(left.date)));
+const sortTrips = (trips) => [...trips].sort(compareTripsNewest);
 
 const buildStats = (trips) => {
   const totalTrips = trips.length;

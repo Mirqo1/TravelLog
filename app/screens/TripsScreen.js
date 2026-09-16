@@ -14,6 +14,8 @@ import PlaceListItem from '../components/PlaceListItem';
 import TripDetailsModal from '../components/TripDetailsModal';
 import { useTrips } from '../context/TripsContext';
 
+import { compareTripsNewest } from '../utils/tripOrder';
+
 const searchFieldValue = (trip, searchField) => {
   if (searchField === 'name') {
     return trip.name;
@@ -43,7 +45,7 @@ export default function TripsScreen() {
 
     result.sort((left, right) => {
       if (sortBy === 'oldest') {
-        return String(left.date).localeCompare(String(right.date));
+        return -compareTripsNewest(left, right);
       }
       if (sortBy === 'rating') {
         return Number(right.rating || 0) - Number(left.rating || 0);
@@ -51,7 +53,7 @@ export default function TripsScreen() {
       if (sortBy === 'location') {
         return String(left.locationName || '').localeCompare(String(right.locationName || ''));
       }
-      return String(right.date).localeCompare(String(left.date));
+      return compareTripsNewest(left, right);
     });
 
     return result;
@@ -96,6 +98,7 @@ export default function TripsScreen() {
         onChangeText={setSearch}
       />
 
+      <Text style={{ marginBottom: 6, color: '#4b5563' }}>Hľadať v poli</Text>
       <View style={styles.chipRow}>
         {[
           ['all', 'Všetko'],

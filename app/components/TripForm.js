@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -33,6 +33,9 @@ export default function TripForm({
   onCancel,
   isSubmitting = false,
 }) {
+  const submitLock = useRef(false);
+  const lastSelection = useRef(null);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(() => toDraft(initialValues));
 
   useEffect(() => {
@@ -41,10 +44,16 @@ export default function TripForm({
 
   useEffect(() => {
     if (externalLocation) {
+      const previous = lastSelection.current;
+      const samePosition = previous && previous.latitude === externalLocation.latitude && previous.longitude === externalLocation.longitude;
+      lastSelection.current = externalLocation;
       setForm((current) => ({
         ...current,
-        latitude: String(externalLocation.latitude),
-        longitude: String(externalLocation.longitude),
+        name: externalLocation.name && (!samePosition || previous.name !== externalLocation.name)
+          ? externalLocation.name : current.name,
+        locationName: samePosition ? current.locationName || externalLocation.locationName || '' : externalLocation.locationName ?? '',
+        latitude: samePosition ? current.latitude : String(externalLocation.latitude),
+        longitude: samePosition ? current.longitude : String(externalLocation.longitude),
       }));
     }
   }, [externalLocation]);
@@ -60,6 +69,9 @@ export default function TripForm({
   const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
   const handleSubmit = async () => {
+    if (submitLock.current || isSubmitting) return;
+    submitLock.current = true;
+    setSaving(true);
     try {
       const latitude = Number(form.latitude);
       const longitude = Number(form.longitude);
@@ -68,8 +80,12 @@ export default function TripForm({
         throw new Error('Názov výletu je povinný.');
       }
 
-      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      if (!form.latitude.trim() || !form.longitude.trim() || !Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
         throw new Error('Vyber platnú polohu.');
+      }
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(form.date) || !Number.isFinite(Date.parse(form.date)) || new Date(form.date).toISOString().slice(0, 10) !== form.date) {
+        throw new Error('Zadaj platný dátum vo formáte YYYY-MM-DD.');
       }
 
       await onSubmit({
@@ -80,10 +96,13 @@ export default function TripForm({
         date: form.date || today(),
         rating: form.rating,
         notes: form.notes.trim(),
-        photos: [],
+        photos: initialValues?.photos || [],
       });
     } catch (error) {
       Alert.alert('Formulár', error.message);
+    } finally {
+      submitLock.current = false;
+      setSaving(false);
     }
   };
 
@@ -156,12 +175,12 @@ export default function TripForm({
       <Text style={styles.helper}>Fotogaléria: placeholder pripravený pre budúce nahrávanie fotiek.</Text>
       <View style={styles.actions}>
         {onCancel ? (
-          <Pressable style={[styles.button, styles.secondary]} onPress={onCancel}>
+          <Pressable style={[styles.button, styles.secondary]} disabled={saving} onPress={onCancel}>
             <Text style={styles.secondaryText}>Zrušiť</Text>
           </Pressable>
         ) : null}
-        <Pressable style={[styles.button, styles.primary]} disabled={isSubmitting} onPress={handleSubmit}>
-          <Text style={styles.primaryText}>{isSubmitting ? 'Ukladám...' : submitLabel}</Text>
+        <Pressable style={[styles.button, styles.primary]} disabled={isSubmitting || saving} onPress={handleSubmit}>
+          <Text style={styles.primaryText}>{isSubmitting || saving ? 'Ukladám...' : submitLabel}</Text>
         </Pressable>
       </View>
     </View>

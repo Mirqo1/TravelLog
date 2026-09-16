@@ -32,3 +32,12 @@ export const searchPlaces = async (query) => {
     fcodeName: place.fcodeName,
   }));
 };
+
+export const findLocationName = async ({ latitude, longitude }) => {
+  const response = await geonamesClient.get('/findNearbyPlaceNameJSON', {
+    params: { lat: latitude, lng: longitude, username: geonamesUsername, style: 'FULL' },
+  });
+  const place = response.data?.geonames?.[0];
+  if (!place || response.data?.status) throw new Error('Lokalita nie je dostupná.');
+  return [place.name, place.countryName].filter(Boolean).join(', ');
+};
