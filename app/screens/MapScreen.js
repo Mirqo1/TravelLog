@@ -1,4 +1,6 @@
+import { theme } from '../theme';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useIsFocused } from '@react-navigation/native';
 import { Alert, Keyboard, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Heatmap, Marker } from 'react-native-maps';
@@ -7,11 +9,12 @@ import TripDetailsModal from '../components/TripDetailsModal';
 import MapTypeToggle from '../components/MapTypeToggle';
 import { useTrips } from '../context/TripsContext';
 import { searchPlaces } from '../services/placeSearchService';
-import { groupMarkers, modeForZoom, validLocation, zoomForRegion } from '../utils/mapVisits';
+import { countryMarkers, groupMarkers, modeForZoom, validLocation, zoomForRegion } from '../utils/mapVisits';
 
 const INITIAL_REGION = { latitude: 49, longitude: 17, latitudeDelta: 35, longitudeDelta: 55 };
 
 export default function MapScreen() {
+  const isFocused = useIsFocused();
   const { trips, addTrip, updateTrip, deleteTrip } = useTrips();
   const [region, setRegion] = useState(INITIAL_REGION);
   const [mapType, setMapType] = useState('standard');
@@ -32,6 +35,7 @@ export default function MapScreen() {
   const mode = modeForZoom(zoom);
   const heatPoints = useMemo(() => trips.filter((trip) => validLocation(trip.location))
     .map((trip) => ({ ...trip.location, weight: 1 })), [trips]);
+  const countryPins = useMemo(() => countryMarkers(trips), [trips]);
   const markers = useMemo(() => mode === 'countries' ? [] : groupMarkers(trips, region, zoom, mode === 'places'),
     [trips, region, zoom, mode]);
 
@@ -102,7 +106,7 @@ export default function MapScreen() {
       <Text style={styles.header}>Mapa návštev</Text>
       <MapTypeToggle value={mapType} onChange={setMapType} />
       <View style={styles.searchRow}>
-        <TextInput value={query} onChangeText={changeQuery} placeholder="Napr. kosice zoo"
+        <TextInput value={query} onChangeText={changeQuery} placeholder="Napr. Big Ben London"
           style={styles.input} returnKeyType="search" onSubmitEditing={handleSearch} />
         <Pressable style={styles.button} disabled={searching} onPress={handleSearch}>
           <Text style={styles.buttonText}>{searching ? 'Hľadám…' : 'Hľadať'}</Text>
@@ -130,15 +134,20 @@ export default function MapScreen() {
         </Pressable>
       </View> : null}
       <Text style={styles.hint}>{mode === 'countries'
-        ? 'Heat mapa návštev · priblíž pre jednotlivé miesta.'
+        ? 'Počet návštev v krajine · ťukni na číslo pre zoznam.'
         : mode === 'clusters' ? 'Heat mapa a skupiny miest · ťuknutím ich priblížiš.'
         : 'Heat mapa a návštevy · ťuknutím otvoríš detail.'}</Text>
       <View style={styles.mapContainer} onLayout={(event) => setMapWidth(event.nativeEvent.layout.width)}>
-        <MapView ref={mapRef} style={styles.map} initialRegion={INITIAL_REGION}
+        {isFocused ? <MapView key={mapType} ref={mapRef} style={styles.map} initialRegion={region}
           mapType={mapType}
           onRegionChangeComplete={setRegion} onPress={selectPoint}
           onPoiClick={(event) => setSelectedCoordinate({ ...event.nativeEvent.coordinate, name: event.nativeEvent.name })}>
           {heatPoints.length > 0 ? <Heatmap points={heatPoints} radius={28} opacity={0.55} /> : null}
+          {mode === 'countries' ? countryPins.map((group) => <Marker key={'country:' + group.country.code}
+            coordinate={group.coordinate} anchor={{ x: 0.5, y: 0.5 }}
+            onPress={(event) => { event.stopPropagation(); showGroup(group.country.name, group.trips); }}>
+            <View style={styles.cluster}><Text style={styles.clusterText}>{group.trips.length}</Text></View>
+          </Marker>) : null}
           {markers.map((group) => (
             <Marker key={mode + ':' + Math.floor(zoom) + ':' + group.key + ':' + group.trips.length}
               coordinate={group.coordinate} title={group.trips.length === 1 ? group.trips[0].name : undefined}
@@ -149,7 +158,7 @@ export default function MapScreen() {
             </Marker>
           ))}
           {selectedCoordinate ? <Marker coordinate={selectedCoordinate} pinColor="#16a34a" /> : null}
-        </MapView>
+        </MapView> : null}
       </View>
       {selectedCoordinate ? <Text numberOfLines={2} style={styles.hint}>Vybrané: {selectedCoordinate.name ||
         selectedCoordinate.latitude.toFixed(4) + ', ' + selectedCoordinate.longitude.toFixed(4)}</Text> : null}
@@ -183,23 +192,23 @@ export default function MapScreen() {
   );
 }
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, gap: 10, backgroundColor: '#f9fafb' },
-  header: { fontSize: 22, fontWeight: '700', color: '#111827' },
+  container: { flex: 1, padding: 16, gap: 10, backgroundColor: 'transparent' },
+  header: { fontSize: 22, fontWeight: '700', color: theme.text },
   searchRow: { flexDirection: 'row', gap: 8 },
-  input: { flex: 1, borderWidth: 1, borderColor: '#d1d5db', borderRadius: 10, paddingHorizontal: 12, backgroundColor: '#fff' },
-  button: { backgroundColor: '#2563eb', borderRadius: 10, padding: 13, alignItems: 'center', justifyContent: 'center' },
+  input: { flex: 1, borderWidth: 1, borderColor: theme.border, borderRadius: 10, paddingHorizontal: 12, backgroundColor: '#fff' },
+  button: { backgroundColor: theme.primary, borderRadius: 10, padding: 13, alignItems: 'center', justifyContent: 'center' },
   buttonText: { color: '#fff', fontWeight: '700', textAlign: 'center' },
-  hint: { color: '#4b5563', fontSize: 12 },
+  hint: { color: theme.muted, fontSize: 12 },
   mapContainer: { flex: 1, minHeight: 160 },
   map: { flex: 1 },
-  cluster: { minWidth: 42, height: 42, paddingHorizontal: 8, borderRadius: 21, backgroundColor: '#2563eb', borderWidth: 2, borderColor: '#fff', alignItems: 'center', justifyContent: 'center' },
+  cluster: { minWidth: 42, height: 42, paddingHorizontal: 8, borderRadius: 21, backgroundColor: theme.primary, borderWidth: 2, borderColor: '#fff', alignItems: 'center', justifyContent: 'center' },
   clusterText: { fontWeight: '700', color: '#fff', fontSize: 16 },
-  results: { flexShrink: 1, backgroundColor: '#fff', padding: 10, borderRadius: 10, gap: 8, borderWidth: 1, borderColor: '#e5e7eb' },
+  results: { flexShrink: 1, backgroundColor: '#fff', padding: 10, borderRadius: 10, gap: 8, borderWidth: 1, borderColor: theme.border },
   resultsHeader: { flexDirection: 'row', justifyContent: 'space-between' },
   resultList: { maxHeight: 180, flexShrink: 1 },
-  resultRow: { paddingVertical: 10, borderBottomWidth: 1, borderColor: '#e5e7eb', gap: 3 },
-  resultName: { fontWeight: '600', color: '#111827' },
-  resultLink: { color: '#2563eb', fontSize: 12 },
-  visitRow: { paddingVertical: 16, borderBottomWidth: 1, borderColor: '#e5e7eb', gap: 4 },
+  resultRow: { paddingVertical: 10, borderBottomWidth: 1, borderColor: theme.border, gap: 3 },
+  resultName: { fontWeight: '600', color: theme.text },
+  resultLink: { color: theme.primary, fontSize: 12 },
+  visitRow: { paddingVertical: 16, borderBottomWidth: 1, borderColor: theme.border, gap: 4 },
   visitName: { fontWeight: '700', fontSize: 16 },
 });

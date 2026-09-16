@@ -1,3 +1,4 @@
+import { theme } from '../theme';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -17,32 +18,23 @@ import { useTrips } from '../context/TripsContext';
 
 import { compareTripsNewest } from '../utils/tripOrder';
 
-const searchFieldValue = (trip, searchField) => {
-  if (searchField === 'name') {
-    return trip.name;
-  }
-  if (searchField === 'location') {
-    return trip.locationName;
-  }
-  if (searchField === 'date') {
-    return trip.date;
-  }
-  return `${trip.name} ${trip.locationName} ${trip.date} ${trip.description}`;
-};
+const normalizeSearch = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 export default function TripsScreen() {
   const { trips, loading, refreshing, refreshTrips, updateTrip, deleteTrip } = useTrips();
   const [search, setSearch] = useState('');
-  const [searchField, setSearchField] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [editingTrip, setEditingTrip] = useState(null);
 
   const filteredTrips = useMemo(() => {
-    const loweredSearch = search.trim().toLowerCase();
+    const loweredSearch = normalizeSearch(search.trim());
     const result = !loweredSearch
       ? [...trips]
-      : trips.filter((trip) => searchFieldValue(trip, searchField).toLowerCase().includes(loweredSearch));
+      : trips.filter((trip) => {
+        const text = normalizeSearch([trip.name, trip.locationName, trip.date, trip.description, trip.notes].filter(Boolean).join(' '));
+        return loweredSearch.split(/\s+/).every((word) => text.includes(word));
+      });
 
     result.sort((left, right) => {
       if (sortBy === 'oldest') {
@@ -58,7 +50,7 @@ export default function TripsScreen() {
     });
 
     return result;
-  }, [search, searchField, sortBy, trips]);
+  }, [search, sortBy, trips]);
 
   const requestDelete = (trip) => {
     Alert.alert('Zmazať výlet?', `Naozaj chceš vymazať ${trip.name}?`, [
@@ -67,7 +59,8 @@ export default function TripsScreen() {
         text: 'Zmazať',
         style: 'destructive',
         onPress: async () => {
-          await deleteTrip(trip.id);
+          try { await deleteTrip(trip.id); }
+          catch (error) { Alert.alert('Vymazanie zlyhalo', error.message); return; }
           if (selectedTrip?.id === trip.id) {
             setSelectedTrip(null);
           }
@@ -95,29 +88,12 @@ export default function TripsScreen() {
       <AddVisitButton />
       <TextInput
         style={styles.searchInput}
-        placeholder="Vyhľadaj výlet"
+        placeholder="Hľadať názov, lokalitu alebo dátum"
         value={search}
         onChangeText={setSearch}
       />
 
-      <Text style={{ marginBottom: 6, color: '#4b5563' }}>Hľadať v poli</Text>
-      <View style={styles.chipRow}>
-        {[
-          ['all', 'Všetko'],
-          ['name', 'Názov'],
-          ['location', 'Lokalita'],
-          ['date', 'Dátum'],
-        ].map(([value, label]) => (
-          <Text
-            key={value}
-            onPress={() => setSearchField(value)}
-            style={[styles.chip, searchField === value && styles.chipActive]}
-          >
-            {label}
-          </Text>
-        ))}
-      </View>
-
+      <Text style={{ marginBottom: 6, color: theme.muted }}>Zoradiť podľa</Text>
       <View style={styles.chipRow}>
         {[
           ['newest', 'Najnovšie'],
@@ -146,7 +122,7 @@ export default function TripsScreen() {
             onDelete={() => requestDelete(item)}
           />
         )}
-        ListEmptyComponent={<Text style={styles.empty}>Zatiaľ nemáš žiadne výlety.</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>{search.trim() ? 'Žiadna návšteva nezodpovedá hľadaniu.' : 'Zatiaľ nemáš žiadne výlety.'}</Text>}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshTrips} />}
         contentContainerStyle={styles.listContent}
       />
@@ -183,17 +159,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: '#f9fafb',
+    backgroundColor: 'transparent',
   },
   header: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 12,
   },
   searchInput: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: theme.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -207,15 +183,15 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   chip: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: theme.border,
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    color: '#111827',
+    color: theme.text,
   },
   chipActive: {
-    backgroundColor: '#bfdbfe',
-    color: '#1d4ed8',
+    backgroundColor: theme.primarySoft,
+    color: theme.primary,
     fontWeight: '700',
   },
   listContent: {
@@ -224,7 +200,7 @@ const styles = StyleSheet.create({
   },
   empty: {
     textAlign: 'center',
-    color: '#6b7280',
+    color: theme.muted,
     marginTop: 40,
   },
 });

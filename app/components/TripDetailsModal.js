@@ -1,5 +1,8 @@
+import { theme } from '../theme';
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
+import { validLocation } from '../utils/mapVisits';
 
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
@@ -20,6 +23,14 @@ export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDel
         <Text style={styles.text}>
           {trip.location?.latitude}, {trip.location?.longitude}
         </Text>
+        {visible && validLocation(trip.location) ? <View style={{ height: 180, borderRadius: 16, overflow: 'hidden' }}>
+          <MapView key={trip.id} style={{ flex: 1 }}
+            initialRegion={{ ...trip.location, latitudeDelta: 0.025, longitudeDelta: 0.025 }}
+            scrollEnabled={false} zoomEnabled={false} rotateEnabled={false} pitchEnabled={false}
+            toolbarEnabled={false} zoomControlEnabled={false}>
+            <Marker coordinate={trip.location} />
+          </MapView>
+        </View> : null}
 
         <Text style={styles.sectionTitle}>Dátum</Text>
         <Text style={styles.text}>{trip.date}</Text>
@@ -56,25 +67,25 @@ export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDel
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    backgroundColor: '#f9fafb',
+    backgroundColor: theme.background,
     gap: 10,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
   },
   sectionTitle: {
     marginTop: 8,
     fontWeight: '700',
-    color: '#1f2937',
+    color: theme.text,
   },
   text: {
-    color: '#374151',
+    color: theme.text,
     lineHeight: 22,
   },
   placeholder: {
-    color: '#6b7280',
+    color: theme.muted,
     fontStyle: 'italic',
   },
   actions: {
@@ -89,16 +100,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   secondary: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: theme.border,
   },
   edit: {
-    backgroundColor: '#2563eb',
+    backgroundColor: theme.primary,
   },
   delete: {
     backgroundColor: '#dc2626',
   },
   secondaryText: {
-    color: '#111827',
+    color: theme.text,
     fontWeight: '700',
   },
   primaryText: {

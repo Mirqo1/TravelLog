@@ -1,3 +1,4 @@
+import { theme } from '../theme';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
@@ -50,18 +51,18 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.border,
   },
   name: {
     fontSize: 16,
     fontWeight: '700',
   },
   meta: {
-    color: '#374151',
+    color: theme.text,
     marginTop: 2,
   },
   notes: {
-    color: '#4b5563',
+    color: theme.muted,
     marginTop: 6,
   },
   pending: {
@@ -80,7 +81,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   detailAction: {
-    backgroundColor: '#2563eb',
+    backgroundColor: theme.primary,
   },
   editAction: {
     backgroundColor: '#0f766e',

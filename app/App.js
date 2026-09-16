@@ -1,5 +1,7 @@
 import 'react-native-gesture-handler';
 import React from 'react';
+import { Image, StyleSheet } from 'react-native';
+import { theme } from './theme';
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -15,8 +17,9 @@ export default function App() {
       <AuthProvider>
         <TripsProvider>
           <NavigationContainer>
-            <StatusBar style="auto" />
-            <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: '#f9fafb' }}>
+            <StatusBar style="dark" />
+            <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: theme.background }}>
+              <Image source={require('../assets/contours.png')} pointerEvents="none" resizeMode="cover" style={StyleSheet.absoluteFill} />
               <Navigation />
             </SafeAreaView>
           </NavigationContainer>

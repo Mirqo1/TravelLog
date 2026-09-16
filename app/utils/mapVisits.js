@@ -62,6 +62,17 @@ export const summarizeCountries = (trips) => {
 };
 
 export const zoomForRegion = (region, width) => Math.log2(Math.max(1, width) * 360 / (256 * Math.max(0.00001, region.longitudeDelta)));
+// Anchor to a real visited point nearest the group's spherical mean. This
+// avoids pins in the ocean or on the opposite side of the date line.
+export const countryMarkers = (trips) => summarizeCountries(trips).groups.flatMap((group) => {
+  const points = group.trips.map((trip) => trip.location).filter(validLocation);
+  if (!points.length) return [];
+  const latitude = points.reduce((sum, p) => sum + p.latitude, 0) / points.length;
+  const longitude = Math.atan2(points.reduce((sum, p) => sum + Math.sin(p.longitude * Math.PI / 180), 0),
+    points.reduce((sum, p) => sum + Math.cos(p.longitude * Math.PI / 180), 0)) * 180 / Math.PI;
+  const score = (p) => (p.latitude - latitude) ** 2 + (((p.longitude - longitude + 540) % 360) - 180) ** 2;
+  return [{ ...group, coordinate: points.reduce((best, p) => score(p) < score(best) ? p : best) }];
+});
 export const modeForZoom = (zoom) => zoom < 5 ? 'countries' : zoom < 11 ? 'clusters' : 'places';
 export const shadeForCount = (count) => count >= 10 ? '#1e40af99' : count >= 5 ? '#2563eb88' : count >= 2 ? '#60a5fa88' : '#bfdbfeaa';
 

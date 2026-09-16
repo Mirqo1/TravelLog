@@ -1,3 +1,4 @@
+import { theme } from '../theme';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { applyLocationSelection } from '../utils/locationSelection';
@@ -190,17 +191,17 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.border,
     gap: 10,
   },
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: theme.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -218,12 +219,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   helper: {
-    color: '#6b7280',
+    color: theme.muted,
     fontSize: 13,
   },
   sectionLabel: {
     fontWeight: '600',
-    color: '#111827',
+    color: theme.text,
   },
   ratingRow: {
     gap: 8,
@@ -243,11 +244,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   ratingButtonActive: {
-    backgroundColor: '#2563eb',
-    borderColor: '#2563eb',
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   ratingText: {
-    color: '#2563eb',
+    color: theme.primary,
     fontWeight: '700',
   },
   ratingTextActive: {
@@ -266,13 +267,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   secondary: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: theme.border,
   },
   primary: {
-    backgroundColor: '#2563eb',
+    backgroundColor: theme.primary,
   },
   secondaryText: {
-    color: '#111827',
+    color: theme.text,
     fontWeight: '600',
   },
   primaryText: {

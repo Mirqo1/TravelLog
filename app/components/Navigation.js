@@ -1,3 +1,4 @@
+import { theme } from '../theme';
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -100,9 +101,11 @@ export default function Navigation() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
+        sceneStyle: { backgroundColor: 'transparent' },
+        tabBarStyle: { backgroundColor: theme.background, borderTopColor: theme.border },
         tabBarShowIcon: true,
-        tabBarActiveTintColor: '#2563eb',
-        tabBarInactiveTintColor: '#6b7280',
+        tabBarActiveTintColor: theme.primary,
+        tabBarInactiveTintColor: theme.muted,
         tabBarIcon: ({ color, size }) => (
           <MaterialIcons name={TAB_ICONS[route.name] || 'circle'} size={size} color={color} />
         ),
@@ -126,7 +129,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 16,
-    backgroundColor: '#f9fafb',
+    backgroundColor: theme.background,
   },
   authHeader: {
     fontSize: 26,
@@ -134,12 +137,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   authSubheader: {
-    color: '#4b5563',
+    color: theme.muted,
     marginBottom: 16,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: theme.border,
     borderRadius: 8,
     backgroundColor: '#fff',
     marginBottom: 10,
@@ -154,13 +157,13 @@ const styles = StyleSheet.create({
   authButton: {
     flex: 1,
     borderRadius: 8,
-    backgroundColor: '#2563eb',
+    backgroundColor: theme.primary,
     alignItems: 'center',
     paddingVertical: 10,
   },
   googleButton: {
     borderRadius: 8,
-    backgroundColor: '#111827',
+    backgroundColor: theme.text,
     alignItems: 'center',
     paddingVertical: 10,
     marginBottom: 10,
@@ -170,6 +173,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   message: {
-    color: '#4b5563',
+    color: theme.muted,
   },
 });

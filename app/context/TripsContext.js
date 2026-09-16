@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { addTrip, deleteTrip, getTrips, getUserProfile, updateTrip } from '../services/tripsService';
+import { addTrip, deleteTrip, getTrips, getUserProfile, updateTrip, restoreTripsBackup } from '../services/tripsService';
 import { useAuth } from './AuthContext';
 
 import { summarizeCountries } from '../utils/mapVisits';
@@ -127,8 +127,13 @@ export const TripsProvider = ({ children }) => {
       addTrip: createTrip,
       updateTrip: editTrip,
       deleteTrip: removeTrip,
+      restoreBackup: async (incoming) => {
+        if (!user?.uid) throw new Error('Musíš byť prihlásený.');
+        const restored = await restoreTripsBackup(user.uid, incoming);
+        setTrips(sortTrips(restored));
+      },
     }),
-    [createTrip, editTrip, error, loadTrips, loading, profile, refreshing, removeTrip, trips],
+    [createTrip, editTrip, error, loadTrips, loading, profile, refreshing, removeTrip, trips, user?.uid],
   );
 
   return <TripsContext.Provider value={value}>{children}</TripsContext.Provider>;

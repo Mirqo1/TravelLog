@@ -1,3 +1,4 @@
+import { theme } from '../theme';
 import React, { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
@@ -64,8 +65,8 @@ export default function TripEditor({ initialValues, coordinates, title = 'Nový 
   );
 }
 const styles = StyleSheet.create({
-  content: { padding: 16, gap: 14, paddingBottom: 24, backgroundColor: '#f9fafb' },
-  title: { fontSize: 24, fontWeight: '700', color: '#111827' },
-  hint: { color: '#4b5563', lineHeight: 20 },
-  mapCard: { overflow: 'hidden', borderRadius: 16, borderWidth: 1, borderColor: '#d1d5db' },
+  content: { padding: 16, gap: 14, paddingBottom: 24, backgroundColor: theme.background },
+  title: { fontSize: 24, fontWeight: '700', color: theme.text },
+  hint: { color: theme.muted, lineHeight: 20 },
+  mapCard: { overflow: 'hidden', borderRadius: 16, borderWidth: 1, borderColor: theme.border },
 });

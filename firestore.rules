@@ -2,13 +2,30 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid
+        && !request.resource.data.keys().hasAny(['isPremium', 'role', 'admin', 'plan']);
+      allow update: if request.auth != null && request.auth.uid == uid
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isPremium', 'role', 'admin', 'plan']);
+    }
+    match /users/{uid}/backups/{backupId} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && backupId == 'notebook'
+        && request.resource.data.keys().hasOnly(['version', 'revision', 'savedAt', 'trips'])
+        && request.resource.data.version == 1
+        && request.resource.data.revision is string
+        && request.resource.data.savedAt is string
+        && request.resource.data.trips is list;
+      allow delete: if request.auth != null && request.auth.uid == uid;
     }
 
     match /places/{placeId} {
       allow read: if request.auth != null && resource.data.userId == request.auth.uid;
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
   }
 }
