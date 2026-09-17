@@ -1,21 +1,17 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { addTrip, deleteTrip, getTrips, getUserProfile, updateTrip } from '../services/tripsService';
+import { addTrip, deleteTrip, getTrips, getUserProfile, updateTrip, restoreTripsBackup } from '../services/tripsService';
 import { useAuth } from './AuthContext';
+
+import { summarizeCountries } from '../utils/mapVisits';
+import { compareTripsNewest } from '../utils/tripOrder';
 
 const TripsContext = createContext(null);
 
-const sortTrips = (trips) => [...trips].sort((left, right) => String(right.date).localeCompare(String(left.date)));
+const sortTrips = (trips) => [...trips].sort(compareTripsNewest);
 
 const buildStats = (trips) => {
   const totalTrips = trips.length;
-  const countriesVisited = new Set(
-    trips
-      .map((trip) => {
-        const parts = String(trip.locationName || '').split(',');
-        return parts[parts.length - 1]?.trim();
-      })
-      .filter(Boolean),
-  ).size;
+  const countriesVisited = summarizeCountries(trips).groups.length;
   const averageRating = totalTrips
     ? (trips.reduce((total, trip) => total + Number(trip.rating || 0), 0) / totalTrips).toFixed(1)
     : '0.0';
@@ -131,8 +127,14 @@ export const TripsProvider = ({ children }) => {
       addTrip: createTrip,
       updateTrip: editTrip,
       deleteTrip: removeTrip,
+      restoreBackup: async (incoming) => {
+        if (!user?.uid) throw new Error('Musíš byť prihlásený.');
+        const restored = await restoreTripsBackup(user.uid, incoming);
+        setTrips(sortTrips(restored));
+        return restored;
+      },
     }),
-    [createTrip, editTrip, error, loadTrips, loading, profile, refreshing, removeTrip, trips],
+    [createTrip, editTrip, error, loadTrips, loading, profile, refreshing, removeTrip, trips, user?.uid],
   );
 
   return <TripsContext.Provider value={value}>{children}</TripsContext.Provider>;

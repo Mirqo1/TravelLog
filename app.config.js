@@ -50,6 +50,16 @@ module.exports = ({ config }) => {
 
   return {
     ...config,
+    icon: './assets/compass-icon.png',
+    android: {
+      ...config.android,
+      adaptiveIcon: {
+        foregroundImage: './assets/compass-foreground.png',
+        monochromeImage: './assets/compass-monochrome.png',
+        backgroundColor: '#F6F0E4',
+      },
+    },
+    splash: { image: './assets/compass-icon.png', resizeMode: 'contain', backgroundColor: '#F6F0E4' },
     plugins,
     extra: {
       ...config.extra,

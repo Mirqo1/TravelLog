@@ -1,335 +1,215 @@
-import React, { useMemo, useState, useRef } from 'react';
-import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import MapView, { Heatmap, Marker, Circle, PROVIDER_GOOGLE } from 'react-native-maps';
-import Constants from 'expo-constants';
+import { theme } from '../theme';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useIsFocused } from '@react-navigation/native';
+import { Alert, Keyboard, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import MapView, { Heatmap, Marker } from 'react-native-maps';
 import AddPlaceModal from '../components/AddPlaceModal';
 import TripDetailsModal from '../components/TripDetailsModal';
+import MapTypeToggle from '../components/MapTypeToggle';
 import { useTrips } from '../context/TripsContext';
-import { searchPlaces } from '../services/geonamesService';
+import { searchPlaces } from '../services/placeSearchService';
+import { countryMarkers, groupMarkers, stableModeForZoom, validLocation, zoomForRegion } from '../utils/mapVisits';
+
+const INITIAL_REGION = { latitude: 49, longitude: 17, latitudeDelta: 35, longitudeDelta: 55 };
 
 export default function MapScreen() {
+  const isFocused = useIsFocused();
   const { trips, addTrip, updateTrip, deleteTrip } = useTrips();
-  const [modalVisible, setModalVisible] = useState(false);
+  const [region, setRegion] = useState(INITIAL_REGION);
+  const [mapType, setMapType] = useState('standard');
+  const [mapWidth, setMapWidth] = useState(360);
   const [selectedCoordinate, setSelectedCoordinate] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResult, setSearchResult] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [editingTrip, setEditingTrip] = useState(null);
-  const [mapReady, setMapReady] = useState(false);
-  const [mapError, setMapError] = useState(null);
+  const [visitGroup, setVisitGroup] = useState(null);
+  const [query, setQuery] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState(null);
+  const [searchError, setSearchError] = useState('');
+  const searchRequest = useRef(null);
+  useEffect(() => () => searchRequest.current?.abort(), []);
   const mapRef = useRef(null);
+  const zoom = zoomForRegion(region, mapWidth);
+  const [mode, setMode] = useState('countries');
+  useEffect(() => setMode((previous) => stableModeForZoom(zoom, previous)), [zoom]);
+  const heatPoints = useMemo(() => trips.filter((trip) => validLocation(trip.location))
+    .map((trip) => ({ ...trip.location, weight: 1 })), [trips]);
+  const countryPins = useMemo(() => countryMarkers(trips), [trips]);
+  const markers = useMemo(() => mode === 'countries' ? [] : groupMarkers(trips, region, zoom, mode === 'places'),
+    [trips, region, zoom, mode]);
 
-  const googleMapsApiKey = Constants.expoConfig?.extra?.expo_public_google_maps_api_key;
-  const hasGoogleMapsApiKey = Boolean(googleMapsApiKey);
-
-  console.log('MapScreen render', {
-    hasGoogleMapsApiKey,
-    googleMapsApiKey: googleMapsApiKey ? 'SET' : 'NOT SET',
-    tripsCount: trips.length,
-    platform: Platform.OS,
-    mapReady,
-  });
-
-  const handleMapPress = (event) => {
-    const coordinate = event.nativeEvent.coordinate;
-    setSelectedCoordinate({ latitude: coordinate.latitude, longitude: coordinate.longitude });
-    setModalVisible(true);
-  };
-
-  const handleMapReady = () => {
-    console.log('MapView ready!');
-    setMapReady(true);
-    
-    // Fit to markers immediately when map is ready
-    if (mapRef.current && tripMarkers.length > 0) {
-      const coordinates = tripMarkers.map((trip) => ({
-        latitude: trip.location.latitude,
-        longitude: trip.location.longitude,
-      }));
-      
-      console.log('Fitting map to coordinates:', coordinates);
-      
-      setTimeout(() => {
-        mapRef.current?.fitToCoordinates(coordinates, {
-          edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
-          animated: true,
-        });
-      }, 500);
-    }
-  };
-
-  const handleMapError = (e) => {
-    console.error('MapView error:', e);
-    setMapError(e.toString());
-  };
-
-  const handleSearch = async () => {
-    try {
-      const results = await searchPlaces(searchQuery);
-      setSearchResult(results[0] || null);
-      if (!results[0]) {
-        Alert.alert('Výsledok', 'Nenašli sa žiadne miesta.');
-      }
-    } catch (error) {
-      Alert.alert('GeoNames chyba', error.message);
-    }
-  };
-
-  const handleSave = async (trip) => {
-    await addTrip(trip);
-    setModalVisible(false);
+  const showGroup = (title, visits) => {
     setSelectedCoordinate(null);
-    Alert.alert('Hotovo', 'Výlet bol uložený.');
+    setVisitGroup({ title, visits });
   };
-
-  const heatPoints = useMemo(
-    () =>
-      trips
-        .filter((trip) => Number.isFinite(trip.location?.latitude) && Number.isFinite(trip.location?.longitude))
-        .map((trip) => ({
-          latitude: trip.location.latitude,
-          longitude: trip.location.longitude,
-          weight: Math.max(1, Number(trip.rating || 1)),
-        })),
-    [trips],
-  );
-  const tripMarkers = useMemo(
-    () =>
-      trips.filter(
-        (trip) => Number.isFinite(trip.location?.latitude) && Number.isFinite(trip.location?.longitude),
-      ),
-    [trips],
-  );
-  const initialRegion = useMemo(() => {
-    if (!tripMarkers.length) {
-      return {
-        latitude: 48.669,
-        longitude: 19.699,
-        latitudeDelta: 12,
-        longitudeDelta: 12,
-      };
+  const handleCluster = (group) => {
+    if (group.trips.length === 1) { setSelectedTrip(group.trips[0]); return; }
+    const spread = Math.max(...group.trips.map((trip) => Math.max(
+      Math.abs(trip.location.latitude - group.coordinate.latitude),
+      Math.abs(trip.location.longitude - group.coordinate.longitude))));
+    if (mode === 'places' || spread < 0.0001) {
+      showGroup('Návštevy na tomto mieste', group.trips);
+      return;
     }
-
-    const latitudes = tripMarkers.map((trip) => trip.location.latitude);
-    const longitudes = tripMarkers.map((trip) => trip.location.longitude);
-    const minLatitude = Math.min(...latitudes);
-    const maxLatitude = Math.max(...latitudes);
-    const minLongitude = Math.min(...longitudes);
-    const maxLongitude = Math.max(...longitudes);
-
-    return {
-      latitude: (minLatitude + maxLatitude) / 2,
-      longitude: (minLongitude + maxLongitude) / 2,
-      latitudeDelta: Math.max(3, (maxLatitude - minLatitude) * 1.6),
-      longitudeDelta: Math.max(3, (maxLongitude - minLongitude) * 1.6),
-    };
-  }, [tripMarkers]);
-
-  console.log('MapScreen initialRegion:', initialRegion);
-  console.log('MapScreen tripMarkers count:', tripMarkers.length);
-
-  // Testing without PROVIDER_GOOGLE first
-  const mapProvider = undefined;
-  console.log('MapScreen mapProvider: undefined (testing default map)');
-
-  const searchMarker = searchResult
-    ? { latitude: Number(searchResult.lat), longitude: Number(searchResult.lng) }
-    : null;
-
-  const handleDelete = async () => {
-    Alert.alert('Zmazať výlet?', `Naozaj chceš vymazať ${selectedTrip.name}?`, [
+    mapRef.current?.animateToRegion({ ...group.coordinate,
+      latitudeDelta: Math.max(0.005, region.latitudeDelta / 3),
+      longitudeDelta: Math.max(0.005, region.longitudeDelta / 3) });
+  };
+  const selectPoint = (event) => {
+    if (event.nativeEvent.action === 'marker-press') return;
+    setSelectedCoordinate(event.nativeEvent.coordinate);
+  };
+  const handleSearch = async () => {
+    if (!query.trim() || searching) return;
+    searchRequest.current?.abort();
+    const controller = new AbortController();
+    searchRequest.current = controller;
+    setSearching(true);
+    setSearchError('');
+    setSearchResults(null);
+    Keyboard.dismiss();
+    try {
+      const results = await searchPlaces(query, region, controller.signal);
+      if (!controller.signal.aborted) setSearchResults(results);
+    } catch (error) { if (!controller.signal.aborted) setSearchError(error.message); }
+    finally { if (!controller.signal.aborted) setSearching(false); }
+  };
+  const changeQuery = (text) => {
+    searchRequest.current?.abort();
+    setSearching(false);
+    setQuery(text);
+    setSearchResults(null);
+    setSearchError('');
+  };
+  const chooseResult = (result) => {
+    setSelectedCoordinate(result);
+    setSearchResults(null);
+    Keyboard.dismiss();
+    mapRef.current?.animateToRegion({ latitude: result.latitude, longitude: result.longitude,
+      latitudeDelta: 0.025, longitudeDelta: 0.025 });
+  };
+  const handleDelete = () => {
+    if (!selectedTrip) return;
+    const trip = selectedTrip;
+    Alert.alert('Zmazať návštevu?', trip.name, [
       { text: 'Zrušiť', style: 'cancel' },
-      {
-        text: 'Zmazať',
-        style: 'destructive',
-        onPress: async () => {
-          await deleteTrip(selectedTrip.id);
-          setSelectedTrip(null);
-        },
-      },
+      { text: 'Zmazať', style: 'destructive', onPress: async () => {
+        try { await deleteTrip(trip.id); setSelectedTrip(null); }
+        catch (error) { Alert.alert('Vymazanie zlyhalo', error.message); }
+      } },
     ]);
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Map</Text>
+      <Text style={styles.header}>Mapa návštev</Text>
+      <MapTypeToggle value={mapType} onChange={setMapType} />
       <View style={styles.searchRow}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Vyhľadaj miesto"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        <Pressable style={styles.searchButton} onPress={handleSearch}>
-          <Text style={styles.searchButtonText}>Hľadať</Text>
+        <TextInput value={query} onChangeText={changeQuery} placeholder="Napr. Big Ben London"
+          style={styles.input} returnKeyType="search" onSubmitEditing={handleSearch} />
+        <Pressable style={styles.button} disabled={searching} onPress={handleSearch}>
+          <Text style={styles.buttonText}>{searching ? 'Hľadám…' : 'Hľadať'}</Text>
         </Pressable>
       </View>
-      {searchResult ? (
-        <Text style={styles.searchHint}>
-          Výsledok: {searchResult.name}, {searchResult.countryName}
-        </Text>
-      ) : (
-        <Text style={styles.searchHint}>Klikni na mapu pre nový výlet alebo otvor marker pre detail.</Text>
-      )}
-      {Platform.OS === 'android' && !hasGoogleMapsApiKey ? (
-        <Text style={styles.apiKeyHint}>
-          Google Maps API key nie je nastavený. Pre Android build nastav EXPO_PUBLIC_GOOGLE_MAPS_API_KEY.
-        </Text>
-      ) : null}
-      {mapError ? (
-        <Text style={styles.errorText}>Map Error: {mapError}</Text>
-      ) : null}
-      <MapView
-        ref={mapRef}
-        style={styles.map}
-        initialRegion={initialRegion}
-        onPress={handleMapPress}
-        provider={mapProvider}
-        onMapReady={handleMapReady}
-        onError={handleMapError}
-        scrollEnabled={true}
-        zoomEnabled={true}
-      >
-        {Heatmap && heatPoints.length ? <Heatmap points={heatPoints} radius={28} opacity={0.55} /> : null}
-        
-        {/* TEST: Using Circles instead of Markers */}
-        {tripMarkers.map((trip) => (
-          <Circle
-            key={trip.id}
-            center={{
-              latitude: trip.location.latitude,
-              longitude: trip.location.longitude,
-            }}
-            radius={1000}
-            fillColor="rgba(37, 99, 235, 0.3)"
-            strokeColor="rgba(37, 99, 235, 0.8)"
-            strokeWidth={2}
-          />
-        ))}
-        
-        {selectedCoordinate ? (
-          <Circle
-            center={selectedCoordinate}
-            radius={500}
-            fillColor="rgba(37, 99, 235, 0.5)"
-            strokeColor="rgba(37, 99, 235, 1)"
-            strokeWidth={2}
-          />
-        ) : null}
-        
-        {searchMarker ? (
-          <Circle
-            center={searchMarker}
-            radius={500}
-            fillColor="rgba(22, 163, 74, 0.5)"
-            strokeColor="rgba(22, 163, 74, 1)"
-            strokeWidth={2}
-          />
-        ) : null}
-      </MapView>
-      <View style={styles.actions}>
-        <Pressable style={styles.quickButton} onPress={() => setModalVisible(true)}>
-          <Text style={styles.quickButtonText}>Pridať nový výlet</Text>
+      {searchError ? <Text accessibilityRole="alert" style={styles.hint}>{searchError}</Text> : null}
+      {searchResults !== null ? <View style={styles.results}>
+        <View style={styles.resultsHeader}>
+          <Text style={styles.hint}>{searchResults.length ? 'Vyber miesto' : 'Nenašli sa žiadne miesta.'}</Text>
+          <Pressable onPress={() => setSearchResults(null)} accessibilityLabel="Zavrieť výsledky" hitSlop={8}>
+            <Text style={styles.resultLink}>Zavrieť</Text>
+          </Pressable>
+        </View>
+        <ScrollView style={styles.resultList} keyboardShouldPersistTaps="handled">
+          {searchResults.map((result) => <Pressable key={result.id} style={styles.resultRow}
+            accessibilityRole="button" onPress={() => chooseResult(result)}>
+            <Text style={styles.resultName}>{result.name}</Text>
+            <Text style={styles.hint}>{result.locationName || `${result.latitude.toFixed(4)}, ${result.longitude.toFixed(4)}`}</Text>
+          </Pressable>)}
+        </ScrollView>
+        <Text style={styles.hint}>Chýba tvoje miesto? Doplň mesto alebo presnejší názov.</Text>
+        <Pressable accessibilityRole="link" onPress={() => Linking.openURL('https://www.openstreetmap.org/copyright')
+          .catch(() => Alert.alert('Odkaz', 'https://www.openstreetmap.org/copyright'))}>
+          <Text style={styles.resultLink}>Vyhľadávanie Photon · © OpenStreetMap contributors</Text>
         </Pressable>
+      </View> : null}
+      <Text style={styles.hint}>{mode === 'countries'
+        ? 'Počet návštev v krajine · ťukni na číslo pre zoznam.'
+        : mode === 'clusters' ? 'Heat mapa a skupiny miest · ťuknutím ich priblížiš.'
+        : 'Heat mapa a návštevy · ťuknutím otvoríš detail.'}</Text>
+      <View style={styles.mapContainer} onLayout={(event) => setMapWidth(event.nativeEvent.layout.width)}>
+        {isFocused ? <MapView ref={mapRef} style={styles.map} initialRegion={region}
+          mapType={mapType}
+          onRegionChangeComplete={setRegion} onPress={selectPoint}
+          onPoiClick={(event) => setSelectedCoordinate({ ...event.nativeEvent.coordinate, name: event.nativeEvent.name })}>
+          {heatPoints.length > 0 ? <Heatmap points={heatPoints} radius={28} opacity={0.55} /> : null}
+          {mode === 'countries' ? countryPins.map((group) => <Marker key={'country:' + group.country.code}
+            coordinate={group.coordinate} anchor={{ x: 0.5, y: 0.5 }}
+            onPress={(event) => { event.stopPropagation(); showGroup(group.country.name, group.trips); }}>
+            <View style={styles.cluster}><Text style={styles.clusterText}>{group.trips.length}</Text></View>
+          </Marker>) : null}
+          {markers.map((group) => (
+            <Marker key={'visits:' + group.trips.map((trip) => trip.id).sort().join('|')}
+              coordinate={group.coordinate} title={group.trips.length === 1 ? group.trips[0].name : undefined}
+              onPress={(event) => { event.stopPropagation(); handleCluster(group); }}>
+              {group.trips.length > 1 ? <View style={styles.cluster}>
+                <Text style={styles.clusterText}>{group.trips.length}</Text>
+              </View> : null}
+            </Marker>
+          ))}
+          {selectedCoordinate ? <Marker coordinate={selectedCoordinate} pinColor="#16a34a" /> : null}
+        </MapView> : null}
       </View>
-      <AddPlaceModal
-        visible={modalVisible}
-        coordinates={selectedCoordinate}
-        onClose={() => {
-          setModalVisible(false);
-          setSelectedCoordinate(null);
-        }}
-        onSave={handleSave}
-      />
-      <AddPlaceModal
-        visible={Boolean(editingTrip)}
-        initialTrip={editingTrip}
-        onClose={() => setEditingTrip(null)}
-        onSave={async (trip) => {
-          await updateTrip(editingTrip.id, trip);
-          setEditingTrip(null);
-        }}
-        title="Upraviť výlet"
-        submitLabel="Uložiť zmeny"
-      />
-      <TripDetailsModal
-        visible={Boolean(selectedTrip)}
-        trip={selectedTrip}
-        onClose={() => setSelectedTrip(null)}
-        onEdit={() => {
-          setEditingTrip(selectedTrip);
-          setSelectedTrip(null);
-        }}
-        onDelete={handleDelete}
-      />
+      {selectedCoordinate ? <Text numberOfLines={2} style={styles.hint}>Vybrané: {selectedCoordinate.name ||
+        selectedCoordinate.latitude.toFixed(4) + ', ' + selectedCoordinate.longitude.toFixed(4)}</Text> : null}
+      <Pressable style={styles.button} onPress={() => setModalVisible(true)}>
+        <Text style={styles.buttonText}>+ Pridať návštevu{selectedCoordinate ? ' na vybranom mieste' : ''}</Text>
+      </Pressable>
+      <AddPlaceModal visible={modalVisible} title="Pridať návštevu" coordinates={selectedCoordinate}
+        onClose={() => setModalVisible(false)} onSave={async (trip) => {
+          await addTrip(trip); setModalVisible(false); setSelectedCoordinate(null);
+          Alert.alert('Hotovo', 'Návšteva bola uložená.');
+        }} />
+      <AddPlaceModal visible={Boolean(editingTrip)} initialTrip={editingTrip} title="Upraviť návštevu"
+        submitLabel="Uložiť zmeny" onClose={() => setEditingTrip(null)}
+        onSave={async (trip) => { await updateTrip(editingTrip.id, trip); setEditingTrip(null); }} />
+      <TripDetailsModal visible={Boolean(selectedTrip)} trip={selectedTrip} onClose={() => setSelectedTrip(null)}
+        onEdit={() => { setEditingTrip(selectedTrip); setSelectedTrip(null); }} onDelete={handleDelete} />
+      <Modal visible={Boolean(visitGroup)} animationType="slide" onRequestClose={() => setVisitGroup(null)}>
+        <SafeAreaProvider><SafeAreaView style={styles.container}>
+          <Text style={styles.header}>{visitGroup?.title}</Text>
+          <Text style={styles.hint}>Počet návštev: {visitGroup?.visits.length || 0}</Text>
+          <ScrollView style={{ flex: 1 }}>
+            {visitGroup?.visits.map((trip) => <Pressable key={trip.id} style={styles.visitRow}
+              onPress={() => { setVisitGroup(null); setSelectedTrip(trip); }}>
+              <Text style={styles.visitName}>{trip.name}</Text><Text>{trip.date} · {trip.locationName}</Text>
+            </Pressable>)}
+          </ScrollView>
+          <Pressable style={styles.button} onPress={() => setVisitGroup(null)}><Text style={styles.buttonText}>Zavrieť</Text></Pressable>
+        </SafeAreaView></SafeAreaProvider>
+      </Modal>
     </View>
   );
 }
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: '#f9fafb',
-  },
-  header: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 10,
-  },
-  searchRow: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
-  },
-  searchInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: '#fff',
-  },
-  searchButton: {
-    backgroundColor: '#2563eb',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  searchButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  searchHint: {
-    marginTop: 8,
-    marginBottom: 10,
-    color: '#4b5563',
-  },
-  apiKeyHint: {
-    marginBottom: 10,
-    color: '#b45309',
-  },
-  errorText: {
-    marginBottom: 10,
-    color: '#dc2626',
-    fontWeight: '600',
-  },
-  map: {
-    flex: 1,
-    borderRadius: 12,
-  },
-  actions: {
-    marginTop: 10,
-  },
-  quickButton: {
-    backgroundColor: '#2563eb',
-    borderRadius: 10,
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  quickButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-  },
+  container: { flex: 1, padding: 16, gap: 10, backgroundColor: 'transparent' },
+  header: { fontSize: 22, fontWeight: '700', color: theme.text },
+  searchRow: { flexDirection: 'row', gap: 8 },
+  input: { flex: 1, borderWidth: 1, borderColor: theme.border, borderRadius: 10, paddingHorizontal: 12, backgroundColor: '#fff' },
+  button: { backgroundColor: theme.primary, borderRadius: 10, padding: 13, alignItems: 'center', justifyContent: 'center' },
+  buttonText: { color: '#fff', fontWeight: '700', textAlign: 'center' },
+  hint: { color: theme.muted, fontSize: 12 },
+  mapContainer: { flex: 1, minHeight: 160 },
+  map: { flex: 1 },
+  cluster: { minWidth: 42, height: 42, paddingHorizontal: 8, borderRadius: 21, backgroundColor: theme.primary, borderWidth: 2, borderColor: '#fff', alignItems: 'center', justifyContent: 'center' },
+  clusterText: { fontWeight: '700', color: '#fff', fontSize: 16 },
+  results: { flexShrink: 1, backgroundColor: '#fff', padding: 10, borderRadius: 10, gap: 8, borderWidth: 1, borderColor: theme.border },
+  resultsHeader: { flexDirection: 'row', justifyContent: 'space-between' },
+  resultList: { maxHeight: 180, flexShrink: 1 },
+  resultRow: { paddingVertical: 10, borderBottomWidth: 1, borderColor: theme.border, gap: 3 },
+  resultName: { fontWeight: '600', color: theme.text },
+  resultLink: { color: theme.primary, fontSize: 12 },
+  visitRow: { paddingVertical: 16, borderBottomWidth: 1, borderColor: theme.border, gap: 4 },
+  visitName: { fontWeight: '700', fontSize: 16 },
 });

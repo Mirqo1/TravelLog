@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { auth, loginWithEmail, logout, onAuthStateChanged, registerWithEmail, signInWithGoogleIdToken } from '../services/authService';
+import { auth, loginWithEmail, logout, onAuthStateChanged, registerWithEmail, signInWithGoogleIdToken, updateDisplayName } from '../services/authService';
 
 const AuthContext = createContext(null);
 
@@ -24,6 +24,7 @@ export const AuthProvider = ({ children }) => {
       registerWithEmail,
       signInWithGoogleIdToken,
       logout,
+      updateDisplayName,
     }),
     [user, loading],
   );

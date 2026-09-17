@@ -1,5 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { theme } from '../theme';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { applyLocationSelection } from '../utils/locationSelection';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -7,6 +9,7 @@ const toDraft = (trip = {}) => ({
   name: trip.name || '',
   description: trip.description || '',
   locationName: trip.locationName || '',
+  countryCode: trip.countryCode || '',
   latitude:
     trip.location?.latitude === 0 || trip.location?.latitude
       ? String(trip.location.latitude)
@@ -33,6 +36,9 @@ export default function TripForm({
   onCancel,
   isSubmitting = false,
 }) {
+  const submitLock = useRef(false);
+  const lastSelection = useRef(null);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(() => toDraft(initialValues));
 
   useEffect(() => {
@@ -41,11 +47,9 @@ export default function TripForm({
 
   useEffect(() => {
     if (externalLocation) {
-      setForm((current) => ({
-        ...current,
-        latitude: String(externalLocation.latitude),
-        longitude: String(externalLocation.longitude),
-      }));
+      const previous = lastSelection.current;
+      lastSelection.current = externalLocation;
+      setForm((current) => applyLocationSelection(current, previous, externalLocation));
     }
   }, [externalLocation]);
 
@@ -57,9 +61,14 @@ export default function TripForm({
     return `Lat: ${form.latitude}, Lng: ${form.longitude}`;
   }, [form.latitude, form.longitude]);
 
-  const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+  const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value,
+    ...(['latitude', 'longitude', 'locationName'].includes(field) ? { countryCode: '' } : {}),
+  }));
 
   const handleSubmit = async () => {
+    if (submitLock.current || isSubmitting) return;
+    submitLock.current = true;
+    setSaving(true);
     try {
       const latitude = Number(form.latitude);
       const longitude = Number(form.longitude);
@@ -68,22 +77,30 @@ export default function TripForm({
         throw new Error('Názov výletu je povinný.');
       }
 
-      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      if (!form.latitude.trim() || !form.longitude.trim() || !Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
         throw new Error('Vyber platnú polohu.');
+      }
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(form.date) || !Number.isFinite(Date.parse(form.date)) || new Date(form.date).toISOString().slice(0, 10) !== form.date) {
+        throw new Error('Zadaj platný dátum vo formáte YYYY-MM-DD.');
       }
 
       await onSubmit({
         name: form.name.trim(),
         description: form.description.trim(),
         locationName: form.locationName.trim(),
+        countryCode: form.countryCode,
         location: { latitude, longitude },
         date: form.date || today(),
         rating: form.rating,
         notes: form.notes.trim(),
-        photos: [],
+        photos: initialValues?.photos || [],
       });
     } catch (error) {
       Alert.alert('Formulár', error.message);
+    } finally {
+      submitLock.current = false;
+      setSaving(false);
     }
   };
 
@@ -156,12 +173,12 @@ export default function TripForm({
       <Text style={styles.helper}>Fotogaléria: placeholder pripravený pre budúce nahrávanie fotiek.</Text>
       <View style={styles.actions}>
         {onCancel ? (
-          <Pressable style={[styles.button, styles.secondary]} onPress={onCancel}>
+          <Pressable style={[styles.button, styles.secondary]} disabled={saving} onPress={onCancel}>
             <Text style={styles.secondaryText}>Zrušiť</Text>
           </Pressable>
         ) : null}
-        <Pressable style={[styles.button, styles.primary]} disabled={isSubmitting} onPress={handleSubmit}>
-          <Text style={styles.primaryText}>{isSubmitting ? 'Ukladám...' : submitLabel}</Text>
+        <Pressable style={[styles.button, styles.primary]} disabled={isSubmitting || saving} onPress={handleSubmit}>
+          <Text style={styles.primaryText}>{isSubmitting || saving ? 'Ukladám...' : submitLabel}</Text>
         </Pressable>
       </View>
     </View>
@@ -174,17 +191,17 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.border,
     gap: 10,
   },
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: theme.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -202,12 +219,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   helper: {
-    color: '#6b7280',
+    color: theme.muted,
     fontSize: 13,
   },
   sectionLabel: {
     fontWeight: '600',
-    color: '#111827',
+    color: theme.text,
   },
   ratingRow: {
     gap: 8,
@@ -227,11 +244,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   ratingButtonActive: {
-    backgroundColor: '#2563eb',
-    borderColor: '#2563eb',
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   ratingText: {
-    color: '#2563eb',
+    color: theme.primary,
     fontWeight: '700',
   },
   ratingTextActive: {
@@ -250,13 +267,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   secondary: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: theme.border,
   },
   primary: {
-    backgroundColor: '#2563eb',
+    backgroundColor: theme.primary,
   },
   secondaryText: {
-    color: '#111827',
+    color: theme.text,
     fontWeight: '600',
   },
   primaryText: {

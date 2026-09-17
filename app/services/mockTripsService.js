@@ -1,11 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { compareTripsNewest } from '../utils/tripOrder';
+import { mergeBackup } from '../utils/backup';
+
 const TRIPS_STORAGE_PREFIX = 'travellog/mock-trips/';
 const PROFILE_STORAGE_PREFIX = 'travellog/mock-profile/';
+const writes = new Map();
+const exclusive = (userId, action) => {
+  const next = (writes.get(userId) || Promise.resolve()).catch(() => {}).then(action);
+  writes.set(userId, next);
+  next.finally(() => { if (writes.get(userId) === next) writes.delete(userId); }).catch(() => {});
+  return next;
+};
 
 const today = () => new Date().toISOString();
 const todayDate = () => today().slice(0, 10);
-const byDateDesc = (left, right) => String(right.date || '').localeCompare(String(left.date || ''));
+const byDateDesc = compareTripsNewest;
 
 const toNumber = (value) => {
   const parsed = Number(value);
@@ -18,6 +28,7 @@ const normalizeTrip = (trip = {}, id = trip.id) => ({
   name: String(trip.name || '').trim(),
   description: String(trip.description || '').trim(),
   locationName: String(trip.locationName || '').trim(),
+  countryCode: String(trip.countryCode || '').trim().toUpperCase(),
   location: {
     latitude: toNumber(trip.location?.latitude ?? trip.latitude),
     longitude: toNumber(trip.location?.longitude ?? trip.longitude),
@@ -26,7 +37,7 @@ const normalizeTrip = (trip = {}, id = trip.id) => ({
   rating: Math.min(5, Math.max(0, Math.round(toNumber(trip.rating)))),
   photos: Array.isArray(trip.photos) ? trip.photos : [],
   notes: String(trip.notes || '').trim(),
-  createdAt: trip.createdAt || today(),
+  createdAt: trip.createdAt || '',
   updatedAt: trip.updatedAt || today(),
   syncStatus: trip.syncStatus || 'synced',
 });
@@ -101,7 +112,7 @@ const profileKey = (userId) => `${PROFILE_STORAGE_PREFIX}${userId}`;
 const readTrips = async (userId) => {
   const raw = await AsyncStorage.getItem(tripsKey(userId));
   if (!raw) {
-    const seeded = sampleTrips(userId);
+    const seeded = [];
     await AsyncStorage.setItem(tripsKey(userId), JSON.stringify(seeded));
     return seeded;
   }
@@ -109,9 +120,7 @@ const readTrips = async (userId) => {
   try {
     return JSON.parse(raw).map((trip) => normalizeTrip(trip, trip.id));
   } catch (error) {
-    const seeded = sampleTrips(userId);
-    await AsyncStorage.setItem(tripsKey(userId), JSON.stringify(seeded));
-    return seeded;
+    throw new Error('Uložené návštevy sa nepodarilo načítať. Pôvodné dáta zostali zachované.');
   }
 };
 
@@ -121,12 +130,19 @@ const saveTrips = async (userId, trips) => {
   return normalized;
 };
 
-export const getTrips = async (userId) => {
+export const getTrips = (userId) => exclusive(userId, async () => {
   const trips = await readTrips(userId);
   return [...trips].sort(byDateDesc);
-};
+});
 
-export const addTrip = async (userId, tripData) => {
+export const restoreTripsBackup = (userId, incoming) => exclusive(userId, async () => {
+  const current = await readTrips(userId);
+  // Keep a pre-restore copy in case a later release changes merge behaviour.
+  await AsyncStorage.setItem(`${tripsKey(userId)}/before-restore`, JSON.stringify(current));
+  return saveTrips(userId, mergeBackup(current, incoming, userId));
+});
+
+export const addTrip = (userId, tripData) => exclusive(userId, async () => {
   const trips = await readTrips(userId);
   const created = normalizeTrip(
     {
@@ -136,13 +152,13 @@ export const addTrip = async (userId, tripData) => {
       updatedAt: today(),
       syncStatus: 'synced',
     },
-    `mock-${Date.now()}`,
+    `mock-${Date.now()}-${Math.random().toString(36).slice(2)}`,
   );
   await saveTrips(userId, [...trips, created]);
   return created;
-};
+});
 
-export const updateTrip = async (userId, tripId, tripData) => {
+export const updateTrip = (userId, tripId, tripData) => exclusive(userId, async () => {
   const trips = await readTrips(userId);
   const existing = trips.find((trip) => trip.id === tripId);
 
@@ -154,6 +170,7 @@ export const updateTrip = async (userId, tripId, tripData) => {
     {
       ...existing,
       ...tripData,
+      createdAt: existing.createdAt,
       userId,
       location: {
         latitude: tripData.location?.latitude ?? existing.location?.latitude,
@@ -170,15 +187,15 @@ export const updateTrip = async (userId, tripId, tripData) => {
     trips.map((trip) => (trip.id === tripId ? updated : trip)),
   );
   return updated;
-};
+});
 
-export const deleteTrip = async (userId, tripId) => {
+export const deleteTrip = (userId, tripId) => exclusive(userId, async () => {
   const trips = await readTrips(userId);
   await saveTrips(
     userId,
     trips.filter((trip) => trip.id !== tripId),
   );
-};
+});
 
 export const getUserProfile = async (userId) => {
   const raw = await AsyncStorage.getItem(profileKey(userId));
