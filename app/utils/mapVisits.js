@@ -1,4 +1,5 @@
 import encodedCountries from '../data/countries.json';
+import countryLabelPoints from '../data/countryLabelPoints.json';
 
 // Delta-encoded [longitude, latitude], precision 1e-4 degrees.
 export const decodeRing = (encoded) => {
@@ -62,9 +63,11 @@ export const summarizeCountries = (trips) => {
 };
 
 export const zoomForRegion = (region, width) => Math.log2(Math.max(1, width) * 360 / (256 * Math.max(0.00001, region.longitudeDelta)));
-// Anchor to a real visited point nearest the group's spherical mean. This
-// avoids pins in the ocean or on the opposite side of the date line.
+// Fixed Natural Earth label points keep overview counts away from border visits.
+// A real visited point is the fallback if label data is missing.
 export const countryMarkers = (trips) => summarizeCountries(trips).groups.flatMap((group) => {
+  const center = countryLabelPoints[group.country.name];
+  if (validLocation(center)) return [{ ...group, coordinate: center }];
   const points = group.trips.map((trip) => trip.location).filter(validLocation);
   if (!points.length) return [];
   const latitude = points.reduce((sum, p) => sum + p.latitude, 0) / points.length;

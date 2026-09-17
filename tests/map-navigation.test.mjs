@@ -5,6 +5,9 @@ const root = new URL('../', import.meta.url);
 const read = (path) => readFile(new URL(path, root), 'utf8');
 const importSource = (source) => import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const source = (await read('app/utils/mapVisits.js')).replace(
+  "import countryLabelPoints from '../data/countryLabelPoints.json';",
+  'const countryLabelPoints = ' + await read('app/data/countryLabelPoints.json') + ';',
+).replace(
   "import encodedCountries from '../data/countries.json';",
   'const encodedCountries = ' + await read('app/data/countries.json') + ';',
 );
@@ -23,7 +26,8 @@ assert.equal(summary.groups[0].trips.length, 5);
 assert.equal(summary.unmatched, 0);
 assert.equal(map.countryMarkers(trips).length, 1);
 assert.equal(map.countryMarkers(trips)[0].trips.length, 5);
-assert(trips.some((trip) => trip.location === map.countryMarkers(trips)[0].coordinate));
+assert.equal(map.countryForLocation(map.countryMarkers(trips)[0].coordinate).code, 'SK');
+assert.deepEqual(map.countryMarkers(trips)[0].coordinate, map.countryMarkers(trips.slice(0, 1))[0].coordinate);
 assert.equal(map.shadeForCount(5), '#2563eb88');
 assert.equal(map.modeForZoom(map.zoomForRegion({ longitudeDelta: 55 }, 360)), 'countries');
 assert.equal(map.modeForZoom(map.zoomForRegion({ longitudeDelta: 5 }, 360)), 'clusters');

@@ -2,6 +2,7 @@ import { theme } from '../theme';
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import HomeScreen from '../screens/HomeScreen';
 import TripsScreen from '../screens/TripsScreen';
@@ -92,6 +93,7 @@ function AuthScreen() {
 
 export default function Navigation() {
   const { user, loading } = useAuth();
+  const insets = useSafeAreaInsets();
 
   if (loading) {
     return (
@@ -107,6 +109,7 @@ export default function Navigation() {
 
   return (
     <Tab.Navigator
+      safeAreaInsets={{ bottom: insets.bottom + 8 }}
       screenOptions={({ route }) => ({
         headerShown: false,
         sceneStyle: { backgroundColor: 'transparent' },

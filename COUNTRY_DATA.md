@@ -15,3 +15,5 @@ These are overview boundaries, not precise border or address data. Small islands
 The point heatmap is visible at every zoom. Zoom transitions: below 5 no visit markers; from 5 to below 11 world-grid clusters (64 px cells); from 11 individual places. Coincident visits remain grouped so every record can be opened. Longitude wrapping is accounted for when filtering visible markers.
 
 No additional native dependencies, paid geocoding service or change to the working Android build configuration is introduced.
+
+Overview marker placement: `app/data/countryLabelPoints.json` contains Natural Earth LABEL_X/LABEL_Y from the same source dataset, keyed by the country display name. These are cartographic label anchors, independent of visit locations. Heatmap and close-up visit coordinates are unchanged.

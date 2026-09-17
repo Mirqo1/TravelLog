@@ -14,6 +14,7 @@ export default function ProfileScreen({ navigation }) {
   const { profile, stats, loading } = useTrips();
   const [loggingOut, setLoggingOut] = useState(false);
   const [avatar, setAvatar] = useState(null);
+  const [avatarDraft, setAvatarDraft] = useState(null);
   const [choosingPhoto, setChoosingPhoto] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
@@ -35,8 +36,7 @@ export default function ProfileScreen({ navigation }) {
       const asset = result.assets[0];
       if (!asset.base64 || asset.base64.length > 700000) throw new Error('Vyber menšiu fotografiu pre profil.');
       const uri = `data:image/jpeg;base64,${asset.base64}`;
-      await AsyncStorage.setItem(`travellog/avatar/${user.uid}`, uri);
-      setAvatar(uri);
+      setAvatarDraft(uri);
     } catch (error) { Alert.alert('Profilová fotografia', error.message); }
     finally { setChoosingPhoto(false); }
   };
@@ -54,6 +54,10 @@ export default function ProfileScreen({ navigation }) {
     try {
       const nextName = nameDraft.trim();
       await updateDisplayName(nextName);
+      if (avatarDraft !== avatar && avatarDraft) {
+        await AsyncStorage.setItem(`travellog/avatar/${user.uid}`, avatarDraft);
+        setAvatar(avatarDraft);
+      }
       setEditingName(false);
       if (cloudConfigured) {
         try { await updateCloudDisplayName(nextName); }
@@ -65,25 +69,24 @@ export default function ProfileScreen({ navigation }) {
   return <ScrollView keyboardShouldPersistTaps="handled" style={styles.screen} contentContainerStyle={styles.container}>
     <Text style={styles.title}>Môj profil</Text>
     <View style={styles.identity}>
-      <Pressable onPress={chooseAvatar} disabled={choosingPhoto} accessibilityRole="button" accessibilityLabel="Zmeniť profilovú fotografiu">
-        {avatar ? <Image source={{ uri: avatar }} style={styles.avatar} /> : <View style={styles.avatar}><Text style={styles.initials}>{initials || 'T'}</Text></View>}
-      </Pressable>
-      <Pressable onPress={chooseAvatar} disabled={choosingPhoto} style={{ padding: 8 }}><Text style={{ color: theme.primary }}>Zmeniť fotografiu</Text></Pressable>
+      {!editingName ? <Pressable accessibilityRole="button" accessibilityLabel="Upraviť profil"
+        onPress={() => { setNameDraft(name); setAvatarDraft(avatar); setEditingName(true); }} style={styles.editProfile}>
+        <MaterialIcons name="edit" size={22} color={theme.primary} />
+      </Pressable> : null}
+      {(editingName ? avatarDraft : avatar) ? <Image source={{ uri: editingName ? avatarDraft : avatar }} style={styles.avatar} />
+        : <View style={styles.avatar}><Text style={styles.initials}>{initials || 'T'}</Text></View>}
+      {editingName ? <Pressable accessibilityRole="button" onPress={chooseAvatar} disabled={choosingPhoto || savingName}
+        style={{ padding: 8 }}><Text style={{ color: theme.primary }}>{choosingPhoto ? 'Načítavam…' : 'Zmeniť fotografiu'}</Text></Pressable> : null}
       {editingName ? <View style={styles.nameEditor}>
         <TextInput autoFocus accessibilityLabel="Zobrazované meno" value={nameDraft} onChangeText={setNameDraft}
           editable={!savingName} maxLength={50} style={styles.nameInput} placeholder="Tvoje meno alebo prezývka" />
         <View style={styles.nameActions}>
-          <Pressable onPress={() => setEditingName(false)} style={styles.nameAction}><Text style={styles.cancelName}>Zrušiť</Text></Pressable>
-          <Pressable onPress={saveName} disabled={savingName} style={[styles.nameAction, styles.saveName]}>
-            <Text style={styles.saveNameText}>{savingName ? 'Ukladám…' : 'Uložiť meno'}</Text>
+          <Pressable onPress={() => setEditingName(false)} disabled={savingName || choosingPhoto} style={styles.nameAction}><Text style={styles.cancelName}>Zrušiť</Text></Pressable>
+          <Pressable onPress={saveName} disabled={savingName || choosingPhoto} style={[styles.nameAction, styles.saveName]}>
+            <Text style={styles.saveNameText}>{savingName ? 'Ukladám…' : 'Uložiť profil'}</Text>
           </Pressable>
         </View>
-      </View> : <>
-        <Text style={styles.name}>{name}</Text>
-        <Pressable onPress={() => { setNameDraft(name); setEditingName(true); }} style={styles.editNameButton}>
-          <Text style={styles.editNameText}>Upraviť meno</Text>
-        </Pressable>
-      </>}
+      </View> : <Text style={styles.name}>{name}</Text>}
       <Text selectable style={styles.email}>{user?.email || 'Email neuvedený'}</Text>
       <View style={styles.badge}><Text style={styles.badgeText}>Testovacia verzia</Text></View>
     </View>
@@ -124,8 +127,7 @@ const styles = StyleSheet.create({
   avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: theme.primarySoft, justifyContent: 'center', alignItems: 'center' },
   initials: { fontSize: 28, fontWeight: '700', color: theme.primary },
   name: { fontSize: 22, fontWeight: '700', color: theme.text, textAlign: 'center' },
-  editNameButton: { paddingHorizontal: 12, paddingVertical: 5 },
-  editNameText: { color: theme.primary, fontWeight: '600' },
+  editProfile: { position: 'absolute', right: 8, top: 8, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   nameEditor: { alignSelf: 'stretch', gap: 10 },
   nameInput: { backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 12, padding: 12, color: theme.text },
   nameActions: { flexDirection: 'row', justifyContent: 'center', gap: 8 },
