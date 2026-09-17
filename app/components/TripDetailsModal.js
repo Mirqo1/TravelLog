@@ -23,10 +23,9 @@ export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDel
           <Text style={styles.link}>Zavrieť</Text>
         </Pressable>
       </View>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
         <View style={styles.titleRow}>
-          <Text accessibilityRole="header" numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.72}
-            style={styles.title}>{trip.name}</Text>
+          <Text accessibilityRole="header" style={styles.title}>{trip.name}</Text>
         </View>
         <Text style={styles.subtitle}>{trip.locationName || 'Lokalita neuvedená'}</Text>
         <View style={styles.summary}>
@@ -68,9 +67,10 @@ const styles = StyleSheet.create({
   eyebrow: { color: theme.muted, fontSize: 11, letterSpacing: 1.5, fontWeight: '700' },
   close: { paddingVertical: 16, paddingLeft: 16 },
   link: { color: theme.primary, fontWeight: '600' },
-  container: { padding: 20, paddingTop: 8, paddingBottom: 28, gap: 16 },
-  titleRow: { alignSelf: 'stretch', width: '100%', minWidth: '100%', flexDirection: 'row' },
-  title: { flex: 1, minWidth: 0, fontSize: 28, lineHeight: 35, fontWeight: '800', color: theme.text },
+  scroll: { flex: 1, alignSelf: 'stretch' },
+  container: { alignItems: 'stretch', padding: 20, paddingTop: 8, paddingBottom: 28, gap: 16 },
+  titleRow: { alignSelf: 'stretch' },
+  title: { alignSelf: 'stretch', fontSize: 24, lineHeight: 31, fontWeight: '800', color: theme.text },
   subtitle: { fontSize: 16, lineHeight: 23, color: theme.muted },
   summary: { flexDirection: 'row', flexWrap: 'wrap', gap: 18, paddingVertical: 8 },
   summaryItem: { minWidth: 140, flexGrow: 1, gap: 6 },

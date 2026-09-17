@@ -110,12 +110,11 @@ export default function Navigation() {
       screenOptions={({ route }) => ({
         headerShown: false,
         sceneStyle: { backgroundColor: 'transparent' },
-        tabBarStyle: { backgroundColor: theme.surface, borderTopColor: theme.border, height: 68, paddingTop: 5, paddingBottom: 5 },
-        tabBarItemStyle: { marginHorizontal: 4, borderRadius: 16 },
-        tabBarActiveBackgroundColor: theme.primarySoft,
+        // Let the navigator include the device's bottom safe-area inset.
+        tabBarStyle: { backgroundColor: theme.background, borderTopColor: theme.border },
         tabBarShowIcon: true,
-        tabBarActiveTintColor: theme.text,
-        tabBarInactiveTintColor: theme.muted,
+        tabBarActiveTintColor: '#3B2D1F',
+        tabBarInactiveTintColor: '#918678',
         tabBarLabelStyle: { fontSize: 11, fontWeight: '700' },
         tabBarIcon: ({ color, size }) => (
           <MaterialIcons name={TAB_ICONS[route.name] || 'circle'} size={size} color={color} />
