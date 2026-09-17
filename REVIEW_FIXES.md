@@ -15,3 +15,11 @@
 - Native APK installation, real Firebase login/registration, backup permissions and visual smoothness still require the phone check.
 
 No local visits are migrated or deleted. Main app test login remains separate from the real cloud backup account in Profile.
+
+## Follow-up: automatic protection and profile polish
+
+- A signed-in cloud account now restores missing visits on startup and automatically replaces its cloud snapshot after local additions, edits or deletions. Failed writes retain local data, show `Čaká na pripojenie`, and retry while the app remains open or on its next start.
+- The profile exposes the current sync state. Photos remain device-local.
+- Registration accepts a chosen display name; Profile can edit it later and also updates the connected Firebase account.
+- The active bottom tab uses a gold background with a darker icon and label.
+- Long visit titles get the full content width and fit into at most two lines with a bounded font reduction.

@@ -131,6 +131,7 @@ export const TripsProvider = ({ children }) => {
         if (!user?.uid) throw new Error('Musíš byť prihlásený.');
         const restored = await restoreTripsBackup(user.uid, incoming);
         setTrips(sortTrips(restored));
+        return restored;
       },
     }),
     [createTrip, editTrip, error, loadTrips, loading, profile, refreshing, removeTrip, trips, user?.uid],

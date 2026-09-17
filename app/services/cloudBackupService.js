@@ -29,16 +29,25 @@ export function watchCloudAccount(callback) {
   const { auth, authSDK } = cloud();
   return authSDK.onAuthStateChanged(auth, callback);
 }
-export async function cloudLogin(email, password, register = false) {
+export async function cloudLogin(email, password, register = false, displayName = '') {
   const { auth, authSDK } = cloud();
   const action = register ? authSDK.createUserWithEmailAndPassword : authSDK.signInWithEmailAndPassword;
-  return action(auth, email.trim(), password);
+  const result = await action(auth, email.trim(), password);
+  if (register && displayName.trim()) await authSDK.updateProfile(result.user, { displayName: displayName.trim() });
+  return result;
 }
 export async function cloudResetPassword(email) {
   const { auth, authSDK } = cloud();
   return authSDK.sendPasswordResetEmail(auth, email.trim());
 }
 export async function cloudLogout() { const { auth, authSDK } = cloud(); return authSDK.signOut(auth); }
+export function getCloudAccount() { return cloudConfigured ? cloud().auth.currentUser : null; }
+export async function updateCloudDisplayName(displayName) {
+  const { auth, authSDK } = cloud();
+  if (!auth.currentUser) return false;
+  await authSDK.updateProfile(auth.currentUser, { displayName: String(displayName || '').trim() });
+  return true;
+}
 function backupRef() {
   const { auth, db, fs } = cloud();
   if (!auth.currentUser) throw new Error('Prihlás sa do účtu pre zálohu.');

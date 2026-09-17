@@ -21,12 +21,14 @@ function AuthScreen() {
   const { loginWithEmail, registerWithEmail, signInWithGoogleIdToken } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [googleToken, setGoogleToken] = useState('');
   const [message, setMessage] = useState('');
 
-  const handleAction = async (action) => {
+  const handleAction = async (action, registering = false) => {
     try {
-      await action(email.trim(), password);
+      if (registering && displayName.trim().length < 2) throw new Error('Zadaj svoje meno alebo prezývku.');
+      await action(email.trim(), password, registering ? displayName.trim() : undefined);
       setMessage('Prihlásenie/registrácia úspešná.');
     } catch (error) {
       setMessage(error.message);
@@ -48,6 +50,12 @@ function AuthScreen() {
       <Text style={styles.authSubheader}>Prihlás sa a spravuj svoje výlety na mape aj offline.</Text>
       <TextInput
         style={styles.input}
+        placeholder="Tvoje meno alebo prezývka (pri registrácii)"
+        value={displayName}
+        onChangeText={setDisplayName}
+      />
+      <TextInput
+        style={styles.input}
         placeholder="Email"
         autoCapitalize="none"
         value={email}
@@ -64,7 +72,7 @@ function AuthScreen() {
         <Pressable style={styles.authButton} onPress={() => handleAction(loginWithEmail)}>
           <Text style={styles.authButtonText}>Prihlásiť</Text>
         </Pressable>
-        <Pressable style={styles.authButton} onPress={() => handleAction(registerWithEmail)}>
+        <Pressable style={styles.authButton} onPress={() => handleAction(registerWithEmail, true)}>
           <Text style={styles.authButtonText}>Registrovať</Text>
         </Pressable>
       </View>
@@ -102,10 +110,13 @@ export default function Navigation() {
       screenOptions={({ route }) => ({
         headerShown: false,
         sceneStyle: { backgroundColor: 'transparent' },
-        tabBarStyle: { backgroundColor: theme.background, borderTopColor: theme.border },
+        tabBarStyle: { backgroundColor: theme.surface, borderTopColor: theme.border, height: 68, paddingTop: 5, paddingBottom: 5 },
+        tabBarItemStyle: { marginHorizontal: 4, borderRadius: 16 },
+        tabBarActiveBackgroundColor: theme.primarySoft,
         tabBarShowIcon: true,
-        tabBarActiveTintColor: theme.primary,
+        tabBarActiveTintColor: theme.text,
         tabBarInactiveTintColor: theme.muted,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '700' },
         tabBarIcon: ({ color, size }) => (
           <MaterialIcons name={TAB_ICONS[route.name] || 'circle'} size={size} color={color} />
         ),

@@ -24,7 +24,10 @@ export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDel
         </Pressable>
       </View>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text accessibilityRole="header" style={styles.title}>{trip.name}</Text>
+        <View style={styles.titleRow}>
+          <Text accessibilityRole="header" numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.72}
+            style={styles.title}>{trip.name}</Text>
+        </View>
         <Text style={styles.subtitle}>{trip.locationName || 'Lokalita neuvedená'}</Text>
         <View style={styles.summary}>
           <View style={styles.summaryItem}><Text style={styles.label}>Dátum návštevy</Text>
@@ -66,7 +69,8 @@ const styles = StyleSheet.create({
   close: { paddingVertical: 16, paddingLeft: 16 },
   link: { color: theme.primary, fontWeight: '600' },
   container: { padding: 20, paddingTop: 8, paddingBottom: 28, gap: 16 },
-  title: { alignSelf: 'stretch', width: '100%', fontSize: 28, lineHeight: 35, fontWeight: '800', color: theme.text },
+  titleRow: { alignSelf: 'stretch', width: '100%', minWidth: '100%', flexDirection: 'row' },
+  title: { flex: 1, minWidth: 0, fontSize: 28, lineHeight: 35, fontWeight: '800', color: theme.text },
   subtitle: { fontSize: 16, lineHeight: 23, color: theme.muted },
   summary: { flexDirection: 'row', flexWrap: 'wrap', gap: 18, paddingVertical: 8 },
   summaryItem: { minWidth: 140, flexGrow: 1, gap: 6 },

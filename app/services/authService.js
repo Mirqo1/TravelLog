@@ -5,4 +5,5 @@ export {
   onAuthStateChanged,
   registerWithEmail,
   signInWithGoogleIdToken,
+  updateDisplayName,
 } from './mockAuthService';

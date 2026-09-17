@@ -1,20 +1,23 @@
 import { theme } from '../theme';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
-import { cloudConfigured, cloudLogout } from '../services/cloudBackupService';
+import { cloudConfigured, cloudLogout, updateCloudDisplayName } from '../services/cloudBackupService';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useAuth } from '../context/AuthContext';
 import { useTrips } from '../context/TripsContext';
 import CloudBackupPanel from '../components/CloudBackupPanel';
 
 export default function ProfileScreen({ navigation }) {
-  const { user, logout } = useAuth();
+  const { user, logout, updateDisplayName } = useAuth();
   const { profile, stats, loading } = useTrips();
   const [loggingOut, setLoggingOut] = useState(false);
   const [avatar, setAvatar] = useState(null);
   const [choosingPhoto, setChoosingPhoto] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [savingName, setSavingName] = useState(false);
   useEffect(() => {
     let active = true;
     setAvatar(null);
@@ -45,6 +48,20 @@ export default function ProfileScreen({ navigation }) {
     try { if (cloudConfigured) await cloudLogout(); await logout(); }
     catch (error) { Alert.alert('Odhlásenie zlyhalo', error.message); setLoggingOut(false); }
   };
+  const saveName = async () => {
+    if (savingName) return;
+    setSavingName(true);
+    try {
+      const nextName = nameDraft.trim();
+      await updateDisplayName(nextName);
+      setEditingName(false);
+      if (cloudConfigured) {
+        try { await updateCloudDisplayName(nextName); }
+        catch (error) { Alert.alert('Meno je uložené v telefóne', 'Do cloudu sa ho teraz nepodarilo odoslať. Skús to znova po pripojení.'); }
+      }
+    } catch (error) { Alert.alert('Meno sa nepodarilo uložiť', error.message); }
+    finally { setSavingName(false); }
+  };
   return <ScrollView keyboardShouldPersistTaps="handled" style={styles.screen} contentContainerStyle={styles.container}>
     <Text style={styles.title}>Môj profil</Text>
     <View style={styles.identity}>
@@ -52,7 +69,21 @@ export default function ProfileScreen({ navigation }) {
         {avatar ? <Image source={{ uri: avatar }} style={styles.avatar} /> : <View style={styles.avatar}><Text style={styles.initials}>{initials || 'T'}</Text></View>}
       </Pressable>
       <Pressable onPress={chooseAvatar} disabled={choosingPhoto} style={{ padding: 8 }}><Text style={{ color: theme.primary }}>Zmeniť fotografiu</Text></Pressable>
-      <Text style={styles.name}>{name}</Text>
+      {editingName ? <View style={styles.nameEditor}>
+        <TextInput autoFocus accessibilityLabel="Zobrazované meno" value={nameDraft} onChangeText={setNameDraft}
+          editable={!savingName} maxLength={50} style={styles.nameInput} placeholder="Tvoje meno alebo prezývka" />
+        <View style={styles.nameActions}>
+          <Pressable onPress={() => setEditingName(false)} style={styles.nameAction}><Text style={styles.cancelName}>Zrušiť</Text></Pressable>
+          <Pressable onPress={saveName} disabled={savingName} style={[styles.nameAction, styles.saveName]}>
+            <Text style={styles.saveNameText}>{savingName ? 'Ukladám…' : 'Uložiť meno'}</Text>
+          </Pressable>
+        </View>
+      </View> : <>
+        <Text style={styles.name}>{name}</Text>
+        <Pressable onPress={() => { setNameDraft(name); setEditingName(true); }} style={styles.editNameButton}>
+          <Text style={styles.editNameText}>Upraviť meno</Text>
+        </Pressable>
+      </>}
       <Text selectable style={styles.email}>{user?.email || 'Email neuvedený'}</Text>
       <View style={styles.badge}><Text style={styles.badgeText}>Testovacia verzia</Text></View>
     </View>
@@ -74,7 +105,7 @@ export default function ProfileScreen({ navigation }) {
       <View style={styles.storageHeader}><MaterialIcons name="phone-android" color={theme.primary} size={24} />
         <Text style={styles.storageTitle}>Uložené v telefóne</Text></View>
       <Text style={styles.description}>Návštevy si môžeš prezerať aj bez internetu. Na načítanie mapy a vyhľadávanie miest potrebuješ pripojenie.</Text>
-      <Text style={styles.description}>Samotné prihlásenie nezálohuje návštevy. Stav zálohy a obnovenie nájdeš nižšie.</Text>
+      <Text style={styles.description}>Po pripojení cloudového účtu sa návštevy ukladajú automaticky. Stav synchronizácie nájdeš nižšie.</Text>
     </View>
     <CloudBackupPanel />
     <Pressable accessibilityRole="button" disabled={loggingOut} onPress={signOut}
@@ -93,6 +124,15 @@ const styles = StyleSheet.create({
   avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: theme.primarySoft, justifyContent: 'center', alignItems: 'center' },
   initials: { fontSize: 28, fontWeight: '700', color: theme.primary },
   name: { fontSize: 22, fontWeight: '700', color: theme.text, textAlign: 'center' },
+  editNameButton: { paddingHorizontal: 12, paddingVertical: 5 },
+  editNameText: { color: theme.primary, fontWeight: '600' },
+  nameEditor: { alignSelf: 'stretch', gap: 10 },
+  nameInput: { backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 12, padding: 12, color: theme.text },
+  nameActions: { flexDirection: 'row', justifyContent: 'center', gap: 8 },
+  nameAction: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10 },
+  cancelName: { color: theme.muted, fontWeight: '600' },
+  saveName: { backgroundColor: theme.primary },
+  saveNameText: { color: '#fff', fontWeight: '700' },
   email: { color: theme.muted, textAlign: 'center' },
   badge: { backgroundColor: theme.primarySoft, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7 },
   badgeText: { color: theme.primary, fontSize: 12, fontWeight: '600' },
