@@ -1,7 +1,15 @@
 import { portableTrips } from './backup';
 
-export const fingerprint = (trips) => JSON.stringify(portableTrips(trips).sort((a, b) => a.id.localeCompare(b.id)));
-const same = (a, b) => fingerprint(a ? [a] : []) === fingerprint(b ? [b] : []);
+// Rebuild nested maps too: Firestore map key order is not meaningful.
+const canonical = trips => portableTrips(trips).map(trip => ({ ...trip,
+  location: { latitude: trip.location?.latitude, longitude: trip.location?.longitude },
+})).sort((a, b) => a.id.localeCompare(b.id));
+export const fingerprint = trips => JSON.stringify(canonical(trips));
+export const sameVisitContent = (a, b) => {
+  const content = trip => trip ? canonical([trip]).map(({ createdAt, updatedAt, ...fields }) => fields) : [];
+  return JSON.stringify(content(a)) === JSON.stringify(content(b));
+};
+const same = sameVisitContent;
 const hash = (text) => { let n = 2166136261; for (const c of text) n = Math.imul(n ^ c.charCodeAt(0), 16777619); return (n >>> 0).toString(36); };
 
 // Three-way merge against the last server snapshot, not device clocks. Absence

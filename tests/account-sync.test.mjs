@@ -16,7 +16,7 @@ const source = (await read('app/services/mockTripsService.js'))
   .replace("import AsyncStorage from '@react-native-async-storage/async-storage';", 'const AsyncStorage = globalThis.syncStorage;')
   .replace("import { compareTripsNewest } from '../utils/tripOrder';", 'const compareTripsNewest = (a,b) => b.date.localeCompare(a.date);')
   .replace("import { mergeBackup } from '../utils/backup';", '')
-  .replace("import { mergeSync } from '../utils/syncMerge';", merge.replace(/export /g, ''));
+  .replace("import { mergeSync, sameVisitContent } from '../utils/syncMerge';", merge.replace(/export /g, ''));
 const service = await moduleOf(source);
 const { createNotebookSync } = await moduleOf((await read('app/services/notebookSync.js'))
   .replace("import { fingerprint } from '../utils/syncMerge';", merge.replace(/export /g, '')));
@@ -138,3 +138,22 @@ await service.updateTrip('cloud-alice', 'a', { photos: [] });
 runner = makeRunner('alice'); await runner.request(); runner.stop();
 assert.deepEqual((await service.getTrips('cloud-alice')).find(trip => trip.id === 'a').photos, []);
 console.log('PASS: cloud metadata changes preserve local gallery; removing local photos stays removed; no photo paths uploaded.');
+
+// Photo-only edit with a timestamp-only remote difference is not a text conflict.
+const oldPhotoVisit = { ...t('photo-only'), updatedAt: '2026-09-22T10:00:00Z' };
+const localPhotoVisit = { ...oldPhotoVisit, photos: [localPhoto], updatedAt: '2026-09-22T11:00:00Z' };
+const remotePhotoVisit = { ...oldPhotoVisit, updatedAt: '2026-09-22T12:00:00Z',
+  location: { longitude: 21, latitude: 48 } };
+const photoMerge = mergeSync([oldPhotoVisit], [localPhotoVisit], [remotePhotoVisit]);
+assert.equal(photoMerge.conflicts, 0);
+assert.equal(photoMerge.trips.length, 1);
+assert.deepEqual(photoMerge.trips[0].photos, [localPhoto]);
+assert.equal(fingerprint([oldPhotoVisit]), fingerprint([{ ...oldPhotoVisit, location: { longitude: 21, latitude: 48 } }]));
+const photoAndText = mergeSync([oldPhotoVisit], [localPhotoVisit], [{ ...remotePhotoVisit, notes: 'Real remote note' }]);
+assert.equal(photoAndText.conflicts, 0);
+assert.equal(photoAndText.trips[0].notes, 'Real remote note');
+assert.deepEqual(photoAndText.trips[0].photos, [localPhoto]);
+const beforePhotoEdit = (await service.getTrips('cloud-alice')).find(trip => trip.id === 'a');
+await service.updateTrip('cloud-alice', 'a', { photos: [localPhoto] });
+assert.equal((await service.getTrips('cloud-alice')).find(trip => trip.id === 'a').updatedAt, beforePhotoEdit.updatedAt);
+console.log('PASS: gallery-only edit keeps shared timestamp; timestamp/key-order differences never create a conflict copy; real remote text edit retains local gallery.');

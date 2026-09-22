@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { compareTripsNewest } from '../utils/tripOrder';
 import { mergeBackup } from '../utils/backup';
-import { mergeSync } from '../utils/syncMerge';
+import { mergeSync, sameVisitContent } from '../utils/syncMerge';
 
 const TRIPS_STORAGE_PREFIX = 'travellog/mock-trips/';
 const PROFILE_STORAGE_PREFIX = 'travellog/mock-profile/';
@@ -205,6 +205,10 @@ export const updateTrip = (userId, tripId, tripData) => exclusive(userId, async 
     },
     tripId,
   );
+
+  // Photos belong to this device. Changing only the gallery must not mark
+  // shared visit text as a new remote edit.
+  if (sameVisitContent(existing, updated)) updated.updatedAt = existing.updatedAt;
 
   await saveTrips(
     userId,

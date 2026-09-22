@@ -73,3 +73,13 @@ Firebase snapshots still exclude images and UI explicitly says photos are local
 only. Google Drive OAuth/transfer/restore is the next separate integration; see
 PHOTO_FEATURE.md. Added Expo image manipulation/sharing dependencies and direct
 filesystem/constants dependencies; existing Android project can use autolinking.
+
+## Prevent false concurrent-edit copies when adding photos
+
+Gallery-only updates now retain the shared visit's updatedAt timestamp. Three-way
+conflict comparison checks portable user content instead of creation/update times;
+serialization also normalizes coordinate map key order. Regression tests cover
+photo-only changes with timestamp/key-order differences and simultaneous real
+remote text edits, retaining local photos without an unnecessary duplicate. Real
+content conflicts continue to preserve both versions. Existing conflict copies
+are not automatically removed because they may contain distinct user data.
