@@ -83,3 +83,13 @@ photo-only changes with timestamp/key-order differences and simultaneous real
 remote text edits, retaining local photos without an unnecessary duplicate. Real
 content conflicts continue to preserve both versions. Existing conflict copies
 are not automatically removed because they may contain distinct user data.
+
+## Swipe through full-screen visit photos
+
+Replaced the single full-screen image with a horizontally paged FlatList, opening
+at the tapped thumbnail. Swiping updates the counter and the photo selected for
+export; Previous/Next buttons scroll the same pager. Pages use the measured safe
+viewport size and only a small window of images is rendered. No new dependencies.
+JSX syntax was checked; physical Android gesture behaviour remains a device check.
+Google Drive owner-side OAuth prerequisites are in GOOGLE_DRIVE_SETUP.md; photo
+upload/restore remains unimplemented and is not claimed enabled by this change.

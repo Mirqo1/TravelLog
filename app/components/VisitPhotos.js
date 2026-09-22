@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { theme } from '../theme';
@@ -30,9 +30,16 @@ export function VisitPhotoGallery({ photos, title }) {
   const items = photoList(photos);
   const [selected, setSelected] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [viewport, setViewport] = useState({ width: 0, height: 0 });
+  const pager = useRef(null);
   const photo = items.find(item => photoKey(item) === selected);
   const index = items.indexOf(photo);
   if (!items.length) return null;
+  const showPhoto = nextIndex => {
+    if (nextIndex < 0 || nextIndex >= items.length) return;
+    setSelected(photoKey(items[nextIndex]));
+    pager.current?.scrollToIndex({ index: nextIndex, animated: true });
+  };
   const share = async () => {
     if (exporting) return;
     setExporting(true);
@@ -51,11 +58,29 @@ export function VisitPhotoGallery({ photos, title }) {
       <SafeAreaProvider><SafeAreaView style={styles.viewer}>
         <View style={styles.viewerBar}><Text style={styles.viewerTitle} numberOfLines={2}>{title}</Text>
           <Pressable accessibilityRole="button" onPress={() => setSelected(null)} style={styles.control}><Text style={styles.white}>Zavrieť</Text></Pressable></View>
-        {photo ? <VisitPhotoImage photo={photo} resizeMode="contain" style={{ flex: 1, width: '100%' }} /> : null}
+        <View style={{ flex: 1 }} onLayout={({ nativeEvent: { layout } }) => {
+          setViewport(previous => previous.width === layout.width && previous.height === layout.height
+            ? previous : { width: layout.width, height: layout.height });
+        }}>
+          {photo && viewport.width > 0 && viewport.height > 0 ? <FlatList
+            key={`photo-pager-${viewport.width}-${viewport.height}`}
+            ref={pager} data={items} horizontal pagingEnabled
+            showsHorizontalScrollIndicator={false} bounces={false}
+            initialScrollIndex={index} initialNumToRender={1} maxToRenderPerBatch={2} windowSize={3}
+            keyExtractor={photoKey}
+            getItemLayout={(_, page) => ({ length: viewport.width, offset: viewport.width * page, index: page })}
+            onMomentumScrollEnd={({ nativeEvent }) => {
+              const next = Math.max(0, Math.min(items.length - 1, Math.round(nativeEvent.contentOffset.x / viewport.width)));
+              setSelected(photoKey(items[next]));
+            }}
+            renderItem={({ item }) => <VisitPhotoImage photo={item} resizeMode="contain"
+              style={{ width: viewport.width, height: viewport.height }} />}
+          /> : null}
+        </View>
         <View style={styles.viewerBar}>
-          <Pressable accessibilityRole="button" disabled={index <= 0} onPress={() => setSelected(photoKey(items[index - 1]))} style={[styles.control, index <= 0 && styles.disabled]}><Text style={styles.white}>‹ Predošlá</Text></Pressable>
+          <Pressable accessibilityRole="button" disabled={index <= 0} onPress={() => showPhoto(index - 1)} style={[styles.control, index <= 0 && styles.disabled]}><Text style={styles.white}>‹ Predošlá</Text></Pressable>
           <Text style={styles.white}>{index + 1} / {items.length}</Text>
-          <Pressable accessibilityRole="button" disabled={index >= items.length - 1} onPress={() => setSelected(photoKey(items[index + 1]))} style={[styles.control, index >= items.length - 1 && styles.disabled]}><Text style={styles.white}>Ďalšia ›</Text></Pressable>
+          <Pressable accessibilityRole="button" disabled={index >= items.length - 1} onPress={() => showPhoto(index + 1)} style={[styles.control, index >= items.length - 1 && styles.disabled]}><Text style={styles.white}>Ďalšia ›</Text></Pressable>
         </View>
         <Pressable accessibilityRole="button" disabled={exporting} style={styles.export} onPress={share}>
           {exporting ? <ActivityIndicator color="#fff" /> : <Text style={styles.white}>Uložiť alebo zdieľať fotografiu</Text>}
