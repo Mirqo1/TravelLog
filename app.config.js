@@ -48,11 +48,21 @@ module.exports = ({ config }) => {
 
   plugins.push(['./plugins/withKotlinCompiler', { kotlinVersion }]);
 
+  const splashIndex = plugins.findIndex((plugin) => (Array.isArray(plugin) ? plugin[0] : plugin) === 'expo-splash-screen');
+  const splashPlugin = ['expo-splash-screen', {
+    image: './assets/compass-foreground.png', imageWidth: 160,
+    resizeMode: 'contain', backgroundColor: '#F6F0E4',
+    dark: { image: './assets/compass-foreground.png', backgroundColor: '#F6F0E4' },
+  }];
+  if (splashIndex >= 0) plugins[splashIndex] = splashPlugin;
+  else plugins.push(splashPlugin);
+
   return {
     ...config,
     icon: './assets/compass-icon.png',
     android: {
       ...config.android,
+      softwareKeyboardLayoutMode: 'resize',
       adaptiveIcon: {
         foregroundImage: './assets/compass-foreground.png',
         monochromeImage: './assets/compass-monochrome.png',

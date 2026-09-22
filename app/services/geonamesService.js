@@ -52,7 +52,7 @@ export const searchPlaces = async (query) => {
 export const findLocationDetails = async ({ latitude, longitude }) => {
   requireAccount();
   const response = await geonamesClient.get('/findNearbyPlaceNameJSON', {
-    params: { lat: latitude, lng: longitude, username: geonamesUsername, style: 'FULL' },
+    params: { lat: latitude, lng: longitude, username: geonamesUsername, style: 'FULL', localCountry: true },
   });
   checkResponse(response.data);
   const place = response.data?.geonames?.[0];

@@ -34,6 +34,7 @@ const normalizeTrip = (trip = {}, id = trip.id) => ({
     longitude: toNumber(trip.location?.longitude ?? trip.longitude),
   },
   date: String(trip.date || todayDate()),
+  visitTime: String(trip.visitTime || ''),
   rating: Math.min(5, Math.max(0, Math.round(toNumber(trip.rating)))),
   photos: Array.isArray(trip.photos) ? trip.photos : [],
   notes: String(trip.notes || '').trim(),

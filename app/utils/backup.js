@@ -1,9 +1,9 @@
 // Backup only portable visit fields. Device-local photo URIs are deliberately
 // excluded until managed photo uploads are implemented.
 export function portableTrips(trips) {
-  return trips.map(({ id, name, locationName, countryCode, location, date, rating, description, notes, createdAt, updatedAt }) => ({
+  return trips.map(({ id, name, locationName, countryCode, location, date, visitTime, rating, description, notes, createdAt, updatedAt }) => ({
     id, name, locationName: locationName || '', countryCode: countryCode || '', location,
-    date, rating: rating || 0, description: description || '', notes: notes || '',
+    date, visitTime: visitTime || '', rating: rating || 0, description: description || '', notes: notes || '',
     createdAt: createdAt || '', updatedAt: updatedAt || '',
   }));
 }
@@ -17,6 +17,7 @@ export function validateBackup(data) {
       || typeof trip.name !== 'string' || !trip.name.trim()
       || !Number.isFinite(trip.location?.latitude) || Math.abs(trip.location.latitude) > 90
       || !Number.isFinite(trip.location?.longitude) || Math.abs(trip.location.longitude) > 180
+      || (trip.visitTime != null && trip.visitTime !== '' && !/^([01]\d|2[0-3]):[0-5]\d$/.test(trip.visitTime))
       || !/^\d{4}-\d{2}-\d{2}$/.test(trip.date)) throw new Error('Záloha obsahuje neplatnú návštevu.');
     seen.add(trip.id);
   }

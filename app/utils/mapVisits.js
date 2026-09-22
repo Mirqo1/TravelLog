@@ -44,9 +44,11 @@ for (const country of countries) {
   for (const name of [country.code, country.name, ...country.names]) countryByName.set(normalizeName(name), country);
 }
 
-export const countryForTrip = (trip) => countryForLocation(trip.location) ||
-  countries.find((country) => country.code === trip.countryCode) ||
-  countryByName.get(normalizeName(String(trip.locationName || '').split(',').pop())) || null;
+// Explicit/geocoded country takes precedence over simplified display boundaries.
+export const countryForTrip = (trip) =>
+  countries.find((country) => country.code === String(trip.countryCode || '').toUpperCase()) ||
+  countryByName.get(normalizeName(String(trip.locationName || '').split(',').pop())) ||
+  countryForLocation(trip.location) || null;
 
 export const summarizeCountries = (trips) => {
   const groups = new Map(), cache = new Map();
@@ -108,4 +110,13 @@ export const groupMarkers = (trips, region, zoom, detailed = false) => {
       longitude: group.trips.reduce((sum, trip) => sum + trip.location.longitude, 0) / group.trips.length,
     },
   }));
+};
+
+let regionNames;
+try { regionNames = new Intl.DisplayNames(['sk'], { type: 'region' }); } catch (_) { /* Native engine may not support DisplayNames. */ }
+const localNames = { SK: 'Slovensko', HU: 'Maďarsko', CZ: 'Česko', AT: 'Rakúsko', PL: 'Poľsko', UA: 'Ukrajina', DE: 'Nemecko', HR: 'Chorvátsko' };
+export const countryDisplayName = (country) => {
+  if (!country) return '';
+  try { return regionNames?.of(country.code) || localNames[country.code] || country.name; }
+  catch (_) { return localNames[country.code] || country.name; }
 };

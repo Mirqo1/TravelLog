@@ -1,3 +1,4 @@
+import { displayVisitDate } from '../utils/visitDate';
 import { theme } from '../theme';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -35,7 +36,7 @@ export default function PlaceListItem({ trip, onDetail, onEdit, onDelete }) {
         <Text style={styles.name}>{trip.name}</Text>
         <Text style={styles.meta}>{trip.locationName || 'Bez lokality'}</Text>
         <Text style={styles.meta}>
-          {trip.date} • {renderRating(trip.rating)}
+          {displayVisitDate(trip)} • {renderRating(trip.rating)}
         </Text>
         <Text style={styles.notes}>{trip.description || trip.notes || 'Bez poznámky'}</Text>
         {trip.syncStatus && trip.syncStatus !== 'synced' ? <Text style={styles.pending}>Čaká na synchronizáciu</Text> : null}

@@ -5,4 +5,5 @@ const timestamp = (value) => {
 
 export const compareTripsNewest = (left, right) =>
   String(right.date || '').localeCompare(String(left.date || '')) ||
+  String(right.visitTime || '').localeCompare(String(left.visitTime || '')) ||
   timestamp(right.createdAt) - timestamp(left.createdAt);

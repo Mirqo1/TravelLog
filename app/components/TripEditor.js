@@ -1,6 +1,6 @@
 import { theme } from '../theme';
 import React, { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import TripForm from './TripForm';
 import MapTypeToggle from './MapTypeToggle';
@@ -13,7 +13,17 @@ export default function TripEditor({ initialValues, coordinates, title = 'Nový 
   const request = useRef(0);
   const [mapWidth, setMapWidth] = useState(0);
   const { height } = useWindowDimensions();
-  const mapHeight = Math.max(280, Math.min(460, height * 0.45));
+  const mapHeight = useRef(Math.max(280, Math.min(460, height * 0.45))).current;
+  const scrollRef = useRef(null);
+  const focusedInput = useRef(null);
+  const revealInput = () => {
+    if (focusedInput.current) scrollRef.current?.getScrollResponder()?.scrollResponderScrollNativeHandleToKeyboard(focusedInput.current, 100, true);
+  };
+  useEffect(() => {
+    const listener = Keyboard.addListener('keyboardDidShow', revealInput);
+    return () => listener.remove();
+  }, []);
+  const inputFocused = (event) => { focusedInput.current = event.nativeEvent.target; revealInput(); };
   const start = coordinates || initialValues?.location || { latitude: 48.1486, longitude: 17.1077 };
   useEffect(() => () => { request.current += 1; }, []);
   const selectLocation = async (coordinate, name) => {
@@ -38,8 +48,8 @@ export default function TripEditor({ initialValues, coordinates, title = 'Nový 
     } else if (coordinates) selectLocation(coordinates, coordinates.name);
   }, [coordinates]);
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView removeClippedSubviews={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView ref={scrollRef} keyboardDismissMode="on-drag" removeClippedSubviews={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.hint}>{hint}</Text>
         <MapTypeToggle value={mapType} onChange={setMapType} />
@@ -58,7 +68,7 @@ export default function TripEditor({ initialValues, coordinates, title = 'Nový 
             ) : null}
           </MapView> : null}
         </View>
-        <TripForm initialValues={initialValues} externalLocation={selection}
+        <TripForm onInputFocus={inputFocused} initialValues={initialValues} externalLocation={selection}
           title="Údaje o návšteve" submitLabel={submitLabel} onSubmit={onSubmit} onCancel={onCancel} />
       </ScrollView>
     </KeyboardAvoidingView>

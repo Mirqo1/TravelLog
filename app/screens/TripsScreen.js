@@ -1,10 +1,11 @@
 import { theme } from '../theme';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   RefreshControl,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -16,12 +17,16 @@ import PlaceListItem from '../components/PlaceListItem';
 import TripDetailsModal from '../components/TripDetailsModal';
 import { useTrips } from '../context/TripsContext';
 
+import { countryForTrip } from '../utils/mapVisits';
+import { displayVisitDate } from '../utils/visitDate';
 import { compareTripsNewest } from '../utils/tripOrder';
 
 const normalizeSearch = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
-export default function TripsScreen() {
+export default function TripsScreen({ route, navigation }) {
   const { trips, loading, refreshing, refreshTrips, updateTrip, deleteTrip } = useTrips();
+  const countryCode = route.params?.countryCode;
+  useEffect(() => { setSearch(''); }, [countryCode]);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [selectedTrip, setSelectedTrip] = useState(null);
@@ -29,10 +34,11 @@ export default function TripsScreen() {
 
   const filteredTrips = useMemo(() => {
     const loweredSearch = normalizeSearch(search.trim());
+    const scopedTrips = countryCode ? trips.filter((trip) => countryForTrip(trip)?.code === countryCode) : trips;
     const result = !loweredSearch
-      ? [...trips]
-      : trips.filter((trip) => {
-        const text = normalizeSearch([trip.name, trip.locationName, trip.date, trip.description, trip.notes].filter(Boolean).join(' '));
+      ? [...scopedTrips]
+      : scopedTrips.filter((trip) => {
+        const text = normalizeSearch([trip.name, trip.locationName, trip.date, displayVisitDate(trip), trip.description, trip.notes].filter(Boolean).join(' '));
         return loweredSearch.split(/\s+/).every((word) => text.includes(word));
       });
 
@@ -40,17 +46,17 @@ export default function TripsScreen() {
       if (sortBy === 'oldest') {
         return -compareTripsNewest(left, right);
       }
-      if (sortBy === 'rating') {
-        return Number(right.rating || 0) - Number(left.rating || 0);
+      if (sortBy === 'added') {
+        return String(right.createdAt || '').localeCompare(String(left.createdAt || '')) || compareTripsNewest(left, right);
       }
-      if (sortBy === 'location') {
-        return String(left.locationName || '').localeCompare(String(right.locationName || ''));
+      if (sortBy === 'name') {
+        return String(left.name || '').localeCompare(String(right.name || ''), 'sk') || compareTripsNewest(left, right);
       }
       return compareTripsNewest(left, right);
     });
 
     return result;
-  }, [search, sortBy, trips]);
+  }, [search, sortBy, trips, countryCode]);
 
   const requestDelete = (trip) => {
     Alert.alert('Zmazať výlet?', `Naozaj chceš vymazať ${trip.name}?`, [
@@ -84,7 +90,10 @@ export default function TripsScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Trips</Text>
+      <Text style={styles.header}>Návštevy</Text>
+      {countryCode ? <Pressable onPress={() => navigation.setParams({ countryCode: null, countryName: null })} style={styles.chip}>
+        <Text>{route.params.countryName || countryCode} · Zrušiť filter ×</Text>
+      </Pressable> : null}
       <AddVisitButton />
       <TextInput
         style={styles.searchInput}
@@ -98,8 +107,8 @@ export default function TripsScreen() {
         {[
           ['newest', 'Najnovšie'],
           ['oldest', 'Najstaršie'],
-          ['rating', 'Rating'],
-          ['location', 'Lokalita'],
+          ['added', 'Posledné pridané'],
+          ['name', 'Názov A–Z'],
         ].map(([value, label]) => (
           <Text
             key={value}

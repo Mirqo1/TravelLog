@@ -1,3 +1,4 @@
+import { displayVisitDate } from '../utils/visitDate';
 import { theme } from '../theme';
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -9,9 +10,6 @@ const ratingText = (value) => {
   const rating = Math.max(0, Math.min(5, Math.round(Number(value) || 0)));
   return rating ? '★'.repeat(rating) + '☆'.repeat(5 - rating) : 'Bez hodnotenia';
 };
-const dateText = (date) => /^\d{4}-\d{2}-\d{2}$/.test(date || '')
-  ? date.split('-').reverse().join('. ') : date || 'Dátum neuvedený';
-
 export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDelete }) {
   if (!trip) return null;
   const hasLocation = validLocation(trip.location);
@@ -30,7 +28,7 @@ export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDel
         <Text style={styles.subtitle}>{trip.locationName || 'Lokalita neuvedená'}</Text>
         <View style={styles.summary}>
           <View style={styles.summaryItem}><Text style={styles.label}>Dátum návštevy</Text>
-            <Text style={styles.value}>{dateText(trip.date)}</Text></View>
+            <Text style={styles.value}>{displayVisitDate(trip)}</Text></View>
           <View style={styles.summaryItem}><Text style={styles.label}>Moje hodnotenie</Text>
             <Text style={styles.rating}>{ratingText(trip.rating)}</Text></View>
         </View>
@@ -46,9 +44,9 @@ export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDel
           </View> : null}
           <Text selectable style={styles.coordinates}>{trip.location.latitude.toFixed(5)}, {trip.location.longitude.toFixed(5)}</Text>
         </View> : null}
-        {trip.description ? <View style={styles.card}><Text style={styles.heading}>Príbeh návštevy</Text>
+        {trip.description ? <View style={styles.card}><Text style={styles.heading}>Popis návštevy</Text>
           <Text style={styles.body}>{trip.description}</Text></View> : null}
-        {trip.notes ? <View style={styles.card}><Text style={styles.heading}>Moje poznámky</Text>
+        {trip.notes ? <View style={styles.card}><Text style={styles.heading}>Poznámky</Text>
           <Text style={styles.body}>{trip.notes}</Text></View> : null}
         {!trip.description && !trip.notes ? <Text style={styles.empty}>Pridaj pár slov, aby ti táto návšteva ožila aj po rokoch.</Text> : null}
         <Pressable accessibilityRole="button" onPress={onEdit} style={styles.edit}>

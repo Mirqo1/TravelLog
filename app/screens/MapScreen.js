@@ -1,3 +1,4 @@
+import { displayVisitDate } from '../utils/visitDate';
 import { theme } from '../theme';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useIsFocused } from '@react-navigation/native';
@@ -9,11 +10,11 @@ import TripDetailsModal from '../components/TripDetailsModal';
 import MapTypeToggle from '../components/MapTypeToggle';
 import { useTrips } from '../context/TripsContext';
 import { searchPlaces } from '../services/placeSearchService';
-import { countryMarkers, groupMarkers, stableModeForZoom, validLocation, zoomForRegion } from '../utils/mapVisits';
+import { countryDisplayName, countryMarkers, groupMarkers, stableModeForZoom, validLocation, zoomForRegion } from '../utils/mapVisits';
 
 const INITIAL_REGION = { latitude: 49, longitude: 17, latitudeDelta: 35, longitudeDelta: 55 };
 
-export default function MapScreen() {
+export default function MapScreen({ route }) {
   const isFocused = useIsFocused();
   const { trips, addTrip, updateTrip, deleteTrip } = useTrips();
   const [region, setRegion] = useState(INITIAL_REGION);
@@ -31,6 +32,19 @@ export default function MapScreen() {
   const searchRequest = useRef(null);
   useEffect(() => () => searchRequest.current?.abort(), []);
   const mapRef = useRef(null);
+  const overviewHandled = useRef(null);
+  const mapReady = useRef(false);
+  useEffect(() => { if (!isFocused) mapReady.current = false; }, [isFocused]);
+  const showOverview = () => {
+    const request = route.params?.overviewRequest;
+    if (!request || overviewHandled.current === request || !mapReady.current || !mapRef.current) return;
+    overviewHandled.current = request;
+    setSelectedCoordinate(null);
+    const points = [...trips.map((trip) => trip.location).filter(validLocation), ...countryMarkers(trips).map((group) => group.coordinate)];
+    if (points.length) mapRef.current.fitToCoordinates(points, { edgePadding: { top: 70, right: 55, bottom: 70, left: 55 }, animated: true });
+    else mapRef.current.animateToRegion(INITIAL_REGION);
+  };
+  useEffect(() => { if (isFocused) showOverview(); }, [route.params?.overviewRequest, isFocused]);
   const zoom = zoomForRegion(region, mapWidth);
   const [mode, setMode] = useState('countries');
   useEffect(() => setMode((previous) => stableModeForZoom(zoom, previous)), [zoom]);
@@ -140,13 +154,13 @@ export default function MapScreen() {
         : 'Heat mapa a návštevy · ťuknutím otvoríš detail.'}</Text>
       <View style={styles.mapContainer} onLayout={(event) => setMapWidth(event.nativeEvent.layout.width)}>
         {isFocused ? <MapView ref={mapRef} style={styles.map} initialRegion={region}
-          mapType={mapType}
+          mapType={mapType} onMapReady={() => { mapReady.current = true; showOverview(); }}
           onRegionChangeComplete={setRegion} onPress={selectPoint}
           onPoiClick={(event) => setSelectedCoordinate({ ...event.nativeEvent.coordinate, name: event.nativeEvent.name })}>
           {heatPoints.length > 0 ? <Heatmap points={heatPoints} radius={28} opacity={0.55} /> : null}
           {mode === 'countries' ? countryPins.map((group) => <Marker key={'country:' + group.country.code}
             coordinate={group.coordinate} anchor={{ x: 0.5, y: 0.5 }}
-            onPress={(event) => { event.stopPropagation(); showGroup(group.country.name, group.trips); }}>
+            onPress={(event) => { event.stopPropagation(); showGroup(countryDisplayName(group.country), group.trips); }}>
             <View style={styles.cluster}><Text style={styles.clusterText}>{group.trips.length}</Text></View>
           </Marker>) : null}
           {markers.map((group) => (
@@ -183,7 +197,7 @@ export default function MapScreen() {
           <ScrollView style={{ flex: 1 }}>
             {visitGroup?.visits.map((trip) => <Pressable key={trip.id} style={styles.visitRow}
               onPress={() => { setVisitGroup(null); setSelectedTrip(trip); }}>
-              <Text style={styles.visitName}>{trip.name}</Text><Text>{trip.date} · {trip.locationName}</Text>
+              <Text style={styles.visitName}>{trip.name}</Text><Text>{displayVisitDate(trip)} · {trip.locationName}</Text>
             </Pressable>)}
           </ScrollView>
           <Pressable style={styles.button} onPress={() => setVisitGroup(null)}><Text style={styles.buttonText}>Zavrieť</Text></Pressable>

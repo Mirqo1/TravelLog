@@ -86,3 +86,11 @@ const navigation = await read('app/components/Navigation.js');
 assert.equal((navigation.match(/<Tab.Screen /g) || []).length, 4);
 assert(!navigation.includes('AddTripScreen'));
 console.log('PASS: country counts and geometry, coastal fallback, zoom modes, clustering, date line, selection reset/races and four tabs.');
+
+// Simplified boundaries must not override the stored country near a border.
+const keked = { location: { latitude: 48.5236, longitude: 21.3497 }, countryCode: 'HU', locationName: 'Kéked, Hungary' };
+assert.equal(map.countryForTrip(keked).code, 'HU');
+assert.equal(map.countryForTrip({ ...keked, countryCode: '' }).code, 'HU');
+assert.equal(map.countryForTrip({ ...keked, location: { latitude: 48.7164, longitude: 21.2611 } }).code, 'HU');
+assert.equal(map.summarizeCountries([...trips, keked]).groups.length, 2);
+console.log('PASS: geocoded or manually corrected country wins over simplified border geometry.');

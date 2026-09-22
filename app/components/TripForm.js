@@ -1,9 +1,13 @@
 import { theme } from '../theme';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import CountryPicker from './CountryPicker';
+import VisitCalendar from './VisitCalendar';
+import { displayDate, localDate, localTime, parseVisitDate, validVisitTime } from '../utils/visitDate';
+import { countries } from '../utils/mapVisits';
 import { applyLocationSelection } from '../utils/locationSelection';
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = localDate;
 
 const toDraft = (trip = {}) => ({
   name: trip.name || '',
@@ -22,7 +26,8 @@ const toDraft = (trip = {}) => ({
       : trip.longitude
         ? String(trip.longitude)
         : '',
-  date: trip.date || today(),
+  date: displayDate(trip.date || today()),
+  visitTime: trip.visitTime || (trip.id || trip.date ? '' : localTime()),
   rating: Number(trip.rating || 0),
   notes: trip.notes || '',
 });
@@ -35,7 +40,9 @@ export default function TripForm({
   onSubmit,
   onCancel,
   isSubmitting = false,
+  onInputFocus,
 }) {
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const submitLock = useRef(false);
   const lastSelection = useRef(null);
   const [saving, setSaving] = useState(false);
@@ -81,17 +88,19 @@ export default function TripForm({
         throw new Error('Vyber platnú polohu.');
       }
 
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(form.date) || !Number.isFinite(Date.parse(form.date)) || new Date(form.date).toISOString().slice(0, 10) !== form.date) {
-        throw new Error('Zadaj platný dátum vo formáte YYYY-MM-DD.');
-      }
+      const date = parseVisitDate(form.date);
+      if (!date) throw new Error('Zadaj existujúci dátum, napr. 22.9.2026, alebo ho vyber v kalendári.');
+      if (form.visitTime && !validVisitTime(form.visitTime)) throw new Error('Čas musí byť vo formáte HH:MM, napr. 14:30.');
+      if (form.countryCode && !countries.some((country) => country.code === form.countryCode.toUpperCase())) throw new Error('Zadaj platný dvojpísmenový kód krajiny, napr. SK alebo HU.');
 
       await onSubmit({
         name: form.name.trim(),
         description: form.description.trim(),
         locationName: form.locationName.trim(),
-        countryCode: form.countryCode,
+        countryCode: form.countryCode.toUpperCase(),
         location: { latitude, longitude },
-        date: form.date || today(),
+        date,
+        visitTime: form.visitTime || '',
         rating: form.rating,
         notes: form.notes.trim(),
         photos: initialValues?.photos || [],
@@ -108,19 +117,22 @@ export default function TripForm({
     <View style={styles.card}>
       <Text style={styles.title}>{title}</Text>
       <TextInput
+        onFocus={onInputFocus}
         style={styles.input}
         placeholder="Názov výletu"
         value={form.name}
         onChangeText={(value) => updateField('name', value)}
       />
       <TextInput
+        onFocus={onInputFocus}
         style={[styles.input, styles.multiline]}
         multiline
-        placeholder="Popis"
+        placeholder="Popis návštevy"
         value={form.description}
         onChangeText={(value) => updateField('description', value)}
       />
       <TextInput
+        onFocus={onInputFocus}
         style={styles.input}
         placeholder="Lokalita (napr. Bratislava, Slovensko)"
         value={form.locationName}
@@ -128,6 +140,7 @@ export default function TripForm({
       />
       <View style={styles.row}>
         <TextInput
+        onFocus={onInputFocus}
           style={[styles.input, styles.halfInput]}
           placeholder="Latitude"
           keyboardType="numeric"
@@ -135,6 +148,7 @@ export default function TripForm({
           onChangeText={(value) => updateField('latitude', value)}
         />
         <TextInput
+        onFocus={onInputFocus}
           style={[styles.input, styles.halfInput]}
           placeholder="Longitude"
           keyboardType="numeric"
@@ -143,12 +157,21 @@ export default function TripForm({
         />
       </View>
       <Text style={styles.helper}>{coordinatesPreview}</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Dátum (YYYY-MM-DD)"
-        value={form.date}
-        onChangeText={(value) => updateField('date', value)}
-      />
+      <Text style={styles.sectionLabel}>Krajina</Text>
+      <CountryPicker value={form.countryCode} onChange={(value) => updateField('countryCode', value)} />
+      <Text style={styles.helper}>Ak automaticky určená krajina nesedí, vyber správnu.</Text>
+      <Text style={styles.sectionLabel}>Dátum návštevy</Text>
+      <View style={styles.row}>
+        <TextInput onFocus={onInputFocus} style={[styles.input, styles.halfInput]} placeholder="DD.MM.RRRR" value={form.date}
+          accessibilityLabel="Dátum návštevy" onChangeText={(value) => updateField('date', value)} />
+        <Pressable accessibilityRole="button" accessibilityState={{ expanded: calendarOpen }} style={[styles.button, styles.secondary]}
+          onPress={() => { Keyboard.dismiss(); setCalendarOpen((open) => !open); }}><Text style={styles.secondaryText}>Kalendár</Text></Pressable>
+      </View>
+      {calendarOpen ? <VisitCalendar value={form.date} onSelect={(date) => { updateField('date', displayDate(date)); setCalendarOpen(false); }} /> : null}
+      <Text style={styles.sectionLabel}>Čas návštevy</Text>
+      <TextInput onFocus={onInputFocus} style={styles.input} placeholder="HH:MM (nepovinné)" value={form.visitTime}
+        accessibilityLabel="Čas návštevy" maxLength={5} onChangeText={(value) => updateField('visitTime', value)} />
+      <Pressable accessibilityRole="button" onPress={() => updateField('visitTime', '')} style={{ paddingVertical: 8 }}><Text style={{ color: theme.primary }}>Čas nepoznám</Text></Pressable>
       <View style={styles.ratingRow}>
         <Text style={styles.sectionLabel}>Hodnotenie</Text>
         <View style={styles.ratingButtons}>
@@ -164,13 +187,13 @@ export default function TripForm({
         </View>
       </View>
       <TextInput
+        onFocus={onInputFocus}
         style={[styles.input, styles.multiline]}
         multiline
         placeholder="Poznámky"
         value={form.notes}
         onChangeText={(value) => updateField('notes', value)}
       />
-      <Text style={styles.helper}>Fotogaléria: placeholder pripravený pre budúce nahrávanie fotiek.</Text>
       <View style={styles.actions}>
         {onCancel ? (
           <Pressable style={[styles.button, styles.secondary]} disabled={saving} onPress={onCancel}>
