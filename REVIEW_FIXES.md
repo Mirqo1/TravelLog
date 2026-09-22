@@ -61,3 +61,15 @@ logout warns about unconfirmed changes. The Profile name editor uses the same re
 account. Photo backup remains excluded and labelled. See CLOUD_BACKUP_SETUP.md for
 migration and device checks. Existing Firebase rules and native build configuration
 are unchanged; no prebuild/clean is needed for these JavaScript-only changes.
+
+## Visit photos and photo cards
+
+Added durable, resized local visit photographs with thumbnails, cover selection,
+removal, full-screen gallery and single-photo system export. Home/Trips show photo
+cards when photo access is available; otherwise retain text cards. Private preview
+APK unlocks testing; production requires server-issued premium/admin claims.
+Existing photos remain accessible in detail without an active entitlement.
+Firebase snapshots still exclude images and UI explicitly says photos are local
+only. Google Drive OAuth/transfer/restore is the next separate integration; see
+PHOTO_FEATURE.md. Added Expo image manipulation/sharing dependencies and direct
+filesystem/constants dependencies; existing Android project can use autolinking.

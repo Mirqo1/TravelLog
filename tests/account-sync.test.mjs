@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 const read = path => readFile(new URL('../' + path, import.meta.url), 'utf8');
 const moduleOf = source => import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const backup = await read('app/utils/backup.js');
+const { portableTrips } = await moduleOf(backup);
 const merge = (await read('app/utils/syncMerge.js')).replace("import { portableTrips } from './backup';", backup.replace(/export /g, ''));
 const { mergeSync, fingerprint } = await moduleOf(merge);
 const memory = new Map();
@@ -20,7 +21,7 @@ const service = await moduleOf(source);
 const { createNotebookSync } = await moduleOf((await read('app/services/notebookSync.js'))
   .replace("import { fingerprint } from '../utils/syncMerge';", merge.replace(/export /g, '')));
 const t = (id, name = id) => ({ id, name, date: '2026-09-22', location: { latitude: 48, longitude: 21 }, updatedAt: '2026-09-22T12:00:00Z' });
-const snapshot = (trips, revision = 'r1') => ({ version: 1, revision, savedAt: '2026-09-22T12:00:00Z', trips });
+const snapshot = (trips, revision = 'r1') => ({ version: 1, revision, savedAt: '2026-09-22T12:00:00Z', trips: portableTrips(trips) });
 
 assert.deepEqual(mergeSync([t('a')], [], [t('a')]).trips, []);
 assert.deepEqual(mergeSync([t('a')], [t('a')], []).trips, []);
@@ -125,3 +126,15 @@ await runner.request(); runner.stop();
 assert.ok(remote.trips.some(x => x.id === 'concurrent-new'));
 assert.equal(remote.trips.find(x => x.id === 'a').notes, 'retry me');
 console.log('PASS: atomic failure/corruption preserves storage; revision conflict retries without losing visits.');
+
+// Portable sync must never upload local photo paths, or wipe the local gallery.
+const localPhoto = { id: 'photo-test-1', fileName: 'photo-test-1.jpg', thumbFileName: 'photo-test-1-thumb.jpg', storage: 'local' };
+await service.updateTrip('cloud-alice', 'a', { photos: [localPhoto] });
+remote = snapshot(remote.trips.map(trip => trip.id === 'a' ? { ...trip, notes: 'changed remotely with gallery retained' } : trip), 'photo-remote');
+runner = makeRunner('alice'); await runner.request(); runner.stop();
+assert.deepEqual((await service.getTrips('cloud-alice')).find(trip => trip.id === 'a').photos, [localPhoto]);
+assert.ok(remote.trips.every(trip => !Object.hasOwn(trip, 'photos')));
+await service.updateTrip('cloud-alice', 'a', { photos: [] });
+runner = makeRunner('alice'); await runner.request(); runner.stop();
+assert.deepEqual((await service.getTrips('cloud-alice')).find(trip => trip.id === 'a').photos, []);
+console.log('PASS: cloud metadata changes preserve local gallery; removing local photos stays removed; no photo paths uploaded.');

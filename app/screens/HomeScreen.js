@@ -4,6 +4,7 @@ import { theme } from '../theme';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { VisitPhotoCover } from '../components/VisitPhotos';
 import CountriesModal from '../components/CountriesModal';
 import { useCloudSync } from '../context/CloudSyncContext';
 import AddVisitButton from '../components/AddVisitButton';
@@ -67,6 +68,7 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.visitName}>{trip.name}</Text>
             <Text style={styles.muted}>{trip.locationName || 'Lokalita neuvedená'}</Text>
             <Text style={styles.visitDate}>{displayVisitDate(trip)}{trip.rating ? `  ·  ★ ${trip.rating}/5` : ''}</Text>
+            <VisitPhotoCover photos={trip.photos} />
           </View>
         </Pressable>
       )) : <View style={[styles.card, styles.empty]}>

@@ -2,6 +2,7 @@ import { displayVisitDate } from '../utils/visitDate';
 import { theme } from '../theme';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { VisitPhotoCover } from './VisitPhotos';
 import { Swipeable } from 'react-native-gesture-handler';
 
 const renderRating = (rating) => {
@@ -22,10 +23,10 @@ export default function PlaceListItem({ trip, onDetail, onEdit, onDelete }) {
   const renderRightActions = () => (
     <View style={styles.rightActions}>
       <Pressable style={[styles.swipeAction, styles.editAction]} onPress={onEdit}>
-        <Text style={styles.swipeText}>Edit</Text>
+        <Text style={styles.swipeText}>Upraviť</Text>
       </Pressable>
       <Pressable style={[styles.swipeAction, styles.deleteAction]} onPress={onDelete}>
-        <Text style={styles.swipeText}>Delete</Text>
+        <Text style={styles.swipeText}>Vymazať</Text>
       </Pressable>
     </View>
   );
@@ -38,7 +39,8 @@ export default function PlaceListItem({ trip, onDetail, onEdit, onDelete }) {
         <Text style={styles.meta}>
           {displayVisitDate(trip)} • {renderRating(trip.rating)}
         </Text>
-        <Text style={styles.notes}>{trip.description || trip.notes || 'Bez poznámky'}</Text>
+        <VisitPhotoCover photos={trip.photos} />
+        <Text numberOfLines={3} style={styles.notes}>{trip.description || trip.notes || 'Bez poznámky'}</Text>
         {trip.syncStatus && trip.syncStatus !== 'synced' ? <Text style={styles.pending}>Čaká na synchronizáciu</Text> : null}
       </Pressable>
     </Swipeable>
@@ -48,8 +50,8 @@ export default function PlaceListItem({ trip, onDetail, onEdit, onDelete }) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 20,
+    padding: 16,
     marginBottom: 10,
     borderWidth: 1,
     borderColor: theme.border,

@@ -3,6 +3,7 @@ import { theme } from '../theme';
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
+import { VisitPhotoGallery } from './VisitPhotos';
 import { validLocation } from '../utils/mapVisits';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
@@ -32,6 +33,7 @@ export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDel
           <View style={styles.summaryItem}><Text style={styles.label}>Moje hodnotenie</Text>
             <Text style={styles.rating}>{ratingText(trip.rating)}</Text></View>
         </View>
+        <VisitPhotoGallery photos={trip.photos} title={trip.name} />
         {hasLocation ? <View style={styles.card}>
           <Text style={styles.heading}>Navštívené miesto</Text>
           {visible ? <View style={styles.mapFrame}>

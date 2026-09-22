@@ -1,6 +1,11 @@
 import { theme } from '../theme';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import VisitPhotoEditor from './VisitPhotoEditor';
+import { useTrips } from '../context/TripsContext';
+import { getTrips } from '../services/tripsService';
+import { photoList, MAX_VISIT_PHOTOS } from '../utils/visitPhotos';
+import { importVisitPhoto, discardUnusedDrafts, deleteManagedPhoto } from '../services/visitPhotoService';
 import CountryPicker from './CountryPicker';
 import VisitCalendar from './VisitCalendar';
 import { displayDate, localDate, localTime, parseVisitDate, validVisitTime } from '../utils/visitDate';
@@ -42,6 +47,34 @@ export default function TripForm({
   isSubmitting = false,
   onInputFocus,
 }) {
+  const { notebookId } = useTrips();
+  const draftOwner = useRef(notebookId);
+  const mounted = useRef(true);
+  const createdPhotos = useRef([]);
+  const [photos, setPhotos] = useState(() => photoList(initialValues?.photos));
+  const [photosBusy, setPhotosBusy] = useState(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      discardUnusedDrafts([...createdPhotos.current], () => getTrips(draftOwner.current));
+    };
+  }, []);
+  const importPhotos = async (assets) => {
+    const imported = [];
+    try {
+      for (const asset of assets) {
+        if (!mounted.current) break;
+        const photo = await importVisitPhoto(asset);
+        if (!mounted.current) { await deleteManagedPhoto(photo); break; }
+        createdPhotos.current.push(photo); imported.push(photo);
+      }
+    } finally {
+      // Successfully processed selections remain available even if one file fails.
+      if (mounted.current) setPhotos(current => [...current, ...imported].slice(0, MAX_VISIT_PHOTOS));
+      else await Promise.all(imported.map(deleteManagedPhoto));
+    }
+  };
   const [calendarOpen, setCalendarOpen] = useState(false);
   const submitLock = useRef(false);
   const lastSelection = useRef(null);
@@ -50,6 +83,7 @@ export default function TripForm({
 
   useEffect(() => {
     setForm(toDraft(initialValues));
+    setPhotos(photoList(initialValues?.photos));
   }, [initialValues]);
 
   useEffect(() => {
@@ -73,7 +107,7 @@ export default function TripForm({
   }));
 
   const handleSubmit = async () => {
-    if (submitLock.current || isSubmitting) return;
+    if (submitLock.current || isSubmitting || photosBusy) return;
     submitLock.current = true;
     setSaving(true);
     try {
@@ -103,7 +137,7 @@ export default function TripForm({
         visitTime: form.visitTime || '',
         rating: form.rating,
         notes: form.notes.trim(),
-        photos: initialValues?.photos || [],
+        photos,
       });
     } catch (error) {
       Alert.alert('Formulár', error.message);
@@ -194,13 +228,15 @@ export default function TripForm({
         value={form.notes}
         onChangeText={(value) => updateField('notes', value)}
       />
+      <VisitPhotoEditor photos={photos} onChange={setPhotos} onImport={importPhotos}
+        disabled={saving || isSubmitting} onBusy={setPhotosBusy} />
       <View style={styles.actions}>
         {onCancel ? (
           <Pressable style={[styles.button, styles.secondary]} disabled={saving} onPress={onCancel}>
             <Text style={styles.secondaryText}>Zrušiť</Text>
           </Pressable>
         ) : null}
-        <Pressable style={[styles.button, styles.primary]} disabled={isSubmitting || saving} onPress={handleSubmit}>
+        <Pressable style={[styles.button, styles.primary]} disabled={isSubmitting || saving || photosBusy} onPress={handleSubmit}>
           <Text style={styles.primaryText}>{isSubmitting || saving ? 'Ukladám...' : submitLabel}</Text>
         </Pressable>
       </View>
