@@ -1,41 +1,84 @@
-# Manual account backup – activation and verification
+# Accounts and automatic visit backup
 
-The app still opens the existing local notebook through its legacy test login. A separate **real Firebase email/password account** in Profile protects manual visit backups. This is an additive migration step: enabling Firebase does not change the current local notebook ID, erase its records, or silently upload them. It is not automatic multi-device synchronization or the final app-wide authentication flow.
+The app now uses **real Firebase email/password authentication** at entry and in
+Profile. The old mock email/token login is no longer used. A clearly labelled
+**Continue without an account** mode keeps a local notebook only.
 
-## Project setup
+## Existing installation / first update
 
-1. Open https://console.firebase.google.com/ and select/add Firebase to the intended TravelLog Google Cloud project.
-2. Authentication → Sign-in method: enable Email/Password. Do not use a password entered into the old mock login as proof of an existing account; register a real account in the backup panel.
-3. Create Cloud Firestore in the appropriate location, using production rules. Publish the repository's `firestore.rules` in the Rules tab. Existing rules are extended with owner-only `/users/{uid}/backups/notebook` access. Clients cannot grant themselves admin/premium via the user profile, nor transfer a legacy place to another user.
-4. Project settings → General → Your apps: register a Web app for the Firebase JS SDK (no Hosting required). Copy the four public configuration values below into EAS's **preview** environment. Do not use a service-account private key.
+- Install the APK as an **update**, using the existing application ID and signing
+  key. Do not uninstall the only copy of local visits.
+- Existing Firebase sessions are restored. Previously uploaded visits are read
+  from the same `users/{uid}/backups/notebook` document; no server migration is
+  necessary. The existing `firestore.rules` and four Firebase environment values
+  remain compatible.
+- Old local visits remain under their original notebook ID. Signing into an
+  account never silently assigns those visits to it. Profile offers **Preniesť
+  moje lokálne návštevy**, shows the target email, and asks for confirmation.
+  Import is once per local notebook per account; the original stays on the phone.
+  Local-only photos are retained by import but are NOT uploaded.
+- If the previous profile was a mock login, its password was never an account
+  password. Use the real account previously created in the backup panel, reset
+  its password, or create a real account.
+- Update all test devices before testing multi-device editing. Old APKs used an
+  additive restore and do not implement this merge protocol.
 
-```
-EXPO_PUBLIC_FIREBASE_API_KEY
-EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN
-EXPO_PUBLIC_FIREBASE_PROJECT_ID
-EXPO_PUBLIC_FIREBASE_APP_ID
-```
+## Behaviour
 
-5. Build an updated APK and install over the existing application. The Firebase settings are embedded at build time. Until all four values exist, the backup panel clearly says it is not activated.
-6. Profile → Account and backup: register, then save a backup. Confirm the target email and count. On another phone, sign into the same backup account and restore. Do not uninstall the only device containing original visits during this test.
+- Each Firebase UID has its own local notebook (`cloud-{uid}`). Logging out keeps
+  its pending changes on disk; they are accessible again after signing into that
+  same account. A different account sees its own data only.
+- Local mutations are serialized and written before reporting success. The local
+  notebook stores visits, the last server baseline, and import markers together
+  in one AsyncStorage value. Corrupt data is not silently replaced.
+- While the app is open, visit changes trigger sync after 900 ms; the foreground
+  app checks again every 30 seconds and on returning to the foreground. This is
+  independent of the selected tab. Android termination/background suspension can
+  pause execution: pending data resumes next time the app opens. Data not yet
+  sent cannot be recovered from a lost phone.
+- Each cycle reads the server, merges local/server changes against the stored
+  baseline, and conditionally uploads with a Firestore revision transaction.
+  Independent edits are combined. Deletions propagate without reappearing after
+  reconnect. Concurrent edits to one visit keep a deterministic recovery copy;
+  a concurrent edit wins over deletion. The UI flags such conflicts for review.
+- A change arriving during upload is sent in another cycle. A stale revision is
+  retried from a fresh read. Network/pending state is distinguished from denied
+  access, payload limits and invalid data. "Saved" means the most recently
+  checked local portable data matches a confirmed server snapshot, not merely
+  that a request has started.
+- Delayed requests are bound to an immutable UID/path. Account changes prevent
+  stale operations from refreshing another account's UI or targeting its backup.
+- Signing out with unconfirmed changes shows a warning. Guest mode always says
+  it is local only. Password reset is available from the entry screen and Profile.
 
-## Behaviour and limits
+## Scope and limitations
 
-- Only the user who owns the Firebase UID can read or write that account's backup. No automatic upload; saving and restoring have explicit confirmations.
-- One replaceable snapshot holds portable visit text, dates, coordinates, ratings and original IDs/timestamps. The app rejects a payload exceeding a conservative 700,000 URI-encoded characters before Firestore's 1 MiB document limit. A larger production store should use versioned per-visit documents.
-- A Firestore transaction compares the revision read before confirmation. If another device changes the backup, the operation fails instead of silently overwriting it.
-- Restore adds missing IDs only. Existing local visits (including edits and photos) win on collisions; restore never deletes local visits. A pre-restore copy remains in local storage. Repeating restore is idempotent.
-- Photographs, profile photos and premium entitlements are **not** included. The UI explicitly says this. Photos need managed Storage upload/download before cross-device guarantees are possible.
-- New notebooks are empty; old sample records already saved are left alone. Malformed local data is no longer replaced with demo data on a read error.
-- App logout also signs out the backup account. Disconnecting only the backup account preserves the local notebook.
-- Language and final branding are deliberately independent of account identity. Keep the installed Android package ID when renaming so updates can preserve local data.
+Visits include names, descriptions, notes, coordinates, country, date/time,
+ratings and original IDs/timestamps. **Visit photos and profile photos are not
+backed up yet.** The planned premium photo flow uses the user's own Google Drive;
+Drive integration and photo cards are a separate task. Wishlist remains planned.
 
-## Checks
+The existing one-document version-1 backup and conservative 700,000 URI-encoded
+character guard remain. Large production notebooks should migrate to per-visit
+storage rather than simply increasing this limit. This implementation is sync
+with conflict recovery, not historical/immutable versioned backup. Account
+verification/deletion and production premium entitlements remain separate work.
 
-Completed: `node tests/backup.test.mjs` checks validation, duplicate rejection, local-photo preservation, repeat restore, concurrent restore/add, and corruption handling. Firebase React Native Auth initialization was exercised with an in-memory storage adapter. Android JS export succeeded.
+## Verification
 
-Still required against the owner's Firebase project: real register/sign-in/password-reset, process-restart persistence, two-device save/restore, offline failure, transaction revision conflict, and Firestore rules rejecting unauthenticated/cross-user access and self-granted admin/premium. No live project deployment or device authentication test has been performed in this change.
+- `node tests/account-sync.test.mjs`: actual local service and sync runner with
+  storage/network doubles: offline deletion and restart, independent device edits,
+  concurrent same-record recovery, edits during upload, account switch during a
+  delayed fetch, explicit repeated import, corrupt/failed storage, revision retry.
+- `node tests/backup.test.mjs`: portable format validation, original photo retention,
+  additive manual restore, concurrent restore/add, corruption handling.
+- Android Metro export and Firebase Auth initialization from the resulting real
+  Android bundle are smoke checks, not a native APK/device test.
 
-## Next authentication step
-
-After successful backup/restore, replace the mock app login with the verified cloud account and migrate a chosen local notebook explicitly. Add email verification, account deletion, photo Storage, then production entitlement checks and admin-only preview controls. Do not infer ownership from a mock email or ship an unrestricted premium switch.
+Device acceptance: confirm original visits after update; explicitly import any
+remaining local visits; add/edit/delete offline and reopen online; sign into the
+same account on a second phone; check both directions including deletion; edit a
+single record on both devices; sign out and into another account; confirm original
+account's pending changes remain available when returning. Verify password reset
+and restored login after process restart. These live checks require the owner's
+Firebase project/device and are not claimed by the automated tests.

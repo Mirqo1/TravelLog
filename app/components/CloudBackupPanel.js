@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useTrips } from '../context/TripsContext';
+import { getTrips, getNotebookState } from '../services/tripsService';
 import { theme } from '../theme';
 import { useCloudSync } from '../context/CloudSyncContext';
 import { useAuth } from '../context/AuthContext';
-import { cloudConfigured, cloudLogin, cloudLogout, cloudResetPassword } from '../services/cloudBackupService';
+import { cloudConfigured, cloudResetPassword } from '../services/cloudBackupService';
 
 const STATUS = {
   local: 'Účet nie je pripojený',
@@ -16,8 +18,19 @@ const STATUS = {
 };
 
 export default function CloudBackupPanel() {
-  const { account, status, message } = useCloudSync();
-  const { updateDisplayName } = useAuth();
+  const { account, status, message, lastSaved, retry } = useCloudSync();
+  const { guest, loginWithEmail, registerWithEmail } = useAuth();
+  const { notebookId, importGuest } = useTrips();
+  const [guestCount, setGuestCount] = useState(0);
+  const [imported, setImported] = useState(false);
+  useEffect(() => {
+    let active = true;
+    setGuestCount(0); setImported(false);
+    if (account && guest?.uid && notebookId) Promise.all([getTrips(guest.uid), getNotebookState(notebookId)])
+      .then(([visits, state]) => { if (active) { setGuestCount(visits.length); setImported(state.imports.includes(guest.uid)); } })
+      .catch(() => { if (active) setFormMessage('Staré lokálne návštevy sa nepodarilo načítať. Zostali zachované.'); });
+    return () => { active = false; };
+  }, [account?.uid, guest?.uid, notebookId]);
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -48,9 +61,19 @@ export default function CloudBackupPanel() {
         <Text selectable style={styles.text}>{account.email}</Text>
         <Text style={styles.text}>{message || 'Po pridaní, úprave alebo vymazaní návštevy sa cloudová kópia aktualizuje automaticky.'}</Text>
         <Text style={styles.note}>Fotografie sa v tejto verzii ešte automaticky neukladajú.</Text>
-        {button('Odpojiť cloudový účet', () => run(cloudLogout), true)}
+        {lastSaved ? <Text style={styles.note}>Posledné potvrdené uloženie: {new Date(lastSaved).toLocaleString()}</Text> : null}
+        {button('Skontrolovať uloženie', retry, true)}
+        {guestCount > 0 && !imported ? <>
+          <Text style={styles.text}>V telefóne máš ešte {guestCount} návštev z pôvodného lokálneho profilu. Do tohto účtu sa neprenášajú bez tvojho výberu.</Text>
+          {button('Preniesť moje lokálne návštevy', () => Alert.alert('Preniesť návštevy?',
+            `Skopírovať ${guestCount} návštev do účtu ${account.email}? Pôvodná lokálna kópia zostane zachovaná.`,
+            [{ text: 'Zrušiť', style: 'cancel' }, { text: 'Preniesť', onPress: () => run(async () => {
+              await importGuest(guest.uid); setImported(true);
+            }) }]), true)}
+        </> : null}
+        {imported ? <Text style={styles.note}>Pôvodné lokálne návštevy boli prenesené. Ďalšie zmeny rob už v tomto účte.</Text> : null}
       </> : <>
-        <Text style={styles.text}>Po pripojení účtu sa existujúce návštevy spoja s cloudovou kópiou. Na novom telefóne sa obnovia automaticky.</Text>
+        <Text style={styles.text}>Prihlás sa do svojho účtu. Jeho návštevy sa obnovia automaticky; prenos návštev z tohto lokálneho profilu si vyberieš osobitne.</Text>
         <TextInput accessibilityLabel="Zobrazované meno" style={styles.input} placeholder="Tvoje meno alebo prezývka"
           value={displayName} onChangeText={setDisplayName} editable={!busy} />
         <TextInput accessibilityLabel="Email" style={styles.input} placeholder="Email" autoCapitalize="none"
@@ -59,15 +82,13 @@ export default function CloudBackupPanel() {
           value={password} onChangeText={setPassword} editable={!busy} />
         {button('Prihlásiť účet', () => run(async () => {
           if (!email.trim() || !password) throw new Error('Vyplň email a heslo.');
-          const result = await cloudLogin(email, password);
-          if (result.user.displayName) await updateDisplayName(result.user.displayName);
+          await loginWithEmail(email, password);
           setPassword('');
         }))}
         {button('Vytvoriť účet', () => run(async () => {
           if (displayName.trim().length < 2) throw new Error('Zadaj svoje meno alebo prezývku.');
           if (!email.trim() || password.length < 6) throw new Error('Vyplň email a heslo s aspoň 6 znakmi.');
-          await cloudLogin(email, password, true, displayName);
-          await updateDisplayName(displayName);
+          await registerWithEmail(email, password, displayName);
           setPassword('');
         }))}
         <Pressable disabled={busy} onPress={() => run(async () => {

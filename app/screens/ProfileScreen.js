@@ -3,15 +3,16 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
-import { cloudConfigured, cloudLogout, updateCloudDisplayName } from '../services/cloudBackupService';
+import { useCloudSync } from '../context/CloudSyncContext';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useAuth } from '../context/AuthContext';
 import { useTrips } from '../context/TripsContext';
 import CloudBackupPanel from '../components/CloudBackupPanel';
 
 export default function ProfileScreen({ navigation }) {
-  const { user, logout, updateDisplayName } = useAuth();
+  const { user, account, logout, updateDisplayName } = useAuth();
   const { profile, stats, loading } = useTrips();
+  const { status: syncStatus } = useCloudSync();
   const [loggingOut, setLoggingOut] = useState(false);
   const [avatar, setAvatar] = useState(null);
   const [avatarDraft, setAvatarDraft] = useState(null);
@@ -45,7 +46,7 @@ export default function ProfileScreen({ navigation }) {
   const signOut = async () => {
     if (loggingOut) return;
     setLoggingOut(true);
-    try { if (cloudConfigured) await cloudLogout(); await logout(); }
+    try { await logout(); }
     catch (error) { Alert.alert('Odhlásenie zlyhalo', error.message); setLoggingOut(false); }
   };
   const saveName = async () => {
@@ -59,10 +60,6 @@ export default function ProfileScreen({ navigation }) {
         setAvatar(avatarDraft);
       }
       setEditingName(false);
-      if (cloudConfigured) {
-        try { await updateCloudDisplayName(nextName); }
-        catch (error) { Alert.alert('Meno je uložené v telefóne', 'Do cloudu sa ho teraz nepodarilo odoslať. Skús to znova po pripojení.'); }
-      }
     } catch (error) { Alert.alert('Meno sa nepodarilo uložiť', error.message); }
     finally { setSavingName(false); }
   };
@@ -88,7 +85,7 @@ export default function ProfileScreen({ navigation }) {
         </View>
       </View> : <Text style={styles.name}>{name}</Text>}
       <Text selectable style={styles.email}>{user?.email || 'Email neuvedený'}</Text>
-      <View style={styles.badge}><Text style={styles.badgeText}>Testovacia verzia</Text></View>
+      <View style={styles.badge}><Text style={styles.badgeText}>{account ? 'Osobný účet' : 'Bez účtu · iba v telefóne'}</Text></View>
     </View>
     <Text style={styles.sectionTitle}>Moje cestovanie</Text>
     <View style={styles.card}>
@@ -111,7 +108,12 @@ export default function ProfileScreen({ navigation }) {
       <Text style={styles.description}>Po pripojení cloudového účtu sa návštevy ukladajú automaticky. Stav synchronizácie nájdeš nižšie.</Text>
     </View>
     <CloudBackupPanel />
-    <Pressable accessibilityRole="button" disabled={loggingOut} onPress={signOut}
+    <Pressable accessibilityRole="button" disabled={loggingOut} onPress={() => {
+        if (account && syncStatus !== 'synced') Alert.alert('Niektoré zmeny ešte nemusia byť v cloude',
+          'Zostanú v tomto telefóne a odošlú sa po ďalšom prihlásení do rovnakého účtu. Na inom telefóne zatiaľ nemusia byť dostupné.',
+          [{ text: 'Zostať prihlásený', style: 'cancel' }, { text: 'Odhlásiť sa', onPress: signOut }]);
+        else signOut();
+      }}
       style={({ pressed }) => [styles.logout, (pressed || loggingOut) && { opacity: 0.6 }]}>
       <MaterialIcons name="logout" color="#b91c1c" size={20} />
       <Text style={styles.logoutText}>{loggingOut ? 'Odhlasujem…' : 'Odhlásiť sa'}</Text>

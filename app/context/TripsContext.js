@@ -1,5 +1,5 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { addTrip, deleteTrip, getTrips, getUserProfile, updateTrip, restoreTripsBackup } from '../services/tripsService';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { addTrip, deleteTrip, getTrips, getUserProfile, updateTrip, restoreTripsBackup, importGuestNotebook } from '../services/tripsService';
 import { useAuth } from './AuthContext';
 
 import { summarizeCountries } from '../utils/mapVisits';
@@ -35,7 +35,11 @@ const buildStats = (trips) => {
 };
 
 export const TripsProvider = ({ children }) => {
-  const { user } = useAuth();
+  const { notebookId, loading: authLoading } = useAuth();
+  const activeId = useRef(notebookId);
+  activeId.current = notebookId;
+  const readVersion = useRef(0);
+  const [loadedFor, setLoadedFor] = useState(null);
   const [trips, setTrips] = useState([]);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -44,7 +48,8 @@ export const TripsProvider = ({ children }) => {
 
   const loadTrips = useCallback(
     async (showRefreshing = false) => {
-      if (!user?.uid) {
+      if (authLoading) return;
+      if (!notebookId) {
         setTrips([]);
         setProfile(null);
         setLoading(false);
@@ -58,92 +63,72 @@ export const TripsProvider = ({ children }) => {
         setLoading(true);
       }
 
+      const version = ++readVersion.current;
       try {
-        const [nextTrips, nextProfile] = await Promise.all([getTrips(user.uid), getUserProfile(user.uid)]);
+        const [nextTrips, nextProfile] = await Promise.all([getTrips(notebookId), getUserProfile(notebookId)]);
+        if (activeId.current !== notebookId || version !== readVersion.current) return;
+        setLoadedFor(notebookId);
         setTrips(sortTrips(nextTrips));
         setProfile(nextProfile);
         setError('');
       } catch (loadError) {
-        setError(loadError.message || 'Trips could not be loaded.');
+        if (activeId.current === notebookId) setError(loadError.message || 'Návštevy sa nepodarilo načítať.');
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (activeId.current === notebookId) { setLoading(false); setRefreshing(false); }
       }
     },
-    [user?.uid],
+    [notebookId, authLoading],
   );
 
   useEffect(() => {
     loadTrips();
   }, [loadTrips]);
 
-  const createTrip = useCallback(
-    async (tripData) => {
-      if (!user?.uid) {
-        throw new Error('Musíš byť prihlásený.');
-      }
+  const refreshAfterSync = useCallback(async () => {
+    const version = ++readVersion.current;
+    const current = await getTrips(notebookId);
+    if (activeId.current === notebookId && version === readVersion.current) setTrips(sortTrips(current));
+    return current;
+  }, [notebookId]);
+  const createTrip = useCallback(async (data) => {
+    if (!notebookId) throw new Error('Najprv otvor profil.');
+    const result = await addTrip(notebookId, data);
+    await refreshAfterSync(); return result;
+  }, [notebookId, refreshAfterSync]);
+  const editTrip = useCallback(async (id, data) => {
+    if (!notebookId) throw new Error('Najprv otvor profil.');
+    const result = await updateTrip(notebookId, id, data);
+    await refreshAfterSync(); return result;
+  }, [notebookId, refreshAfterSync]);
+  const removeTrip = useCallback(async (id) => {
+    if (!notebookId) throw new Error('Najprv otvor profil.');
+    await deleteTrip(notebookId, id); await refreshAfterSync();
+  }, [notebookId, refreshAfterSync]);
 
-      const createdTrip = await addTrip(user.uid, tripData);
-      setTrips((current) => sortTrips([...current, createdTrip]));
-      return createdTrip;
-    },
-    [user?.uid],
-  );
-
-  const editTrip = useCallback(
-    async (tripId, tripData) => {
-      if (!user?.uid) {
-        throw new Error('Musíš byť prihlásený.');
-      }
-
-      const updatedTrip = await updateTrip(user.uid, tripId, tripData);
-      setTrips((current) => sortTrips(current.map((trip) => (trip.id === tripId ? updatedTrip : trip))));
-      return updatedTrip;
-    },
-    [user?.uid],
-  );
-
-  const removeTrip = useCallback(
-    async (tripId) => {
-      if (!user?.uid) {
-        throw new Error('Musíš byť prihlásený.');
-      }
-
-      await deleteTrip(user.uid, tripId);
-      setTrips((current) => current.filter((trip) => trip.id !== tripId));
-    },
-    [user?.uid],
-  );
-
-  const value = useMemo(
-    () => ({
-      trips,
-      profile,
-      loading,
-      refreshing,
-      error,
-      stats: buildStats(trips),
-      refreshTrips: () => loadTrips(true),
-      addTrip: createTrip,
-      updateTrip: editTrip,
-      deleteTrip: removeTrip,
-      restoreBackup: async (incoming) => {
-        if (!user?.uid) throw new Error('Musíš byť prihlásený.');
-        const restored = await restoreTripsBackup(user.uid, incoming);
-        setTrips(sortTrips(restored));
-        return restored;
-      },
-    }),
-    [createTrip, editTrip, error, loadTrips, loading, profile, refreshing, removeTrip, trips, user?.uid],
-  );
+  const applySnapshot = useCallback(async (operation) => {
+    if (!notebookId) throw new Error('Najprv otvor profil.');
+    await operation(notebookId);
+    // Read after queued edits rather than displaying an older in-flight snapshot.
+    return refreshAfterSync();
+  }, [notebookId, refreshAfterSync]);
+  const restoreBackup = useCallback(incoming => applySnapshot(id => restoreTripsBackup(id, incoming)), [applySnapshot]);
+  const importGuest = useCallback(guestId => applySnapshot(id => importGuestNotebook(id, guestId)), [applySnapshot]);
+  const visibleTrips = loadedFor === notebookId ? trips : [];
+  const value = useMemo(() => ({
+    trips: visibleTrips, profile: loadedFor === notebookId ? profile : null,
+    loading: authLoading || loading || (!error && !!notebookId && loadedFor !== notebookId),
+    refreshing, error, notebookId, loadedFor,
+    stats: buildStats(visibleTrips), refreshTrips: () => loadTrips(true),
+    addTrip: createTrip, updateTrip: editTrip, deleteTrip: removeTrip,
+    restoreBackup, importGuest, refreshAfterSync,
+  }), [visibleTrips, profile, authLoading, loading, refreshing, error, notebookId, loadedFor,
+    loadTrips, createTrip, editTrip, removeTrip, restoreBackup, importGuest, refreshAfterSync]);
 
   return <TripsContext.Provider value={value}>{children}</TripsContext.Provider>;
 };
 
 export const useTrips = () => {
   const context = useContext(TripsContext);
-  if (!context) {
-    throw new Error('useTrips must be used inside TripsProvider');
-  }
+  if (!context) throw new Error('useTrips must be used inside TripsProvider');
   return context;
 };

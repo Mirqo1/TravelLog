@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { compareTripsNewest } from '../utils/tripOrder';
 import { mergeBackup } from '../utils/backup';
+import { mergeSync } from '../utils/syncMerge';
 
 const TRIPS_STORAGE_PREFIX = 'travellog/mock-trips/';
 const PROFILE_STORAGE_PREFIX = 'travellog/mock-profile/';
@@ -110,26 +111,48 @@ const sampleTrips = (userId) =>
 const tripsKey = (userId) => `${TRIPS_STORAGE_PREFIX}${userId}`;
 const profileKey = (userId) => `${PROFILE_STORAGE_PREFIX}${userId}`;
 
-const readTrips = async (userId) => {
+const readNotebook = async (userId) => {
   const raw = await AsyncStorage.getItem(tripsKey(userId));
-  if (!raw) {
-    const seeded = [];
-    await AsyncStorage.setItem(tripsKey(userId), JSON.stringify(seeded));
-    return seeded;
-  }
-
+  if (!raw) return { trips: [], base: [], imports: [] };
   try {
-    return JSON.parse(raw).map((trip) => normalizeTrip(trip, trip.id));
+    const parsed = JSON.parse(raw);
+    const state = Array.isArray(parsed) ? { trips: parsed, base: [], imports: [] } : parsed;
+    if (!Array.isArray(state.trips) || !Array.isArray(state.base) || !Array.isArray(state.imports)) throw new Error('format');
+    return { ...state, trips: state.trips.map(trip => normalizeTrip(trip, trip.id)) };
   } catch (error) {
     throw new Error('Uložené návštevy sa nepodarilo načítať. Pôvodné dáta zostali zachované.');
   }
 };
-
-const saveTrips = async (userId, trips) => {
-  const normalized = trips.map((trip) => normalizeTrip(trip, trip.id)).sort(byDateDesc);
-  await AsyncStorage.setItem(tripsKey(userId), JSON.stringify(normalized));
-  return normalized;
+const readTrips = async (userId) => (await readNotebook(userId)).trips;
+const writeNotebook = async (userId, state) => {
+  const trips = state.trips.map(trip => normalizeTrip({ ...trip, userId }, trip.id)).sort(byDateDesc);
+  // One durable write stores both visits and the merge baseline. A process exit
+  // cannot leave an updated baseline paired with yesterday's local records.
+  await AsyncStorage.setItem(tripsKey(userId), JSON.stringify(userId.startsWith('cloud-') ? { ...state, trips } : trips));
+  return trips;
 };
+const saveTrips = async (userId, trips) => writeNotebook(userId, { ...await readNotebook(userId), trips });
+
+export const mergeRemoteNotebook = (userId, remote) => exclusive(userId, async () => {
+  const state = await readNotebook(userId);
+  const merged = mergeSync(state.base, state.trips, remote?.trips || []);
+  const conflicts = (state.conflicts || 0) + merged.conflicts;
+  const trips = await writeNotebook(userId, { ...state, trips: merged.trips, base: remote?.trips || [], conflicts });
+  return { trips, conflicts };
+});
+export const acknowledgeNotebook = (userId, saved) => exclusive(userId, async () => {
+  const state = await readNotebook(userId);
+  await writeNotebook(userId, { ...state, base: saved.trips, lastSaved: saved.savedAt });
+});
+export const getNotebookState = (userId) => exclusive(userId, () => readNotebook(userId));
+export const importGuestNotebook = (userId, guestId) => exclusive(userId, async () => {
+  if (!userId.startsWith('cloud-') || !guestId || guestId.startsWith('cloud-')) throw new Error('Neplatný prenos návštev.');
+  const state = await readNotebook(userId);
+  if (state.imports.includes(guestId)) return state.trips;
+  const source = await getTrips(guestId);
+  const merged = mergeSync([], state.trips, source);
+  return writeNotebook(userId, { ...state, trips: merged.trips, imports: [...state.imports, guestId], conflicts: (state.conflicts || 0) + merged.conflicts });
+});
 
 export const getTrips = (userId) => exclusive(userId, async () => {
   const trips = await readTrips(userId);

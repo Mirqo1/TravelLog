@@ -48,3 +48,16 @@ Date/calendar/order/backup-roundtrip tests, backup service tests, map navigation
 - Premium wishlist, photo backup/gallery, sharing, translations and server-controlled admin/Premium access remain in the product roadmap.
 
 References: https://docs.expo.dev/versions/latest/sdk/splash-screen/ and https://www.geonames.org/export/web-services.html
+
+## Real accounts and durable automatic sync
+
+Replaced the active mock login with Firebase email/password plus a labelled guest
+mode. Preserved the existing guest notebook and cloud backup format. Each account
+now has separate local storage; old local visits require an explicit confirmed
+import. Added persistent three-way merge, deletion propagation, conflict recovery
+copies, retry/foreground polling and a single-flight uploader that retains edits
+made during requests. UI shows pending/error/confirmed states and last server save;
+logout warns about unconfirmed changes. The Profile name editor uses the same real
+account. Photo backup remains excluded and labelled. See CLOUD_BACKUP_SETUP.md for
+migration and device checks. Existing Firebase rules and native build configuration
+are unchanged; no prebuild/clean is needed for these JavaScript-only changes.
