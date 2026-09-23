@@ -60,7 +60,7 @@ export default function CloudBackupPanel() {
         <Text style={styles.accountName}>{account.displayName || 'Meno nie je nastavené'}</Text>
         <Text selectable style={styles.text}>{account.email}</Text>
         <Text style={styles.text}>{message || 'Po pridaní, úprave alebo vymazaní návštevy sa cloudová kópia aktualizuje automaticky.'}</Text>
-        <Text style={styles.note}>Táto synchronizácia ukladá texty návštev. Zálohovanie fotografií na Google Disk zapni v samostatnej časti nižšie.</Text>
+        <Text style={styles.note}>Táto synchronizácia ukladá texty návštev. Zálohovanie fotografií na Google Disk zapni v sekcii Fotografie a Google Disk.</Text>
         {lastSaved ? <Text style={styles.note}>Posledné potvrdené uloženie: {new Date(lastSaved).toLocaleString()}</Text> : null}
         {button('Skontrolovať uloženie', retry, true)}
         {guestCount > 0 && !imported ? <>
@@ -90,7 +90,7 @@ export default function CloudBackupPanel() {
           if (!email.trim() || password.length < 6) throw new Error('Vyplň email a heslo s aspoň 6 znakmi.');
           await registerWithEmail(email, password, displayName);
           setPassword('');
-        }))}
+        }), true)}
         <Pressable disabled={busy} onPress={() => run(async () => {
           if (!email.trim()) throw new Error('Najprv zadaj email.');
           await cloudResetPassword(email); setFormMessage('Ak účet existuje, dostaneš email na obnovu hesla.');

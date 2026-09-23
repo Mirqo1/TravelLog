@@ -1,3 +1,5 @@
+import SettingsSection from '../components/SettingsSection';
+import { useDriveBackup } from '../context/DriveBackupContext';
 import { theme } from '../theme';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -13,7 +15,15 @@ import CloudBackupPanel from '../components/CloudBackupPanel';
 export default function ProfileScreen({ navigation }) {
   const { user, account, logout, updateDisplayName } = useAuth();
   const { profile, stats, loading } = useTrips();
-  const { status: syncStatus } = useCloudSync();
+  const { status: syncStatus, message: syncMessage } = useCloudSync();
+  const drive = useDriveBackup();
+  const [openSection, setOpenSection] = useState(account ? null : 'account');
+  const toggleSection = key => setOpenSection(current => current === key ? null : key);
+  const accountSummary = !account ? 'Prihlásenie alebo vytvorenie účtu'
+    : syncStatus === 'synced' ? 'Návštevy sú automaticky uložené'
+    : syncMessage || 'Návštevy čakajú na synchronizáciu';
+  const photoSummary = !drive.signedIn ? 'Najprv sa prihlás do účtu'
+    : drive.message || (drive.config ? 'Google Disk je pripojený' : 'Google Disk nie je pripojený');
   const [loggingOut, setLoggingOut] = useState(false);
   const [avatar, setAvatar] = useState(null);
   const [avatarDraft, setAvatarDraft] = useState(null);
@@ -92,7 +102,7 @@ export default function ProfileScreen({ navigation }) {
     <View style={styles.card}>
       {[{ label: 'Uložené návštevy', value: stats.totalTrips, icon: 'place', route: 'Trips' },
         { label: 'Navštívené krajiny', value: stats.countriesVisited, icon: 'public', route: 'Map' }].map((item) => (
-        <Pressable key={item.route} accessibilityRole="button" onPress={() => navigation.navigate(item.route)}
+        <Pressable key={item.route} accessibilityRole="button" onPress={() => item.route === 'Map' ? navigation.navigate('Map', { overviewRequest: Date.now() }) : navigation.navigate('Trips', { countryCode: null, countryName: null })}
           style={({ pressed }) => [styles.row, pressed && { opacity: 0.6 }]}>
           <View style={styles.rowIcon}><MaterialIcons name={item.icon} color={theme.primary} size={22} /></View>
           <Text style={styles.rowLabel}>{item.label}</Text>
@@ -101,15 +111,24 @@ export default function ProfileScreen({ navigation }) {
         </Pressable>
       ))}
     </View>
-    <Text style={styles.sectionTitle}>Moje dáta</Text>
+    <Text style={styles.sectionTitle}>Účet a nastavenia</Text>
+    <SettingsSection title="Účet a záloha návštev" summary={accountSummary} icon="cloud-done"
+      expanded={openSection === 'account'} onPress={() => toggleSection('account')}>
+      <CloudBackupPanel />
+    </SettingsSection>
+    <SettingsSection title="Fotografie a Google Disk" summary={photoSummary} icon="photo-library"
+      expanded={openSection === 'photos'} onPress={() => toggleSection('photos')}>
+      <DriveBackupPanel />
+    </SettingsSection>
+    <SettingsSection title="Ukladanie a offline režim" summary="Ako sú chránené tvoje údaje" icon="phone-android"
+      expanded={openSection === 'storage'} onPress={() => toggleSection('storage')}>
     <View style={styles.storage}>
       <View style={styles.storageHeader}><MaterialIcons name="phone-android" color={theme.primary} size={24} />
         <Text style={styles.storageTitle}>Uložené v telefóne</Text></View>
       <Text style={styles.description}>Návštevy si môžeš prezerať aj bez internetu. Na načítanie mapy a vyhľadávanie miest potrebuješ pripojenie.</Text>
-      <Text style={styles.description}>Po pripojení cloudového účtu sa návštevy ukladajú automaticky. Stav synchronizácie nájdeš nižšie.</Text>
+      <Text style={styles.description}>Po pripojení cloudového účtu sa návštevy ukladajú automaticky. Stav vidíš v sekcii Účet a záloha návštev.</Text>
     </View>
-    <CloudBackupPanel />
-    <DriveBackupPanel />
+    </SettingsSection>
     <Pressable accessibilityRole="button" disabled={loggingOut} onPress={() => {
         if (account && syncStatus !== 'synced') Alert.alert('Niektoré zmeny ešte nemusia byť v cloude',
           'Zostanú v tomto telefóne a odošlú sa po ďalšom prihlásení do rovnakého účtu. Na inom telefóne zatiaľ nemusia byť dostupné.',

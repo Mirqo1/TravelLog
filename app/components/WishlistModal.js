@@ -1,3 +1,4 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -7,8 +8,8 @@ import { useTrips } from '../context/TripsContext';
 import { findLocationDetails } from '../services/geonamesService';
 import AddPlaceModal from './AddPlaceModal';
 
-const Button = ({ children, onPress, disabled }) => <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress}
-  style={[styles.button, disabled && { opacity: 0.45 }]}><Text style={styles.buttonText}>{children}</Text></Pressable>;
+const Button = ({ children, onPress, disabled, secondary = false }) => <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress}
+  style={[styles.button, secondary && styles.secondaryButton, disabled && { opacity: 0.45 }]}><Text style={[styles.buttonText, secondary && styles.secondaryText]}>{children}</Text></Pressable>;
 const Shell = ({ children, onClose }) => <Modal visible animationType="slide" onRequestClose={onClose}>
   <SafeAreaProvider><SafeAreaView style={styles.screen}>{children}</SafeAreaView></SafeAreaProvider>
 </Modal>;
@@ -63,7 +64,7 @@ export function WishlistEditor({ place, onClose }) {
         <TextInput onFocus={onFocus} accessibilityLabel="Moje poznámky" style={[styles.input, { minHeight: 100, textAlignVertical: 'top' }]} multiline maxLength={2000}
           value={draft.notes || ''} editable={!busy} onChangeText={notes => setDraft(old => ({ ...old, notes }))} placeholder="Čo tu chcem vidieť…" />
         <Button disabled={busy || !draft.name?.trim()} onPress={submit}>{busy ? 'Ukladám…' : 'Uložiť do wishlistu'}</Button>
-        <Button disabled={busy} onPress={onClose}>Zrušiť</Button>
+        <Pressable accessibilityRole="button" disabled={busy} onPress={onClose} style={styles.link}><Text style={[styles.muted, { textAlign: 'center' }]}>Zrušiť</Text></Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   </Shell>;
@@ -101,30 +102,53 @@ export default function WishlistModal({ visible, onClose, onMap }) {
   ]);
   return <Shell onClose={onClose}>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Chcem navštíviť</Text>
+      <View style={styles.headingRow}>
+        <Text style={[styles.title, { flex: 1 }]}>Chcem navštíviť</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Zavrieť wishlist" onPress={onClose} style={styles.iconButton}>
+          <MaterialIcons name="close" size={24} color={theme.text} />
+        </Pressable>
+      </View>
       <Text style={styles.muted}>Wishlist · Premium{preview ? ' · testovací prístup' : ''}</Text>
-      <Text style={styles.muted}>{message}</Text>
+      <View style={styles.headingRow}>
+        <Text accessibilityLiveRegion="polite" style={[styles.muted, { flex: 1 }]}>{message}</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Synchronizovať wishlist" onPress={sync} style={styles.iconButton}>
+          <MaterialIcons name="sync" size={22} color={theme.primary} />
+        </Pressable>
+      </View>
       {!premium ? <Text style={styles.muted}>Nové miesta môžeš ukladať s Premium. Svoje uložené miesta môžeš naďalej prezerať, odstrániť alebo zaznamenať ako návštevu.</Text> : null}
       <Button disabled={!premium || !ready} onPress={() => { onClose(); onMap(); }}>+ Vybrať miesto na mape</Button>
       <TextInput accessibilityLabel="Hľadať vo wishliste" style={styles.input} value={query} onChangeText={setQuery} placeholder="Hľadať v uložených miestach" />
       {!filtered.length ? <Text style={styles.muted}>{!ready ? 'Načítavam…' : query ? 'Žiadne zodpovedajúce miesta.' : 'Tvoje budúce dobrodružstvá začínajú tu. Vyber miesto na mape a ulož si ho.'}</Text> : null}
       {filtered.map(item => <View key={item.id} style={styles.card}>
-        <Text style={styles.name}>{item.name}</Text>
+        <View style={styles.headingRow}>
+          <Text style={[styles.name, { flex: 1 }]}>{item.name}</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Možnosti miesta ${item.name}`} style={styles.iconButton}
+            onPress={() => Alert.alert(item.name, 'Možnosti miesta', [
+              ...(premium ? [{ text: 'Upraviť', onPress: () => setEditing(item) }] : []),
+              { text: 'Odstrániť', style: 'destructive', onPress: () => removeItem(item) },
+              { text: 'Zrušiť', style: 'cancel' },
+            ])}><MaterialIcons name="more-vert" size={24} color={theme.muted} /></Pressable>
+        </View>
         <Text style={styles.muted}>{item.locationName || `${item.location.latitude.toFixed(4)}, ${item.location.longitude.toFixed(4)}`}</Text>
         {item.notes ? <Text style={styles.muted}>{item.notes}</Text> : null}
-        <Button onPress={() => { onClose(); onMap(item); }}>Zobraziť na mape</Button>
-        <Button onPress={() => setVisiting(item)}>Navštívil som</Button>
-        <View style={styles.row}>
-          {premium ? <Pressable accessibilityRole="button" style={styles.link} onPress={() => setEditing(item)}><Text style={styles.label}>Upraviť</Text></Pressable> : null}
-          <Pressable accessibilityRole="button" style={styles.link} onPress={() => removeItem(item)}><Text style={styles.label}>Odstrániť</Text></Pressable>
+        <View style={styles.cardActions}>
+          <Pressable accessibilityRole="button" style={styles.mapLink} onPress={() => { onClose(); onMap(item); }}>
+            <MaterialIcons name="place" size={20} color={theme.primary} /><Text style={styles.label}>Na mape</Text>
+          </Pressable>
+          <Button secondary onPress={() => setVisiting(item)}>Navštívil som</Button>
         </View>
       </View>)}
-      <Button onPress={sync}>Synchronizovať</Button>
-      <Button onPress={onClose}>Zavrieť</Button>
+
     </ScrollView>
   </Shell>;
 }
 const styles = StyleSheet.create({
+  headingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  cardActions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  mapLink: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 48, paddingRight: 10 },
+  secondaryButton: { backgroundColor: 'transparent', borderWidth: 1, borderColor: theme.border },
+  secondaryText: { color: theme.primary },
   screen: { flex: 1, backgroundColor: theme.background }, content: { padding: 20, paddingBottom: 28, gap: 12 },
   title: { fontSize: 25, fontWeight: '800', color: theme.text }, name: { fontSize: 19, fontWeight: '700', color: theme.text },
   muted: { color: theme.muted, lineHeight: 21 }, label: { color: theme.primary, fontWeight: '700' },

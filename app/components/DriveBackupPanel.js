@@ -6,8 +6,8 @@ import { theme } from '../theme';
 export default function DriveBackupPanel() {
   const drive = useDriveBackup();
   const action = fn => () => Promise.resolve().then(fn).catch(error => Alert.alert('Google Disk', error.message));
-  const button = (text, fn, disabled = false) => <Pressable accessibilityRole="button" disabled={disabled || drive.busy}
-    onPress={action(fn)} style={[styles.button, (disabled || drive.busy) && { opacity: 0.45 }]}><Text style={styles.buttonText}>{text}</Text></Pressable>;
+  const button = (text, fn, disabled = false, primary = false) => <Pressable accessibilityRole="button" disabled={disabled || drive.busy}
+    onPress={action(fn)} style={[styles.button, primary && styles.primaryButton, (disabled || drive.busy) && { opacity: 0.45 }]}><Text style={[styles.buttonText, primary && { color: '#fff' }]}>{text}</Text></Pressable>;
   return <View style={styles.card}>
     <Text style={styles.title}>Fotografie · Google Disk</Text>
     <Text style={styles.note}>Zálohy využívajú miesto na tvojom Google Disku. Sú súkromné a nezobrazujú sa medzi bežnými súbormi.</Text>
@@ -31,7 +31,7 @@ export default function DriveBackupPanel() {
           {!drive.canUpload ? <Text style={styles.note}>Nové zálohy vyžadujú Premium. Existujúce si môžeš obnoviť aj bez neho.</Text> : null}
         </> : <>
           <Text style={styles.note}>Vyber Google účet pre fotografie tohto účtu TravelLog. Môže byť iný než tvoj prihlasovací e-mail.</Text>
-          {button('Pripojiť Google Disk', drive.connect, !drive.ready)}
+          {button('Pripojiť Google Disk', drive.connect, !drive.ready, true)}
           {!!drive.message && <Text style={styles.note}>{drive.message}</Text>}
         </>}
         <Text style={styles.note}>Automatické zálohovanie funguje vo všetkých záložkách, kým je aplikácia otvorená. Po jej zatvorení alebo bez siete fotky čakajú na ďalšie otvorenie. Stav „zálohované“ sa zobrazí až po dokončení prenosu.</Text>
@@ -44,6 +44,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, fontWeight: '700', color: theme.text },
   note: { color: theme.muted, lineHeight: 20, fontSize: 13 }, email: { color: theme.text, fontWeight: '600' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  button: { minHeight: 46, justifyContent: 'center', alignItems: 'center', borderRadius: 12, padding: 10, backgroundColor: theme.primarySoft },
+  button: { minHeight: 46, justifyContent: 'center', alignItems: 'center', borderRadius: 12, padding: 10, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface },
+  primaryButton: { backgroundColor: theme.primary, borderColor: theme.primary },
   buttonText: { fontWeight: '700', color: theme.primary },
 });

@@ -195,13 +195,15 @@ export default function MapScreen({ route, navigation }) {
       </View>
       {selectedCoordinate ? <Text numberOfLines={2} style={styles.hint}>Vybrané: {selectedCoordinate.name ||
         selectedCoordinate.latitude.toFixed(4) + ', ' + selectedCoordinate.longitude.toFixed(4)}</Text> : null}
-      <Pressable style={styles.button} onPress={() => setModalVisible(true)}>
-        <Text style={styles.buttonText}>+ Pridať návštevu{selectedCoordinate ? ' na vybranom mieste' : ''}</Text>
+      <View style={styles.mapActions}>
+      <Pressable accessibilityRole="button" style={[styles.button, styles.mapAction]} onPress={() => setModalVisible(true)}>
+        <Text style={styles.buttonText}>+ Pridať návštevu</Text>
       </Pressable>
-      {selectedCoordinate ? <Pressable style={styles.button} onPress={() => {
+      {selectedCoordinate ? <Pressable accessibilityRole="button" style={[styles.button, styles.mapAction, styles.wishAction]} onPress={() => {
         if (!premium) { Alert.alert('Premium', 'Ukladanie miest do wishlistu je súčasťou Premium.'); return; }
         setWishDraft({ name: selectedCoordinate.name || '', latitude: selectedCoordinate.latitude, longitude: selectedCoordinate.longitude, locationName: selectedCoordinate.locationName || '', countryCode: selectedCoordinate.countryCode || '' });
-      }}><Text style={styles.buttonText}>☆ Chcem navštíviť</Text></Pressable> : null}
+      }}><Text style={[styles.buttonText, { color: theme.primary }]}>☆ Chcem navštíviť</Text></Pressable> : null}
+      </View>
       {wishDraft ? <WishlistEditor place={wishDraft} onClose={() => setWishDraft(null)} /> : null}
       <WishlistModal visible={wishlistOpen} onClose={() => setWishlistOpen(false)}
         onMap={item => navigation.setParams({ wishRequest: Date.now(), wishPlace: item || null })} />
@@ -232,6 +234,9 @@ export default function MapScreen({ route, navigation }) {
   );
 }
 const styles = StyleSheet.create({
+  mapActions: { flexDirection: 'row', gap: 10, alignItems: 'stretch' },
+  mapAction: { flex: 1, minHeight: 48, paddingHorizontal: 8 },
+  wishAction: { backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.primary },
   container: { flex: 1, padding: 16, gap: 10, backgroundColor: 'transparent' },
   header: { fontSize: 22, fontWeight: '700', color: theme.text },
   searchRow: { flexDirection: 'row', gap: 8 },

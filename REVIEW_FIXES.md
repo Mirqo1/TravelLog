@@ -153,3 +153,23 @@ upload/restore remains unimplemented and is not claimed enabled by this change.
   No billing integration or second-phone recovery acceptance claimed.
 - Regression tests cover storage failure, account switches, offline deletion,
   access gates, foreground sync, conversion retries. Android Hermes export passed.
+
+
+## Quieter actions and more content space (2026-09-23)
+
+- Wishlist: one filled add-place action; per-card map link, outlined visited action
+  and accessible overflow menu for edit/remove (deletion still confirmed). Close
+  and manual sync move to labelled 44 px icon targets. Editor cancel is a text action.
+- Map: visit and wishlist actions share one row with distinct filled/outlined
+  styles, flexible equal widths and wrapping labels. Existing safe-area tab bar
+  is unchanged.
+- Trips: title/add/search/sort/country controls live inside FlatList's scrolling
+  header, without sticky indices or nested ScrollView. Country filter has 16 px
+  separation from Add Visit. Selecting a different country resets list offset.
+- Profile: three collapsed settings sections with visible short backup statuses;
+  account setup starts expanded for guests. One section opens at a time. Folded
+  forms stay mounted to preserve drafts/operations; accessibility hides their
+  children. Sync providers remain app-wide. Secondary backup actions use outlines.
+- Android Hermes export verified; physical phone layout still needs acceptance,
+  especially enlarged font sizes and narrow displays. No dependency, native,
+  Firebase rules or storage schema changes in this UI update.

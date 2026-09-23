@@ -1,5 +1,5 @@
 import { theme } from '../theme';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -26,7 +26,8 @@ const normalizeSearch = (value) => String(value || '').normalize('NFD').replace(
 export default function TripsScreen({ route, navigation }) {
   const { trips, loading, refreshing, refreshTrips, updateTrip, deleteTrip } = useTrips();
   const countryCode = route.params?.countryCode;
-  useEffect(() => { setSearch(''); }, [countryCode]);
+  const listRef = useRef(null);
+  useEffect(() => { setSearch(''); listRef.current?.scrollToOffset({ offset: 0, animated: false }); }, [countryCode]);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [selectedTrip, setSelectedTrip] = useState(null);
@@ -90,8 +91,15 @@ export default function TripsScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
+
+      <FlatList
+        ref={listRef}
+        style={{ flex: 1 }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        ListHeaderComponent={<View style={styles.listHeader}>
       <Text style={styles.header}>Návštevy</Text>
-      {countryCode ? <Pressable onPress={() => navigation.setParams({ countryCode: null, countryName: null })} style={styles.chip}>
+      {countryCode ? <Pressable onPress={() => navigation.setParams({ countryCode: null, countryName: null })} accessibilityRole="button" accessibilityLabel="Zrušiť filter krajiny" style={[styles.chip, styles.countryFilter]}>
         <Text>{route.params.countryName || countryCode} · Zrušiť filter ×</Text>
       </Pressable> : null}
       <AddVisitButton />
@@ -120,7 +128,7 @@ export default function TripsScreen({ route, navigation }) {
         ))}
       </View>
 
-      <FlatList
+        </View>}
         data={filteredTrips}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
@@ -160,6 +168,8 @@ export default function TripsScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
+  listHeader: { paddingBottom: 12 },
+  countryFilter: { alignSelf: 'flex-start', marginBottom: 16, minHeight: 44, justifyContent: 'center' },
   loader: {
     flex: 1,
     justifyContent: 'center',
