@@ -245,3 +245,13 @@ export const getUserProfile = async (userId) => {
   await AsyncStorage.setItem(profileKey(userId), JSON.stringify(profile));
   return profile;
 };
+
+// Atomic, photo-only restore. A form edit or deletion during a download wins.
+export const restoreVisitPhotos = (userId, tripId, photos, expected, isCurrent) => exclusive(userId, async () => {
+  const trips = await readTrips(userId);
+  if (!isCurrent()) return false;
+  const trip = trips.find(item => item.id === tripId);
+  if (!trip || (trip.photos || []).length || expected !== '[]') return false;
+  await saveTrips(userId, trips.map(item => item.id === tripId ? { ...item, photos } : item));
+  return true;
+});

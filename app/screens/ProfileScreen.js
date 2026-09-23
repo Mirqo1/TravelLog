@@ -7,6 +7,7 @@ import { useCloudSync } from '../context/CloudSyncContext';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useAuth } from '../context/AuthContext';
 import { useTrips } from '../context/TripsContext';
+import DriveBackupPanel from '../components/DriveBackupPanel';
 import CloudBackupPanel from '../components/CloudBackupPanel';
 
 export default function ProfileScreen({ navigation }) {
@@ -108,6 +109,7 @@ export default function ProfileScreen({ navigation }) {
       <Text style={styles.description}>Po pripojení cloudového účtu sa návštevy ukladajú automaticky. Stav synchronizácie nájdeš nižšie.</Text>
     </View>
     <CloudBackupPanel />
+    <DriveBackupPanel />
     <Pressable accessibilityRole="button" disabled={loggingOut} onPress={() => {
         if (account && syncStatus !== 'synced') Alert.alert('Niektoré zmeny ešte nemusia byť v cloude',
           'Zostanú v tomto telefóne a odošlú sa po ďalšom prihlásení do rovnakého účtu. Na inom telefóne zatiaľ nemusia byť dostupné.',

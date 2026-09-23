@@ -43,7 +43,7 @@ export default function VisitPhotoEditor({ photos, onChange, onImport, disabled,
       {busy ? <ActivityIndicator color={theme.primary} /> : <MaterialIcons name="add-photo-alternate" size={24} color={theme.primary} />}
       <Text style={styles.actionText}>{busy ? 'Pripravujem fotografie…' : 'Pridať fotografie'}</Text>
     </Pressable> : null}
-    <Text style={styles.note}>Fotky sú zatiaľ iba v tomto telefóne. Textová cloudová záloha ich neobsahuje.</Text>
+    <Text style={styles.note}>Fotky sa ukladajú do telefónu. Zálohu fotografií na svoj Google Disk zapni v Profile; textová záloha ich neobsahuje.</Text>
   </View>;
 }
 const styles = StyleSheet.create({

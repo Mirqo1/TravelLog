@@ -16,7 +16,7 @@ Profile. The old mock email/token login is no longer used. A clearly labelled
   account never silently assigns those visits to it. Profile offers **Preniesť
   moje lokálne návštevy**, shows the target email, and asks for confirmation.
   Import is once per local notebook per account; the original stays on the phone.
-  Local-only photos are retained by import but are NOT uploaded.
+  Local photos are retained by import but are NOT uploaded by Firebase; enable the separate Google Drive photo backup in Profile.
 - If the previous profile was a mock login, its password was never an account
   password. Use the real account previously created in the backup panel, reset
   its password, or create a real account.
@@ -54,9 +54,9 @@ Profile. The old mock email/token login is no longer used. A clearly labelled
 ## Scope and limitations
 
 Visits include names, descriptions, notes, coordinates, country, date/time,
-ratings and original IDs/timestamps. **Visit photos and profile photos are not
-backed up yet.** The planned premium photo flow uses the user's own Google Drive;
-Drive integration and photo cards are a separate task. Wishlist remains planned.
+ratings and original IDs/timestamps. **Firebase does not contain photos.** Visit photo backup/restore now uses the
+user's Google Drive after explicit connection in Profile; see GOOGLE_DRIVE_SETUP.md.
+Profile photos remain local-only. Wishlist remains planned.
 
 The existing one-document version-1 backup and conservative 700,000 URI-encoded
 character guard remain. Large production notebooks should migrate to per-visit

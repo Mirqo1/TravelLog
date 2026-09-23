@@ -1,5 +1,5 @@
 // Backup only portable visit fields. Device-local photo URIs are deliberately
-// excluded until managed photo uploads are implemented.
+// excluded here; Google Drive photo backup has its own private manifests.
 export function portableTrips(trips) {
   return trips.map(({ id, name, locationName, countryCode, location, date, visitTime, rating, description, notes, createdAt, updatedAt }) => ({
     id, name, locationName: locationName || '', countryCode: countryCode || '', location,

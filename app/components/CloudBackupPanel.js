@@ -60,7 +60,7 @@ export default function CloudBackupPanel() {
         <Text style={styles.accountName}>{account.displayName || 'Meno nie je nastavené'}</Text>
         <Text selectable style={styles.text}>{account.email}</Text>
         <Text style={styles.text}>{message || 'Po pridaní, úprave alebo vymazaní návštevy sa cloudová kópia aktualizuje automaticky.'}</Text>
-        <Text style={styles.note}>Fotografie sa v tejto verzii ešte automaticky neukladajú.</Text>
+        <Text style={styles.note}>Táto synchronizácia ukladá texty návštev. Zálohovanie fotografií na Google Disk zapni v samostatnej časti nižšie.</Text>
         {lastSaved ? <Text style={styles.note}>Posledné potvrdené uloženie: {new Date(lastSaved).toLocaleString()}</Text> : null}
         {button('Skontrolovať uloženie', retry, true)}
         {guestCount > 0 && !imported ? <>

@@ -93,3 +93,18 @@ viewport size and only a small window of images is rendered. No new dependencies
 JSX syntax was checked; physical Android gesture behaviour remains a device check.
 Google Drive owner-side OAuth prerequisites are in GOOGLE_DRIVE_SETUP.md; photo
 upload/restore remains unimplemented and is not claimed enabled by this change.
+
+
+## Google Drive photo backup (2026-09-23)
+
+- Added local Android Expo module using Google AuthorizationClient, appdata-only
+  scope, account-pinned reauthorization, Wi-Fi detection and SHA-256 namespaces.
+- Profile connection, account-specific settings, automatic all-tab foreground
+  backup and explicit non-destructive restore. No OAuth secrets/tokens in storage.
+- Persistent upload journal; checksum-based blob reuse; complete album publication;
+  per-device manifests; integrity-checked temporary downloads and atomic photo-only
+  restore that preserves existing galleries and never revives deleted visits.
+- Updated photo/text backup UI wording and documented real-device acceptance and
+  limits (no suspended-app worker, remote deletion, partial-gallery repair yet).
+- Service regression tests, notebook restore tests, native autolinking and Android
+  Metro/Hermes export passed. Full APK and real Google Drive still require testing.

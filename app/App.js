@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider } from './context/AuthContext';
 import { TripsProvider } from './context/TripsContext';
+import { DriveBackupProvider } from './context/DriveBackupContext';
 import { CloudSyncProvider } from './context/CloudSyncContext';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Navigation from './components/Navigation';
@@ -18,6 +19,7 @@ export default function App() {
       <AuthProvider>
         <TripsProvider>
           <CloudSyncProvider>
+          <DriveBackupProvider>
           <NavigationContainer>
             <StatusBar style="dark" />
             <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: theme.background }}>
@@ -25,6 +27,7 @@ export default function App() {
               <Navigation />
             </SafeAreaView>
           </NavigationContainer>
+          </DriveBackupProvider>
           </CloudSyncProvider>
         </TripsProvider>
       </AuthProvider>

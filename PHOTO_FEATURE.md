@@ -34,30 +34,11 @@ can still view/export all existing photos in detail and remove/reorder them.
 
 ## Backup boundary
 
-**This release does not upload or restore photos through Google Drive or Firebase.**
-All new photo UI explicitly labels this. Portable Firebase visit snapshots still
-exclude photos, file paths, thumbnails and binary data. Syncing edited visit text
-preserves the local gallery. A second phone restores text but not these images.
-Do not uninstall the only installation containing local photos.
-
-Google Drive remains the agreed next step: user's own quota, not Firebase Storage
-paid by the app owner. Before shipping that integration:
-
-1. Enable Google Drive API in the app's Google Cloud project.
-2. Configure Google OAuth consent and an Android OAuth client for the exact app
-   package/signing SHA-1; supply any required public client IDs to the app build.
-   Do not place a client secret or service-account key into the APK.
-3. Implement a supported native Google authorization flow requesting only the
-   `drive.appdata` scope for a private application data folder. Link a chosen
-   Google identity explicitly to the currently signed-in TravelLog account;
-   never infer ownership from matching email text.
-4. Persist a photo upload/download queue and a manifest relating visit IDs to
-   stable photo IDs. Handle account switching, revoked access, quota exhaustion,
-   Wi-Fi-only uploads, restart, delete conflicts and interrupted transfers.
-5. Test restore on another physical phone before claiming photos are backed up.
-
-Reference: https://developers.google.com/workspace/drive/api/guides/appdata
-The Google Drive connector in ChatGPT is not the app's end-user OAuth integration.
+Google Drive photo backups are now implemented separately from Firebase text
+sync. Enable them in Profile after installing the new native APK. See
+[GOOGLE_DRIVE_SETUP.md](GOOGLE_DRIVE_SETUP.md) for OAuth setup, behaviour, limits,
+Windows build commands and the required two-phone acceptance test. Local photos
+remain readable without Drive. Profile avatars are still local-only.
 
 ## Local Windows build
 

@@ -157,3 +157,15 @@ const beforePhotoEdit = (await service.getTrips('cloud-alice')).find(trip => tri
 await service.updateTrip('cloud-alice', 'a', { photos: [localPhoto] });
 assert.equal((await service.getTrips('cloud-alice')).find(trip => trip.id === 'a').updatedAt, beforePhotoEdit.updatedAt);
 console.log('PASS: gallery-only edit keeps shared timestamp; timestamp/key-order differences never create a conflict copy; real remote text edit retains local gallery.');
+
+// Drive restore must be photo-only and must lose to concurrent local gallery edits.
+const restoreUser = 'cloud-drive-restore';
+const visit = await service.addTrip(restoreUser, { ...t('restore'), photos: [] });
+const beforeRestore = (await service.getTrips(restoreUser))[0];
+assert.equal(await service.restoreVisitPhotos(restoreUser, visit.id, [{ id: 'photo-drive', fileName: 'photo-drive.jpg' }], '[]', () => false), false);
+assert.equal(await service.restoreVisitPhotos(restoreUser, visit.id, [{ id: 'photo-drive', fileName: 'photo-drive.jpg' }], '[]', () => true), true);
+assert.equal((await service.getTrips(restoreUser))[0].updatedAt, beforeRestore.updatedAt);
+assert.equal(await service.restoreVisitPhotos(restoreUser, visit.id, [{ id: 'photo-other', fileName: 'photo-other.jpg' }], '[]', () => true), false);
+await service.deleteTrip(restoreUser, visit.id);
+assert.equal(await service.restoreVisitPhotos(restoreUser, visit.id, [], '[]', () => true), false);
+console.log('PASS: Drive photo-only restore preserves timestamps, respects account cancellation and existing galleries, never recreates a deleted visit.');
