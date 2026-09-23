@@ -1,3 +1,5 @@
+import WishlistModal, { WishlistEditor } from '../components/WishlistModal';
+import { useWishlist } from '../context/WishlistContext';
 import { displayVisitDate } from '../utils/visitDate';
 import { theme } from '../theme';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -14,8 +16,12 @@ import { countryDisplayName, countryMarkers, groupMarkers, stableModeForZoom, va
 
 const INITIAL_REGION = { latitude: 49, longitude: 17, latitudeDelta: 35, longitudeDelta: 55 };
 
-export default function MapScreen({ route }) {
+export default function MapScreen({ route, navigation }) {
   const isFocused = useIsFocused();
+  const { premium } = useWishlist();
+  const [wishlistOpen, setWishlistOpen] = useState(false);
+  const [wishDraft, setWishDraft] = useState(null);
+  const wishHandled = useRef(null);
   const { trips, addTrip, updateTrip, deleteTrip } = useTrips();
   const [region, setRegion] = useState(INITIAL_REGION);
   const [mapType, setMapType] = useState('standard');
@@ -35,6 +41,15 @@ export default function MapScreen({ route }) {
   const overviewHandled = useRef(null);
   const mapReady = useRef(false);
   useEffect(() => { if (!isFocused) mapReady.current = false; }, [isFocused]);
+  const showWish = () => {
+    const request = route.params?.wishRequest;
+    if (!request || wishHandled.current === request || !mapReady.current || !mapRef.current) return;
+    wishHandled.current = request;
+    const item = route.params.wishPlace;
+    setSelectedCoordinate(item ? { ...item.location, name: item.name, locationName: item.locationName, countryCode: item.countryCode } : null);
+    if (item) mapRef.current.animateToRegion({ ...item.location, latitudeDelta: 0.025, longitudeDelta: 0.025 });
+  };
+  useEffect(() => { if (isFocused) showWish(); }, [route.params?.wishRequest, isFocused]);
   const showOverview = () => {
     const request = route.params?.overviewRequest;
     if (!request || overviewHandled.current === request || !mapReady.current || !mapRef.current) return;
@@ -118,7 +133,10 @@ export default function MapScreen({ route }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Mapa návštev</Text>
+      <View style={styles.resultsHeader}>
+        <Text style={styles.header}>Mapa návštev</Text>
+        <Pressable accessibilityRole="button" hitSlop={8} onPress={() => setWishlistOpen(true)}><Text style={styles.resultLink}>Wishlist ☆</Text></Pressable>
+      </View>
       <MapTypeToggle value={mapType} onChange={setMapType} />
       <View style={styles.searchRow}>
         <TextInput value={query} onChangeText={changeQuery} placeholder="Napr. Big Ben London"
@@ -154,7 +172,7 @@ export default function MapScreen({ route }) {
         : 'Heat mapa a návštevy · ťuknutím otvoríš detail.'}</Text>
       <View style={styles.mapContainer} onLayout={(event) => setMapWidth(event.nativeEvent.layout.width)}>
         {isFocused ? <MapView ref={mapRef} style={styles.map} initialRegion={region}
-          mapType={mapType} onMapReady={() => { mapReady.current = true; showOverview(); }}
+          mapType={mapType} onMapReady={() => { mapReady.current = true; showOverview(); showWish(); }}
           onRegionChangeComplete={setRegion} onPress={selectPoint}
           onPoiClick={(event) => setSelectedCoordinate({ ...event.nativeEvent.coordinate, name: event.nativeEvent.name })}>
           {heatPoints.length > 0 ? <Heatmap points={heatPoints} radius={28} opacity={0.55} /> : null}
@@ -180,6 +198,13 @@ export default function MapScreen({ route }) {
       <Pressable style={styles.button} onPress={() => setModalVisible(true)}>
         <Text style={styles.buttonText}>+ Pridať návštevu{selectedCoordinate ? ' na vybranom mieste' : ''}</Text>
       </Pressable>
+      {selectedCoordinate ? <Pressable style={styles.button} onPress={() => {
+        if (!premium) { Alert.alert('Premium', 'Ukladanie miest do wishlistu je súčasťou Premium.'); return; }
+        setWishDraft({ name: selectedCoordinate.name || '', latitude: selectedCoordinate.latitude, longitude: selectedCoordinate.longitude, locationName: selectedCoordinate.locationName || '', countryCode: selectedCoordinate.countryCode || '' });
+      }}><Text style={styles.buttonText}>☆ Chcem navštíviť</Text></Pressable> : null}
+      {wishDraft ? <WishlistEditor place={wishDraft} onClose={() => setWishDraft(null)} /> : null}
+      <WishlistModal visible={wishlistOpen} onClose={() => setWishlistOpen(false)}
+        onMap={item => navigation.setParams({ wishRequest: Date.now(), wishPlace: item || null })} />
       <AddPlaceModal visible={modalVisible} title="Pridať návštevu" coordinates={selectedCoordinate}
         onClose={() => setModalVisible(false)} onSave={async (trip) => {
           await addTrip(trip); setModalVisible(false); setSelectedCoordinate(null);

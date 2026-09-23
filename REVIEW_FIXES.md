@@ -136,3 +136,20 @@ upload/restore remains unimplemented and is not claimed enabled by this change.
   normal/v31 fixture themes; existing app theme, icon and signing file preserved.
 - SVG preview inspected; physical Android splash layout still needs device check.
 - Second-phone Drive recovery remains deferred, explicitly not marked verified.
+
+
+## Centered startup mark and Premium wishlist (2026-09-23)
+
+- Replace bottom splash wordmark with one centered, mask-safe vector stack.
+  Existing native-project script still preserves Gradle/signing configuration.
+- Add wishlist accessible in Home and Map. Save a selected place, edit text,
+  search, reopen its map location, remove, or convert into a completed visit.
+  Conversion retry reuses a stable visit ID. Planned items stay outside stats.
+- Account-scoped durable local storage; owner-only Firestore documents with
+  tombstones and transactional latest-change merging. App-wide foreground sync.
+  Read/remove/convert remains available without Premium; private preview unlocks
+  creation/editing. Production access uses the existing premium/admin claims.
+- Firebase rule deployment is a separate required user step (WISHLIST.md).
+  No billing integration or second-phone recovery acceptance claimed.
+- Regression tests cover storage failure, account switches, offline deletion,
+  access gates, foreground sync, conversion retries. Android Hermes export passed.

@@ -166,8 +166,10 @@ export const restoreTripsBackup = (userId, incoming) => exclusive(userId, async 
   return saveTrips(userId, mergeBackup(current, incoming, userId));
 });
 
-export const addTrip = (userId, tripData) => exclusive(userId, async () => {
+export const addTrip = (userId, tripData, wishlistId = null) => exclusive(userId, async () => {
   const trips = await readTrips(userId);
+  const stableId = wishlistId ? `wishlist-visit-${wishlistId}` : null;
+  if (stableId && trips.some(trip => trip.id === stableId)) return trips.find(trip => trip.id === stableId);
   const created = normalizeTrip(
     {
       ...tripData,
@@ -176,7 +178,7 @@ export const addTrip = (userId, tripData) => exclusive(userId, async () => {
       updatedAt: today(),
       syncStatus: 'synced',
     },
-    `mock-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    stableId || `mock-${Date.now()}-${Math.random().toString(36).slice(2)}`,
   );
   await saveTrips(userId, [...trips, created]);
   return created;

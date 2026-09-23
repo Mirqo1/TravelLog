@@ -1,3 +1,5 @@
+import WishlistModal from '../components/WishlistModal';
+import { useWishlist } from '../context/WishlistContext';
 import { countryDisplayName } from '../utils/mapVisits';
 import { displayVisitDate } from '../utils/visitDate';
 import { theme } from '../theme';
@@ -14,10 +16,12 @@ import { useTrips } from '../context/TripsContext';
 
 export default function HomeScreen({ navigation }) {
   const { loading, error, stats, trips, updateTrip, deleteTrip, refreshTrips } = useTrips();
+  const [wishlistOpen, setWishlistOpen] = useState(false);
+  const { items: wishes } = useWishlist();
   const [countriesOpen, setCountriesOpen] = useState(false);
   const { account, status, message } = useCloudSync();
   const backupTitle = !account ? 'Uložené v tomto telefóne' : status === 'synced' ? 'Návštevy zálohované' : status === 'syncing' || status === 'connecting' ? 'Ukladám do cloudu…' : 'Záloha čaká na uloženie';
-  const backupMessage = !account ? 'Pre automatické zálohovanie sa prihlás do cloudového účtu v Profile.' : status === 'synced' ? 'Automatická záloha funguje počas používania aplikácie vo všetkých záložkách. Fotografie zatiaľ nie sú súčasťou zálohy.' : message || 'Údaje sú v telefóne. Po dokončení prenosu sa tu zobrazí potvrdenie zálohy.';
+  const backupMessage = !account ? 'Pre automatické zálohovanie sa prihlás do cloudového účtu v Profile.' : status === 'synced' ? 'Automatická záloha funguje počas používania aplikácie vo všetkých záložkách. Zálohu fotografií na vlastný Google Disk si zapneš v Profile.' : message || 'Údaje sú v telefóne. Po dokončení prenosu sa tu zobrazí potvrdenie zálohy.';
   const [selectedId, setSelectedId] = useState(null);
   const [editingTrip, setEditingTrip] = useState(null);
   const selectedTrip = trips.find((trip) => trip.id === selectedId);
@@ -45,6 +49,10 @@ export default function HomeScreen({ navigation }) {
         <Pressable onPress={refreshTrips} style={styles.linkButton}><Text style={styles.link}>Skúsiť načítať znova</Text></Pressable>
       </View> : null}
       <AddVisitButton />
+      <Pressable accessibilityRole="button" style={styles.card} onPress={() => setWishlistOpen(true)}>
+        <Text style={styles.sectionTitle}>Chcem navštíviť · {wishes.length}</Text>
+        <Text style={styles.muted}>Wishlist · Premium · miesta na budúce cesty</Text>
+      </Pressable>
       <View style={styles.statsRow}>
         {[{ label: 'Návštevy', value: stats.totalTrips, icon: 'place', route: 'Trips' },
           { label: 'Krajiny', value: stats.countriesVisited, icon: 'public', route: 'Map' }].map((item) => (
@@ -82,6 +90,8 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.muted}>{backupMessage}</Text></View>
       </View>
     </ScrollView>
+    <WishlistModal visible={wishlistOpen} onClose={() => setWishlistOpen(false)}
+      onMap={item => navigation.navigate('Map', { wishRequest: Date.now(), wishPlace: item || null })} />
     <CountriesModal visible={countriesOpen} trips={trips} onClose={() => setCountriesOpen(false)}
       onCountry={(country) => { setCountriesOpen(false); navigation.navigate('Trips', { countryCode: country.code, countryName: countryDisplayName(country) }); }}
       onMap={() => { setCountriesOpen(false); navigation.navigate('Map', { overviewRequest: Date.now() }); }} />

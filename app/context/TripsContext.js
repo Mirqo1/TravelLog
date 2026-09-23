@@ -90,9 +90,9 @@ export const TripsProvider = ({ children }) => {
     if (activeId.current === notebookId && version === readVersion.current) setTrips(sortTrips(current));
     return current;
   }, [notebookId]);
-  const createTrip = useCallback(async (data) => {
+  const createTrip = useCallback(async (data, wishlistId = null) => {
     if (!notebookId) throw new Error('Najprv otvor profil.');
-    const result = await addTrip(notebookId, data);
+    const result = await addTrip(notebookId, data, wishlistId);
     await refreshAfterSync(); return result;
   }, [notebookId, refreshAfterSync]);
   const editTrip = useCallback(async (id, data) => {

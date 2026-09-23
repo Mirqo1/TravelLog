@@ -47,6 +47,9 @@ before building. Fresh Expo prebuilds apply `withSplashBranding` automatically.
 
 - Google Drive: user reports first-phone functionality works. Restore on a SECOND
   phone has NOT been verified; user explicitly deferred that acceptance check.
-- Next larger agreed feature: Premium wishlist of places the user wants to visit.
-  Wishlist implementation is still pending.
+- Premium wishlist implemented: Home/Map access, separate local account storage,
+  automatic foreground Firestore sync, editing/removal and conversion to a visit.
+  Firebase rules publication and phone acceptance remain required; see WISHLIST.md.
+- Splash placement revised: compass and name form one centered vector stack,
+  replacing the earlier bottom wordmark. See SPLASH_BRANDING.md.
 

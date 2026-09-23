@@ -77,3 +77,26 @@ export async function saveCloudBackup(trips, expectedRevision, uid) {
   });
   return backup;
 }
+
+// Wishlist lives separately from completed visits and their backup schema.
+function wishlistCollection(uid) {
+  const { auth, db, fs } = cloud();
+  if (!uid || auth.currentUser?.uid !== uid) throw new Error('Účet sa zmenil.');
+  return fs.collection(db, 'users', uid, 'wishlist');
+}
+export async function readCloudWishlist(uid) {
+  const { fs } = cloud();
+  const snapshot = await fs.getDocsFromServer(wishlistCollection(uid));
+  return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+}
+export async function saveCloudWish(uid, item, merge) {
+  const { fs, db } = cloud();
+  const ref = fs.doc(wishlistCollection(uid), item.id);
+  return fs.runTransaction(db, async transaction => {
+    wishlistCollection(uid);
+    const old = await transaction.get(ref);
+    const [result] = merge(old.exists() ? [{ ...old.data(), id: old.id }] : [], [item]);
+    if (!old.exists() || JSON.stringify(old.data()) !== JSON.stringify(result)) transaction.set(ref, result);
+    return result;
+  });
+}

@@ -169,3 +169,10 @@ assert.equal(await service.restoreVisitPhotos(restoreUser, visit.id, [{ id: 'pho
 await service.deleteTrip(restoreUser, visit.id);
 assert.equal(await service.restoreVisitPhotos(restoreUser, visit.id, [], '[]', () => true), false);
 console.log('PASS: Drive photo-only restore preserves timestamps, respects account cancellation and existing galleries, never recreates a deleted visit.');
+
+const wishVisit1 = await service.addTrip('cloud-wishlist-test', t('ignored', 'Planned zoo'), 'wish-123');
+const wishVisit2 = await service.addTrip('cloud-wishlist-test', t('ignored', 'Retry'), 'wish-123');
+assert.equal(wishVisit1.id, wishVisit2.id);
+assert.equal((await service.getTrips('cloud-wishlist-test')).length, 1);
+assert.equal(wishVisit2.name, 'Planned zoo');
+console.log('PASS: wishlist conversion retry creates one visit and preserves the first saved visit.');

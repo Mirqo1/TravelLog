@@ -1,9 +1,10 @@
 # Compass and TravelLog startup branding
 
-Android 12+ shows the existing compass in the centre and an outlined TravelLog
-wordmark in its native bottom branding area. Sand background and brown/ochre
-palette are unchanged. Older Android versions keep the existing compass splash.
-No artificial delay or second loading screen was added.
+The native splash now uses **one centered compass + TravelLog stack**, with the
+wordmark immediately beneath the compass. The old bottom branding attribute is
+removed. Both elements are vector paths on a transparent background; they fit
+inside Android's splash icon safe circle. No artificial delay or second loading
+screen is added. Launcher and in-app compass assets are unchanged.
 
 ## Existing local Windows project
 
@@ -16,7 +17,7 @@ gradlew.bat :app:assembleRelease
 ```
 
 Use the existing JDK 21 session settings. The script updates only matching splash
-XML themes (including qualified variants) and adds the wordmark drawable. It does
+XML themes (including qualified variants) and adds the combined drawable. It does
 not touch app/build.gradle, signing credentials or local app.json. Repeating it is
 safe. Do not use prebuild --clean for this change.
 
@@ -26,8 +27,8 @@ reverse registration order. Introspection verifies the final generated style.
 
 ## Artwork
 
-`assets/splash-wordmark.svg` is the visual source, and `assets/splash-wordmark.xml`
-is its native Android vector equivalent (200x80 dp). Both contain outlined paths;
+`assets/splash-centered.svg` is the visual source, and `assets/splash-centered.xml`
+is its native Android vector equivalent (288x288 dp with a 192 dp safe circle). Both contain outlined paths;
 no font is bundled or loaded at startup. Regeneration uses fontTools and
 `scripts/generate-splash-wordmark.py /path/to/DejaVuSans-Bold.ttf`.
 The glyph attribution/license is in `assets/splash-wordmark-LICENSE.txt`.

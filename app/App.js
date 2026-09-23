@@ -11,6 +11,7 @@ import { DriveBackupProvider } from './context/DriveBackupContext';
 import { CloudSyncProvider } from './context/CloudSyncContext';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Navigation from './components/Navigation';
+import { WishlistProvider } from './context/WishlistContext';
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
         <TripsProvider>
           <CloudSyncProvider>
           <DriveBackupProvider>
+          <WishlistProvider>
           <NavigationContainer>
             <StatusBar style="dark" />
             <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: theme.background }}>
@@ -27,6 +29,7 @@ export default function App() {
               <Navigation />
             </SafeAreaView>
           </NavigationContainer>
+          </WishlistProvider>
           </DriveBackupProvider>
           </CloudSyncProvider>
         </TripsProvider>
