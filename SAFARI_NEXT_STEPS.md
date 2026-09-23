@@ -36,6 +36,17 @@ Check startup/launcher icon, long airport names in Home and Trips, contour contr
 
 ## User note — splash branding (2026-09-23)
 
-Keep the compass the user likes, and add the application name to the opening
-screen so it is not just a standalone icon. Recorded for a later design change;
-not part of the startup-crash hotfix. Final product name is still to be decided.
+Implemented: retain the centre compass and add an outlined TravelLog wordmark
+in brown/ochre through Android 12+ native splash branding. No second activity,
+JS startup overlay, artificial delay or change to account initialization. Final
+product name is still to be decided; wordmark source is separate and replaceable.
+For the existing signed Android project run `node scripts/apply-splash-branding.cjs`
+before building. Fresh Expo prebuilds apply `withSplashBranding` automatically.
+
+## Current next steps (2026-09-23)
+
+- Google Drive: user reports first-phone functionality works. Restore on a SECOND
+  phone has NOT been verified; user explicitly deferred that acceptance check.
+- Next larger agreed feature: Premium wishlist of places the user wants to visit.
+  Wishlist implementation is still pending.
+

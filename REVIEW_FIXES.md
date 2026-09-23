@@ -121,3 +121,18 @@ upload/restore remains unimplemented and is not claimed enabled by this change.
   existing backup/isolation checks, and signs out again. The original code fails
   this test; the fix passes. No local data, signing or OAuth configuration changed.
 - Recorded the request to add the app name alongside the compass on startup.
+
+
+## Native splash wordmark (2026-09-23)
+
+- Retain compass and sand background; add TravelLog in brown/ochre using Android
+  12+ `android:windowSplashScreenBrandingImage` (200x80 dp vector drawable).
+  Text is outlined and has a transparent background. No runtime font loading,
+  timers, additional launch activity or authentication changes.
+- Expo plugin registered before expo-splash-screen because mods run in reverse
+  registration order; Expo introspection confirms branding survives generation.
+- Existing local signed projects use `node scripts/apply-splash-branding.cjs`:
+  updates matching splash themes and copies drawable only. Verified twice against
+  normal/v31 fixture themes; existing app theme, icon and signing file preserved.
+- SVG preview inspected; physical Android splash layout still needs device check.
+- Second-phone Drive recovery remains deferred, explicitly not marked verified.

@@ -56,6 +56,9 @@ module.exports = ({ config }) => {
   }];
   if (splashIndex >= 0) plugins[splashIndex] = splashPlugin;
   else plugins.push(splashPlugin);
+  // Expo mods run in reverse registration order: apply branding after splash styles.
+  const configuredSplashIndex = plugins.findIndex(plugin => (Array.isArray(plugin) ? plugin[0] : plugin) === 'expo-splash-screen');
+  plugins.splice(configuredSplashIndex, 0, './plugins/withSplashBranding');
 
   return {
     ...config,
