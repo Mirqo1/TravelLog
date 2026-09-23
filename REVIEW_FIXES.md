@@ -173,3 +173,21 @@ upload/restore remains unimplemented and is not claimed enabled by this change.
 - Android Hermes export verified; physical phone layout still needs acceptance,
   especially enlarged font sizes and narrow displays. No dependency, native,
   Firebase rules or storage schema changes in this UI update.
+
+## Persistent Premium map action and planned-place markers (2026-09-23)
+
+- Chcem navštíviť is shown whenever Premium/test access is active, even without
+  a selected coordinate. With no point, it enters explicit pick mode; map/POI/
+  search selection then opens the editor. Press again to cancel pick mode.
+- Wishlist entry now uses the shared surface/border/brown palette, bookmark icon,
+  count and a minimum 44 px touch target. Existing saved places remain accessible
+  without Premium, as before.
+- Extra task: map displays planned places with outlined star markers, clustered
+  at intermediate zoom and hidden in country overview to avoid the previously
+  reported map clutter. Co-located wishes open a chooser. Saved-point selection
+  preserves wishlist ID/notes when editing; it does not create a duplicate wish.
+  Planned places remain excluded from visit heat and statistics.
+- Actual MapScreen behavior checked with mocked native hosts: initial action,
+  cancel/retry pick, POI editor, overview/nearby markers, saved-item reuse and Free
+  list access. Existing map-navigation regression checks and Android export pass.
+  Native marker appearance and touch handling still need phone acceptance.

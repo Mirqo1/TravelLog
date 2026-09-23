@@ -1,3 +1,4 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import WishlistModal, { WishlistEditor } from '../components/WishlistModal';
 import { useWishlist } from '../context/WishlistContext';
 import { displayVisitDate } from '../utils/visitDate';
@@ -18,7 +19,8 @@ const INITIAL_REGION = { latitude: 49, longitude: 17, latitudeDelta: 35, longitu
 
 export default function MapScreen({ route, navigation }) {
   const isFocused = useIsFocused();
-  const { premium } = useWishlist();
+  const { premium, items: wishes } = useWishlist();
+  const [pickingWish, setPickingWish] = useState(false);
   const [wishlistOpen, setWishlistOpen] = useState(false);
   const [wishDraft, setWishDraft] = useState(null);
   const wishHandled = useRef(null);
@@ -41,12 +43,22 @@ export default function MapScreen({ route, navigation }) {
   const overviewHandled = useRef(null);
   const mapReady = useRef(false);
   useEffect(() => { if (!isFocused) mapReady.current = false; }, [isFocused]);
+  const openWishEditor = coordinate => {
+    const existing = wishes.find(item => item.id === coordinate.wishlistId);
+    setWishDraft(existing || { name: coordinate.name || '', latitude: coordinate.latitude,
+      longitude: coordinate.longitude, locationName: coordinate.locationName || '', countryCode: coordinate.countryCode || '' });
+  };
+  const selectCoordinate = coordinate => {
+    setSelectedCoordinate(coordinate);
+    if (pickingWish && premium) { setPickingWish(false); openWishEditor(coordinate); }
+  };
   const showWish = () => {
     const request = route.params?.wishRequest;
     if (!request || wishHandled.current === request || !mapReady.current || !mapRef.current) return;
     wishHandled.current = request;
     const item = route.params.wishPlace;
-    setSelectedCoordinate(item ? { ...item.location, name: item.name, locationName: item.locationName, countryCode: item.countryCode } : null);
+    setPickingWish(!item && premium);
+    setSelectedCoordinate(item ? { ...item.location, name: item.name, locationName: item.locationName, countryCode: item.countryCode, wishlistId: item.id } : null);
     if (item) mapRef.current.animateToRegion({ ...item.location, latitudeDelta: 0.025, longitudeDelta: 0.025 });
   };
   useEffect(() => { if (isFocused) showWish(); }, [route.params?.wishRequest, isFocused]);
@@ -54,6 +66,7 @@ export default function MapScreen({ route, navigation }) {
     const request = route.params?.overviewRequest;
     if (!request || overviewHandled.current === request || !mapReady.current || !mapRef.current) return;
     overviewHandled.current = request;
+    setPickingWish(false);
     setSelectedCoordinate(null);
     const points = [...trips.map((trip) => trip.location).filter(validLocation), ...countryMarkers(trips).map((group) => group.coordinate)];
     if (points.length) mapRef.current.fitToCoordinates(points, { edgePadding: { top: 70, right: 55, bottom: 70, left: 55 }, animated: true });
@@ -68,6 +81,20 @@ export default function MapScreen({ route, navigation }) {
   const countryPins = useMemo(() => countryMarkers(trips), [trips]);
   const markers = useMemo(() => mode === 'countries' ? [] : groupMarkers(trips, region, zoom, mode === 'places'),
     [trips, region, zoom, mode]);
+
+  const wishMarkers = useMemo(() => mode === 'countries' ? [] : groupMarkers(wishes, region, zoom, mode === 'places'),
+    [wishes, region, zoom, mode]);
+  const selectWish = item => selectCoordinate({ ...item.location, name: item.name,
+    locationName: item.locationName, countryCode: item.countryCode, wishlistId: item.id });
+  const handleWishCluster = group => {
+    if (group.trips.length === 1) { selectWish(group.trips[0]); return; }
+    const spread = Math.max(...group.trips.map(item => Math.max(Math.abs(item.location.latitude - group.coordinate.latitude),
+      Math.abs(item.location.longitude - group.coordinate.longitude))));
+    if (mode === 'places' || spread < 0.0001) {
+      setVisitGroup({ title: 'Chcem navštíviť', visits: group.trips, wishlist: true });
+    } else mapRef.current?.animateToRegion({ ...group.coordinate,
+      latitudeDelta: Math.max(0.005, region.latitudeDelta / 3), longitudeDelta: Math.max(0.005, region.longitudeDelta / 3) });
+  };
 
   const showGroup = (title, visits) => {
     setSelectedCoordinate(null);
@@ -88,7 +115,7 @@ export default function MapScreen({ route, navigation }) {
   };
   const selectPoint = (event) => {
     if (event.nativeEvent.action === 'marker-press') return;
-    setSelectedCoordinate(event.nativeEvent.coordinate);
+    selectCoordinate(event.nativeEvent.coordinate);
   };
   const handleSearch = async () => {
     if (!query.trim() || searching) return;
@@ -113,7 +140,7 @@ export default function MapScreen({ route, navigation }) {
     setSearchError('');
   };
   const chooseResult = (result) => {
-    setSelectedCoordinate(result);
+    selectCoordinate(result);
     setSearchResults(null);
     Keyboard.dismiss();
     mapRef.current?.animateToRegion({ latitude: result.latitude, longitude: result.longitude,
@@ -133,9 +160,14 @@ export default function MapScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.resultsHeader}>
-        <Text style={styles.header}>Mapa návštev</Text>
-        <Pressable accessibilityRole="button" hitSlop={8} onPress={() => setWishlistOpen(true)}><Text style={styles.resultLink}>Wishlist ☆</Text></Pressable>
+      <View style={styles.mapHeader}>
+        <Text style={[styles.header, { flex: 1 }]}>Mapa návštev</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Otvoriť wishlist, ${wishes.length} miest`}
+          style={({ pressed }) => [styles.wishlistEntry, pressed && { opacity: 0.65 }]}
+          onPress={() => { setPickingWish(false); setWishlistOpen(true); }}>
+          <MaterialIcons name="bookmark-border" size={21} color={theme.primary} />
+          <Text style={styles.wishlistEntryText}>Wishlist{wishes.length ? ` · ${wishes.length}` : ''}</Text>
+        </Pressable>
       </View>
       <MapTypeToggle value={mapType} onChange={setMapType} />
       <View style={styles.searchRow}>
@@ -166,15 +198,15 @@ export default function MapScreen({ route, navigation }) {
           <Text style={styles.resultLink}>Vyhľadávanie Photon · © OpenStreetMap contributors</Text>
         </Pressable>
       </View> : null}
-      <Text style={styles.hint}>{mode === 'countries'
+      <Text accessibilityLiveRegion="polite" style={styles.hint}>{pickingWish ? 'Vyhľadaj miesto alebo ťukni na mapu. Opätovným stlačením tlačidla výber zrušíš.' : mode === 'countries'
         ? 'Počet návštev v krajine · ťukni na číslo pre zoznam.'
-        : mode === 'clusters' ? 'Heat mapa a skupiny miest · ťuknutím ich priblížiš.'
-        : 'Heat mapa a návštevy · ťuknutím otvoríš detail.'}</Text>
+        : mode === 'clusters' ? 'Skupiny návštev · ☆ plánované miesta. Ťuknutím priblížiš.'
+        : 'Heat mapa a návštevy · ☆ plánované miesta.'}</Text>
       <View style={styles.mapContainer} onLayout={(event) => setMapWidth(event.nativeEvent.layout.width)}>
         {isFocused ? <MapView ref={mapRef} style={styles.map} initialRegion={region}
           mapType={mapType} onMapReady={() => { mapReady.current = true; showOverview(); showWish(); }}
           onRegionChangeComplete={setRegion} onPress={selectPoint}
-          onPoiClick={(event) => setSelectedCoordinate({ ...event.nativeEvent.coordinate, name: event.nativeEvent.name })}>
+          onPoiClick={(event) => selectCoordinate({ ...event.nativeEvent.coordinate, name: event.nativeEvent.name })}>
           {heatPoints.length > 0 ? <Heatmap points={heatPoints} radius={28} opacity={0.55} /> : null}
           {mode === 'countries' ? countryPins.map((group) => <Marker key={'country:' + group.country.code}
             coordinate={group.coordinate} anchor={{ x: 0.5, y: 0.5 }}
@@ -190,19 +222,28 @@ export default function MapScreen({ route, navigation }) {
               </View> : null}
             </Marker>
           ))}
-          {selectedCoordinate ? <Marker coordinate={selectedCoordinate} pinColor="#16a34a" /> : null}
+          {wishMarkers.map(group => <Marker key={'wishes:' + group.trips.map(item => item.id).sort().join('|')}
+            coordinate={group.coordinate} anchor={{ x: 0.5, y: 0.5 }} zIndex={2}
+            accessibilityLabel={group.trips.length === 1 ? `Chcem navštíviť: ${group.trips[0].name}` : `Wishlist: ${group.trips.length} miest`}
+            onPress={event => { event.stopPropagation(); handleWishCluster(group); }}>
+            <View style={styles.wishMarker}><Text style={styles.wishMarkerText}>☆{group.trips.length > 1 ? ` ${group.trips.length}` : ''}</Text></View>
+          </Marker>)}
+          {selectedCoordinate ? <Marker zIndex={3} coordinate={selectedCoordinate} pinColor="#16a34a" /> : null}
         </MapView> : null}
       </View>
       {selectedCoordinate ? <Text numberOfLines={2} style={styles.hint}>Vybrané: {selectedCoordinate.name ||
         selectedCoordinate.latitude.toFixed(4) + ', ' + selectedCoordinate.longitude.toFixed(4)}</Text> : null}
       <View style={styles.mapActions}>
-      <Pressable accessibilityRole="button" style={[styles.button, styles.mapAction]} onPress={() => setModalVisible(true)}>
+      <Pressable accessibilityRole="button" style={[styles.button, styles.mapAction]} onPress={() => { setPickingWish(false); setModalVisible(true); }}>
         <Text style={styles.buttonText}>+ Pridať návštevu</Text>
       </Pressable>
-      {selectedCoordinate ? <Pressable accessibilityRole="button" style={[styles.button, styles.mapAction, styles.wishAction]} onPress={() => {
-        if (!premium) { Alert.alert('Premium', 'Ukladanie miest do wishlistu je súčasťou Premium.'); return; }
-        setWishDraft({ name: selectedCoordinate.name || '', latitude: selectedCoordinate.latitude, longitude: selectedCoordinate.longitude, locationName: selectedCoordinate.locationName || '', countryCode: selectedCoordinate.countryCode || '' });
-      }}><Text style={[styles.buttonText, { color: theme.primary }]}>☆ Chcem navštíviť</Text></Pressable> : null}
+      {premium ? <Pressable accessibilityRole="button" accessibilityState={{ selected: pickingWish }}
+        style={[styles.button, styles.mapAction, styles.wishAction, pickingWish && { backgroundColor: theme.primarySoft }]}
+        onPress={() => {
+          Keyboard.dismiss();
+          if (selectedCoordinate) { setPickingWish(false); openWishEditor(selectedCoordinate); }
+          else setPickingWish(current => !current);
+        }}><Text style={[styles.buttonText, { color: theme.primary }]}>☆ Chcem navštíviť</Text></Pressable> : null}
       </View>
       {wishDraft ? <WishlistEditor place={wishDraft} onClose={() => setWishDraft(null)} /> : null}
       <WishlistModal visible={wishlistOpen} onClose={() => setWishlistOpen(false)}
@@ -220,11 +261,11 @@ export default function MapScreen({ route, navigation }) {
       <Modal visible={Boolean(visitGroup)} animationType="slide" onRequestClose={() => setVisitGroup(null)}>
         <SafeAreaProvider><SafeAreaView style={styles.container}>
           <Text style={styles.header}>{visitGroup?.title}</Text>
-          <Text style={styles.hint}>Počet návštev: {visitGroup?.visits.length || 0}</Text>
+          <Text style={styles.hint}>{visitGroup?.wishlist ? 'Plánované miesta' : 'Počet návštev'}: {visitGroup?.visits.length || 0}</Text>
           <ScrollView style={{ flex: 1 }}>
             {visitGroup?.visits.map((trip) => <Pressable key={trip.id} style={styles.visitRow}
-              onPress={() => { setVisitGroup(null); setSelectedTrip(trip); }}>
-              <Text style={styles.visitName}>{trip.name}</Text><Text>{displayVisitDate(trip)} · {trip.locationName}</Text>
+              onPress={() => { setVisitGroup(null); if (visitGroup.wishlist) selectWish(trip); else setSelectedTrip(trip); }}>
+              <Text style={styles.visitName}>{trip.name}</Text><Text>{visitGroup.wishlist ? trip.locationName : `${displayVisitDate(trip)} · ${trip.locationName}`}</Text>
             </Pressable>)}
           </ScrollView>
           <Pressable style={styles.button} onPress={() => setVisitGroup(null)}><Text style={styles.buttonText}>Zavrieť</Text></Pressable>
@@ -234,6 +275,13 @@ export default function MapScreen({ route, navigation }) {
   );
 }
 const styles = StyleSheet.create({
+  mapHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  wishlistEntry: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12,
+    paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface, flexShrink: 1 },
+  wishlistEntryText: { color: theme.primary, fontSize: 14, fontWeight: '700', flexShrink: 1 },
+  wishMarker: { minWidth: 36, height: 36, borderRadius: 10, backgroundColor: theme.surface, borderWidth: 2,
+    borderColor: theme.primary, paddingHorizontal: 7, alignItems: 'center', justifyContent: 'center' },
+  wishMarkerText: { color: theme.primary, fontWeight: '800', fontSize: 20 },
   mapActions: { flexDirection: 'row', gap: 10, alignItems: 'stretch' },
   mapAction: { flex: 1, minHeight: 48, paddingHorizontal: 8 },
   wishAction: { backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.primary },

@@ -65,3 +65,11 @@ Phone acceptance: save a searched POI and a blank map point; restart; edit notes
 open the saved location; cancel then complete a visit; verify no extra visit or
 country count before conversion. After publishing rules, check the saved status
 and later restore on another phone signed into the same Firebase account.
+
+### Map interaction update
+
+The Premium map action is always visible. Without a selected point, press it to
+start choosing, then tap the map/POI or select a search result. Press it again to
+cancel selection. Planned places appear as outlined stars at closer zoom levels;
+nearby places cluster, while country overview remains free of wishlist pins.
+The styled Wishlist entry opens the full list even after Premium expires.
