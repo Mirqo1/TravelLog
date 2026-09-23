@@ -53,3 +53,20 @@ before building. Fresh Expo prebuilds apply `withSplashBranding` automatically.
 - Splash placement revised: compass and name form one centered vector stack,
   replacing the earlier bottom wordmark. See SPLASH_BRANDING.md.
 
+## Future idea — Premium community recommendations nearby
+
+Status: idea recorded at the user's request; do NOT implement yet.
+
+- Preserve the app's offline-first personal diary/travel journal experience.
+- Optional online Premium feature: recommend places based on TravelLog users'
+  ratings, rather than Google reviews.
+- Proposed eligibility: at least 10 distinct people have rated the same place
+  and its average rating is strictly above 4.5 out of 5. These are initial example
+  thresholds to finalize when designing the feature.
+- Trigger: a Premium user is online and logs a visit nearby. Show an unobtrusive
+  in-app suggestion such as “Používatelia odporúčajú navštíviť v okolí toto miesto”.
+- Offline diary entry must continue working without recommendations or a network.
+- Later design decisions: what counts as nearby, reliable shared place identity,
+  one rating per person/place, consent to contribute ratings while keeping diary
+  notes/photos private, abuse resistance, and frequency/dismissal of suggestions.
+  These are open questions, not approved implementation requirements.
