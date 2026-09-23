@@ -70,3 +70,40 @@ Status: idea recorded at the user's request; do NOT implement yet.
   one rating per person/place, consent to contribute ratings while keeping diary
   notes/photos private, abuse resistance, and frequency/dismissal of suggestions.
   These are open questions, not approved implementation requirements.
+
+
+## Next build — match Home branding to the approved splash
+
+User request: Home compass + TravelLog should match the approved centered splash
+mark in appearance, proportions and compass-to-wordmark spacing. Keep the slogan
+below it, with balanced consistent spacing; a more compact header is welcome.
+Reuse the visual artwork where practical, but avoid carrying the splash's large
+transparent masking margins into Home. Preserve safe-area clearance.
+Status: queued for the next implementation/build; not implemented in this note.
+
+## Trips year timeline — proposal under discussion
+
+User idea: a horizontal year axis above Trips, from the earliest visit year on
+the left to the current year on the right. Drag a thumb to move to visits by
+actual activity date, not creation/logging date. Display the year at the current
+finger/thumb position live while dragging.
+
+Suggested behavior to discuss before implementation:
+- Compact track, larger invisible touch target, snapping to whole years and a
+  live year bubble above the thumb. Allow tapping the track as well.
+- Year selection filters the visits to that year; an explicit All years option
+  restores the full list. This is a proposed alternative to jumping through a
+  long list, not yet the user's approved choice.
+- Combine with country and text filters; clearly indicate years with no matching
+  visits rather than silently switching to a different year.
+- Axis scrolls away with the Trips header, preserving the already accepted
+  content-first scrolling behavior. Handle a single-year history and no visits.
+Status: discussion only; do not implement until behavior is agreed.
+
+## Future naming/navigation — wishlist
+
+User wants to rename Wishlist to something like “Moje sny”; wording is tentative.
+Its current button placement in Map is not satisfactory and should be relocated.
+A possible destination is a Visits / Moje sny switch within Trips, sharing search
+and avoiding an additional bottom-navigation tab. This is a suggestion, not an
+approved placement. Defer rename/relocation until the final design is agreed.
