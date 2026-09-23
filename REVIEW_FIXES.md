@@ -108,3 +108,16 @@ upload/restore remains unimplemented and is not claimed enabled by this change.
   limits (no suspended-app worker, remote deletion, partial-gallery repair yet).
 - Service regression tests, notebook restore tests, native autolinking and Android
   Metro/Hermes export passed. Full APK and real Google Drive still require testing.
+
+
+## Cold-start crash hotfix (2026-09-23)
+
+- Reproduced a synchronous DriveBackupProvider render error with account=null and
+  saved=null: both optional UIDs were undefined, so equality passed and accessing
+  saved.config threw TypeError before the first screen rendered.
+- Require a nonempty active UID before treating settings as loaded. Cold start,
+  signed-out and guest states now expose config=null and ready=false.
+- Regression test starts without a Firebase account, restores the account, runs
+  existing backup/isolation checks, and signs out again. The original code fails
+  this test; the fix passes. No local data, signing or OAuth configuration changed.
+- Recorded the request to add the app name alongside the compass on startup.

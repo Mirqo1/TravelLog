@@ -20,8 +20,9 @@ export function DriveBackupProvider({ children }) {
   const operation = useRef(null);
   const epoch = useRef(0);
   const live = useRef(null);
-  const config = saved?.uid === uid ? saved.config : null;
-  const ready = saved?.uid === uid;
+  // On cold start both IDs can be undefined. That is not a loaded account.
+  const ready = !!uid && saved?.uid === uid;
+  const config = ready ? saved.config : null;
   live.current = { uid, notebookId, loading, config, ready, canAddPhotos };
   const stop = () => {
     epoch.current++;

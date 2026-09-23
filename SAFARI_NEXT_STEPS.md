@@ -21,7 +21,6 @@
 5. Admin/test access: server-assigned admin claim, test-account Free/Premium preview, separate production billing entitlement. No public password or unrestricted premium switch in the app.
 6. Google reviews: optional lower-priority enhancement via official Places API; must resolve a Google Place ID (Photon/OSM IDs are not interchangeable), show Google and author attribution and source links, follow ordering/caching/EEA conditions, and budget API usage. Not scraping. Check paid-app terms before putting this specifically behind a paywall.
 7. New name: shortlist first, then check domains/store names and relevant trademarks. The current name remains a working title until a replacement is chosen. The compass remains reusable.
-8. Premium wishlist (confirmed by user): save places the user wants to visit. Keep planned places separate from completed visits, so they do not increase visit/country statistics or heatmap density. A later "Mark as visited" action should open the visit form with the saved place prefilled. This is a planned feature, not implemented in the current build.
 
 ## References
 
@@ -33,3 +32,10 @@
 ## APK verification
 
 Check startup/launcher icon, long airport names in Home and Trips, contour contrast, larger system font, five Slovak visits → one country marker, Satellite → Home → Countries, noninteractive detail map and local profile photo after restart. Native APK/device visuals are not verified by the JavaScript export.
+
+
+## User note — splash branding (2026-09-23)
+
+Keep the compass the user likes, and add the application name to the opening
+screen so it is not just a standalone icon. Recorded for a later design change;
+not part of the startup-crash hotfix. Final product name is still to be decided.

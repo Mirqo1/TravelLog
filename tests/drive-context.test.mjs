@@ -40,7 +40,16 @@ const prefix = `const { ${names.join(',')} } = globalThis.driveContextDouble; co
 const { DriveBackupProvider } = await import('data:text/javascript;base64,' + Buffer.from(prefix + src).toString('base64'));
 const render = () => { index = 0; const value = DriveBackupProvider({}); const effects = pendingEffects; pendingEffects = []; effects.forEach(fn => fn()); return value; };
 const tick = () => new Promise(resolve => setImmediate(resolve));
-render(); await tick(); let value = render();
+// Cold start: Firebase has not restored an account yet and settings are null.
+account = null;
+let value = render();
+assert.equal(value.config, null);
+assert.equal(value.ready, false);
+assert.equal(value.signedIn, false);
+await tick(); value = render();
+assert.equal(value.config, null);
+account = { uid: 'alice' };
+render(); await tick(); value = render();
 assert.equal(value.config.email, bind.email);
 // Provider owns auto timers regardless of which navigation screen is visible.
 for (const fn of timers.values()) fn(); await tick(); value = render();
@@ -61,3 +70,13 @@ assert.equal(memory.has(stateKey('bob')), false); assert.ok(stopCalls > 0);
 await value.connect(); value = render(); assert.equal(value.config.permissionId, bind.permissionId);
 await value.disconnect(); value = render(); assert.equal(value.config, null); assert.equal(memory.has(stateKey('bob')), false);
 console.log('PASS: in-flight account switch cannot update new account settings/state, explicit connect/disconnect.');
+
+// Sign-out returns to the same no-account state after settings have been loaded.
+account = null;
+value = render();
+assert.equal(value.config, null);
+assert.equal(value.ready, false);
+await tick(); value = render();
+assert.equal(value.config, null);
+assert.equal(value.signedIn, false);
+console.log('PASS: cold start before Firebase restoration and sign-out remain safe with null settings.');
