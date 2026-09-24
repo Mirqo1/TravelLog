@@ -1,3 +1,4 @@
+import { normalizeTags } from '../utils/backup';
 import { displayVisitDate } from '../utils/visitDate';
 import { theme } from '../theme';
 import React from 'react';
@@ -33,6 +34,9 @@ export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDel
           <View style={styles.summaryItem}><Text style={styles.label}>Moje hodnotenie</Text>
             <Text style={styles.rating}>{ratingText(trip.rating)}</Text></View>
         </View>
+        {normalizeTags(trip.tags).length ? <View style={styles.tags}>
+          {normalizeTags(trip.tags).map(tag => <Text key={tag} style={styles.tag}>{tag}</Text>)}
+        </View> : null}
         <VisitPhotoGallery photos={trip.photos} title={trip.name} />
         {hasLocation ? <View style={styles.card}>
           <Text style={styles.heading}>Navštívené miesto</Text>
@@ -72,6 +76,8 @@ const styles = StyleSheet.create({
   titleRow: { alignSelf: 'stretch' },
   title: { alignSelf: 'stretch', fontSize: 24, lineHeight: 31, fontWeight: '800', color: theme.text },
   subtitle: { fontSize: 16, lineHeight: 23, color: theme.muted },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tag: { color: theme.primary, backgroundColor: theme.surface, borderColor: theme.border, borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, fontSize: 13 },
   summary: { flexDirection: 'row', flexWrap: 'wrap', gap: 18, paddingVertical: 8 },
   summaryItem: { minWidth: 140, flexGrow: 1, gap: 6 },
   label: { fontSize: 12, color: theme.muted },

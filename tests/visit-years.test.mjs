@@ -45,6 +45,10 @@ assert.equal(find(tree,'FlatList').props.data.length,4,'Jump must not filter oth
 find(tree,'FlatList').props.onScrollToIndexFailed({index:1,averageItemLength:200});
 assert.equal(scroll.at(-1).offset,200);
 find(tree,'FlatList').props.onScrollBeginDrag();assert.equal(timers.size,0,'User scroll cancels pending automatic retries');
+trips[2].tags=['Turistika'];
+find(find(tree,'FlatList').props.ListHeaderComponent,'TextInput').props.onChangeText('turistika');
+tree=render();assert.deepEqual(find(tree,'FlatList').props.data.map(t=>t.id),['2']);
+find(find(tree,'FlatList').props.ListHeaderComponent,'TextInput').props.onChangeText('');tree=render();
 params={section:'dreams',sectionRequest:1};render();tree=render();assert.equal(find(tree,'WishlistModal').props.embedded,true);
 assert.equal(find(tree,'FlatList'),undefined);
 params={section:'visits',sectionRequest:2};render();tree=render();assert.equal(find(tree,'FlatList').props.data.length,4);

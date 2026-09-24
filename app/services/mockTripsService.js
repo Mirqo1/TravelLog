@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { compareTripsNewest } from '../utils/tripOrder';
-import { mergeBackup } from '../utils/backup';
+import { mergeBackup, normalizeTags } from '../utils/backup';
 import { mergeSync, sameVisitContent } from '../utils/syncMerge';
 
 const TRIPS_STORAGE_PREFIX = 'travellog/mock-trips/';
@@ -39,6 +39,7 @@ const normalizeTrip = (trip = {}, id = trip.id) => ({
   rating: Math.min(5, Math.max(0, Math.round(toNumber(trip.rating)))),
   photos: Array.isArray(trip.photos) ? trip.photos : [],
   notes: String(trip.notes || '').trim(),
+  tags: normalizeTags(trip.tags),
   createdAt: trip.createdAt || '',
   updatedAt: trip.updatedAt || today(),
   syncStatus: trip.syncStatus || 'synced',

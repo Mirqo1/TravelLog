@@ -119,3 +119,18 @@ Home reuses the approved splash mark with tight transparent bounds and retains
 the slogan. Moje sny is the second section in Trips; its Map header shortcut is
 removed. Storage paths remain unchanged. This supersedes the earlier unapproved
 filtering suggestion. See REVIEW_FIXES.md for checks and device acceptance.
+
+
+## Visit tags and Drive cleanup follow-up
+
+Implemented Premium/preview visit tags: eight labels, 30 characters each,
+comma-separated input, compact detail labels and existing Trips search.
+Labels remain readable/searchable after expiry and survive ordinary edits,
+local persistence and text backup/sync. Legacy backups remain compatible.
+Entitlement gate follows the photo UI; production server enforcement is pending.
+
+Drive cleanup remains pending: removing a local photo/visit does not delete
+its cloud blob. Plan a confirmed cleanup preview protecting photos referenced
+by other device manifests. Google Drive settings / Manage apps can remove ALL
+hidden TravelLog backup data, not individual photos. Disconnect backup on all
+connected devices first to avoid automatic re-upload.

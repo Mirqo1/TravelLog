@@ -1,3 +1,5 @@
+import { normalizeTags } from '../utils/backup';
+import { usePhotoAccess } from '../hooks/usePhotoAccess';
 import { theme } from '../theme';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -35,6 +37,7 @@ const toDraft = (trip = {}) => ({
   visitTime: trip.visitTime || (trip.id || trip.date ? '' : localTime()),
   rating: Number(trip.rating || 0),
   notes: trip.notes || '',
+  tags: normalizeTags(trip.tags).join(', '),
 });
 
 export default function TripForm({
@@ -48,6 +51,7 @@ export default function TripForm({
   onInputFocus,
 }) {
   const { notebookId } = useTrips();
+  const { canAddPhotos: canEditTags } = usePhotoAccess();
   const draftOwner = useRef(notebookId);
   const mounted = useRef(true);
   const createdPhotos = useRef([]);
@@ -137,6 +141,7 @@ export default function TripForm({
         visitTime: form.visitTime || '',
         rating: form.rating,
         notes: form.notes.trim(),
+        tags: normalizeTags(canEditTags ? form.tags : initialValues?.tags),
         photos,
       });
     } catch (error) {
@@ -228,6 +233,13 @@ export default function TripForm({
         value={form.notes}
         onChangeText={(value) => updateField('notes', value)}
       />
+      {canEditTags ? <View style={{ gap: 6 }}>
+        <Text style={styles.sectionLabel}>Štítky · Premium</Text>
+        <TextInput onFocus={onInputFocus} style={styles.input} value={form.tags}
+          accessibilityLabel="Štítky návštevy" placeholder="rodina, turistika, múzeum"
+          maxLength={320} onChangeText={(value) => updateField('tags', value)} />
+        <Text style={styles.helper}>Oddeľ čiarkou. Najviac 8 štítkov po 30 znakov; nájdeš ich aj cez vyhľadávanie.</Text>
+      </View> : form.tags ? <Text style={styles.helper}>Štítky: {form.tags}</Text> : null}
       <VisitPhotoEditor photos={photos} onChange={setPhotos} onImport={importPhotos}
         disabled={saving || isSubmitting} onBusy={setPhotosBusy} />
       <View style={styles.actions}>

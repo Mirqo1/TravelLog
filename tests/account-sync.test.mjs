@@ -15,7 +15,7 @@ globalThis.syncStorage = {
 const source = (await read('app/services/mockTripsService.js'))
   .replace("import AsyncStorage from '@react-native-async-storage/async-storage';", 'const AsyncStorage = globalThis.syncStorage;')
   .replace("import { compareTripsNewest } from '../utils/tripOrder';", 'const compareTripsNewest = (a,b) => b.date.localeCompare(a.date);')
-  .replace("import { mergeBackup } from '../utils/backup';", '')
+  .replace("import { mergeBackup, normalizeTags } from '../utils/backup';", '')
   .replace("import { mergeSync, sameVisitContent } from '../utils/syncMerge';", merge.replace(/export /g, ''));
 const service = await moduleOf(source);
 const { createNotebookSync } = await moduleOf((await read('app/services/notebookSync.js'))
@@ -176,3 +176,22 @@ assert.equal(wishVisit1.id, wishVisit2.id);
 assert.equal((await service.getTrips('cloud-wishlist-test')).length, 1);
 assert.equal(wishVisit2.name, 'Planned zoo');
 console.log('PASS: wishlist conversion retry creates one visit and preserves the first saved visit.');
+
+// Optional tags survive persistence and portable sync, including old tag-less backups.
+const tagged = await service.addTrip('tags-user', { ...t('tags'), tags: [' rodina ', 'Rodina', 'turistika'] });
+assert.deepEqual((await service.getTrips('tags-user'))[0].tags, ['rodina', 'turistika']);
+const packed = portableTrips([tagged]);
+assert.deepEqual(packed[0].tags, ['rodina', 'turistika']);
+await service.restoreTripsBackup('tags-second-phone', packed);
+assert.deepEqual((await service.getTrips('tags-second-phone'))[0].tags, ['rodina', 'turistika']);
+assert.deepEqual(portableTrips([t('legacy')])[0].tags, []);
+await service.updateTrip('tags-user', tagged.id, { notes: 'Only edit notes' });
+assert.deepEqual((await service.getTrips('tags-user'))[0].tags, ['rodina', 'turistika']);
+const tagChange = mergeSync([t('legacy')], [{ ...t('legacy'), tags: ['rodina'] }], [t('legacy')]);
+assert.equal(tagChange.conflicts, 0);
+assert.deepEqual(tagChange.trips[0].tags, ['rodina']);
+const { normalizeTags } = await moduleOf(backup);
+assert.deepEqual(normalizeTags(' rodina, Rodina, , turistika '), ['rodina', 'turistika']);
+assert.equal(normalizeTags(Array.from({length: 12}, (_, i) => String(i))).length, 8);
+assert.equal(normalizeTags(['a'.repeat(50)])[0].length, 30);
+console.log('PASS: tags persist across edits, backup/restore and sync; legacy visits remain compatible; labels bounded and deduplicated.');

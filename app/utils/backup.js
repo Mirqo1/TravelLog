@@ -1,9 +1,21 @@
+// Optional compact labels travel with text backups, independently of photos.
+export function normalizeTags(value) {
+  const values = typeof value === 'string' ? value.split(',') : Array.isArray(value) ? value : [];
+  const seen = new Set();
+  return values.filter(tag => typeof tag === 'string').map(tag => tag.trim().replace(/\s+/g, ' ').slice(0, 30))
+    .filter(tag => {
+      const key = tag.toLocaleLowerCase();
+      if (!tag || seen.has(key)) return false;
+      seen.add(key); return true;
+    }).slice(0, 8);
+}
+
 // Backup only portable visit fields. Device-local photo URIs are deliberately
 // excluded here; Google Drive photo backup has its own private manifests.
 export function portableTrips(trips) {
-  return trips.map(({ id, name, locationName, countryCode, location, date, visitTime, rating, description, notes, createdAt, updatedAt }) => ({
+  return trips.map(({ id, name, locationName, countryCode, location, date, visitTime, rating, description, notes, tags, createdAt, updatedAt }) => ({
     id, name, locationName: locationName || '', countryCode: countryCode || '', location,
-    date, visitTime: visitTime || '', rating: rating || 0, description: description || '', notes: notes || '',
+    date, visitTime: visitTime || '', rating: rating || 0, description: description || '', notes: notes || '', tags: normalizeTags(tags),
     createdAt: createdAt || '', updatedAt: updatedAt || '',
   }));
 }

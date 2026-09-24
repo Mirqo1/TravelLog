@@ -55,7 +55,7 @@ export default function TripsScreen({ route, navigation }) {
     const result = !loweredSearch
       ? [...scopedTrips]
       : scopedTrips.filter((trip) => {
-        const text = normalizeSearch([trip.name, trip.locationName, trip.date, displayVisitDate(trip), trip.description, trip.notes].filter(Boolean).join(' '));
+        const text = normalizeSearch([trip.name, trip.locationName, trip.date, displayVisitDate(trip), trip.description, trip.notes, ...(trip.tags || [])].filter(Boolean).join(' '));
         return loweredSearch.split(/\s+/).every((word) => text.includes(word));
       });
 

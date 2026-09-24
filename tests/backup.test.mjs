@@ -29,7 +29,7 @@ const mergeSource = (await readFile(new URL('../app/utils/syncMerge.js', import.
 const serviceSource = (await readFile(new URL('../app/services/mockTripsService.js', import.meta.url), 'utf8'))
   .replace("import AsyncStorage from '@react-native-async-storage/async-storage';", 'const AsyncStorage = globalThis.backupTestStorage;')
   .replace("import { compareTripsNewest } from '../utils/tripOrder';", 'const compareTripsNewest = (a, b) => b.date.localeCompare(a.date);')
-  .replace("import { mergeBackup } from '../utils/backup';", source.replace(/export /g, ''))
+  .replace("import { mergeBackup, normalizeTags } from '../utils/backup';", source.replace(/export /g, ''))
   .replace("import { mergeSync, sameVisitContent } from '../utils/syncMerge';", mergeSource);
 const service = await import('data:text/javascript;base64,' + Buffer.from(serviceSource).toString('base64'));
 assert.deepEqual(await service.getTrips('new-device'), []);
