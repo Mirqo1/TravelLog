@@ -226,3 +226,15 @@ upload/restore remains unimplemented and is not claimed enabled by this change.
   indicators unchanged per the user's instruction. The earlier layout moved
   controls into the list header but did not set indicator styling.
 - Existing year-navigation component regression check passes.
+
+
+## Trips action-style sections and counts (2026-09-24)
+
+- Match Visits / Moje sny to the map's add-visit / planned-place action pair:
+  equal flexible widths, 10 px gap/corners, 48 px minimum touch height, filled
+  active brown button and outlined surface inactive button. Labels can wrap.
+- Small additional improvement: show total visit and dream counts in the section
+  labels. Counts describe the entire section, independent of visit search/country
+  filters. Pending dream loading displays an ellipsis rather than a misleading zero.
+- Year-navigation/section-switch regression check passed; no native dependencies
+  or storage changes. Phone visual acceptance remains to be checked.

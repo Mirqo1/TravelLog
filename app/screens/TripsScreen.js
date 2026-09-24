@@ -1,3 +1,4 @@
+import { useWishlist } from '../context/WishlistContext';
 import WishlistModal from '../components/WishlistModal';
 import VisitYearTimeline from '../components/VisitYearTimeline';
 import { visitYear, yearRange, yearJumpIndex } from '../utils/visitYears';
@@ -29,6 +30,7 @@ const normalizeSearch = (value) => String(value || '').normalize('NFD').replace(
 
 export default function TripsScreen({ route, navigation }) {
   const { trips, loading, refreshing, refreshTrips, updateTrip, deleteTrip } = useTrips();
+  const { items: dreams, ready: dreamsReady } = useWishlist();
   const countryCode = route.params?.countryCode;
   const listRef = useRef(null);
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 10 });
@@ -123,7 +125,7 @@ export default function TripsScreen({ route, navigation }) {
       <Pressable key={key} accessibilityRole="tab" accessibilityState={{ selected: section === key }}
         onPress={() => { cancelJump(); setSection(key); navigation.setParams({ section: key }); }}
         style={[styles.sectionTab, section === key && styles.sectionTabActive]}>
-        <Text style={[styles.sectionLabel, section === key && { color: '#fff' }]}>{label}</Text>
+        <Text style={[styles.sectionLabel, section === key && { color: '#fff' }]}>{label} · {key === 'visits' ? trips.length : dreamsReady ? dreams.length : '…'}</Text>
       </Pressable>)}
   </View>;
 
@@ -249,9 +251,9 @@ export default function TripsScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  sectionTabs: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
-  sectionTab: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, backgroundColor: theme.border },
-  sectionTabActive: { backgroundColor: theme.primary }, sectionLabel: { color: theme.text, fontWeight: '600' },
+  sectionTabs: { flexDirection: 'row', gap: 10, alignItems: 'stretch', marginBottom: 16 },
+  sectionTab: { flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', paddingVertical: 13, paddingHorizontal: 8, borderRadius: 10, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.primary },
+  sectionTabActive: { backgroundColor: theme.primary }, sectionLabel: { color: theme.primary, fontWeight: '700', textAlign: 'center' },
   yearHeading: { fontSize: 20, fontWeight: '800', color: theme.primary, paddingTop: 8, paddingBottom: 12 },
   jumpMessage: { color: theme.muted, paddingBottom: 12 },
   listHeader: { paddingBottom: 12 },
