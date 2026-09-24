@@ -14,7 +14,6 @@ export default function VisitYearTimeline({ min, max, value, onSelect, onDraggin
   const finish = commit => { dragging.current = false; onDragging(false); if (commit) onSelect(latest.current); };
   const position = 12 + (max === min ? 0 : (clamp(year) - min) / (max - min)) * Math.max(0, width - 24);
   return <View style={styles.container}>
-    <Text style={styles.hint}>Preskočiť na rok · podľa dátumu návštevy</Text>
     <View accessible accessibilityRole="adjustable" accessibilityLabel="Rok návštev"
       accessibilityValue={{ min, max, now: clamp(year), text: String(clamp(year)) }}
       accessibilityActions={[{ name: 'increment', label: 'Ďalší rok' }, { name: 'decrement', label: 'Predošlý rok' }]}

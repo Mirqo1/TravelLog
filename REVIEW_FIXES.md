@@ -214,3 +214,15 @@ upload/restore remains unimplemented and is not claimed enabled by this change.
   year jumps without filtering, retry cancellation and section switching. Existing
   map/wishlist regression checks and Android Hermes export pass. Physical-device
   gesture and long-list layout acceptance remain to be checked in the signed APK.
+
+## Timeline copy and section-switch styling (2026-09-24)
+
+- Remove the instructional sentence above the year axis and the routine successful
+  jump caption below it. Keep year labels/live thumb feedback and screen-reader
+  announcement; exceptional empty-year/jump-failure information remains available.
+- Style Visits / Moje sny like the existing Map / Satellite control: rounded
+  buttons, brown selected background, neutral inactive background, no underline.
+- Scrollbar appearance was not customized in these changes; leave native scroll
+  indicators unchanged per the user's instruction. The earlier layout moved
+  controls into the list header but did not set indicator styling.
+- Existing year-navigation component regression check passes.

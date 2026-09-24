@@ -108,7 +108,7 @@ export default function TripsScreen({ route, navigation }) {
     const actualYear = visitYear(filteredTrips[index]);
     const message = actualYear === jumpRequest.year ? `Návštevy v roku ${actualYear}`
       : `Rok ${jumpRequest.year} nemá zodpovedajúce návštevy. Presúvam na rok ${actualYear}.`;
-    setJumpMessage(message); AccessibilityInfo.announceForAccessibility(message);
+    setJumpMessage(actualYear === jumpRequest.year ? '' : message); AccessibilityInfo.announceForAccessibility(message);
     jump.current = { id: filteredTrips[index].id, attempts: 0 };
     retryTimer.current = setTimeout(attemptJump, 80);
     return cancelJump;
@@ -123,7 +123,7 @@ export default function TripsScreen({ route, navigation }) {
       <Pressable key={key} accessibilityRole="tab" accessibilityState={{ selected: section === key }}
         onPress={() => { cancelJump(); setSection(key); navigation.setParams({ section: key }); }}
         style={[styles.sectionTab, section === key && styles.sectionTabActive]}>
-        <Text style={[styles.sectionLabel, section === key && { color: theme.primary, fontWeight: '800' }]}>{label}</Text>
+        <Text style={[styles.sectionLabel, section === key && { color: '#fff' }]}>{label}</Text>
       </Pressable>)}
   </View>;
 
@@ -249,9 +249,9 @@ export default function TripsScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  sectionTabs: { flexDirection: 'row', borderBottomWidth: 1, borderColor: theme.border, marginBottom: 16 },
-  sectionTab: { flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderBottomWidth: 3, borderColor: 'transparent' },
-  sectionTabActive: { borderColor: theme.primary }, sectionLabel: { color: theme.muted, fontSize: 18 },
+  sectionTabs: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  sectionTab: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, backgroundColor: theme.border },
+  sectionTabActive: { backgroundColor: theme.primary }, sectionLabel: { color: theme.text, fontWeight: '600' },
   yearHeading: { fontSize: 20, fontWeight: '800', color: theme.primary, paddingTop: 8, paddingBottom: 12 },
   jumpMessage: { color: theme.muted, paddingBottom: 12 },
   listHeader: { paddingBottom: 12 },
