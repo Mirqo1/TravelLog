@@ -73,3 +73,10 @@ start choosing, then tap the map/POI or select a search result. Press it again t
 cancel selection. Planned places appear as outlined stars at closer zoom levels;
 nearby places cluster, while country overview remains free of wishlist pins.
 The styled Wishlist entry opens the full list even after Premium expires.
+
+### Moje sny navigation update
+
+The user-facing name is now **Moje sny**, embedded as the second section inside
+Trips next to Návštevy. Home opens this section; the Map header list shortcut was
+removed. The Premium map add action and star markers remain. Internal filenames,
+AsyncStorage keys and Firestore paths keep the wishlist name to preserve all data.

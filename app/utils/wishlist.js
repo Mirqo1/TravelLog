@@ -1,7 +1,7 @@
 // Tombstones retain removals across offline devices. Deterministic last-change wins.
 export function validateWish(item) {
   if (!item || !/^[a-zA-Z0-9-]{1,100}$/.test(item.id || '') || !Number.isSafeInteger(item.changedAt) || item.changedAt < 0)
-    throw new Error('Neplatná položka wishlistu.');
+    throw new Error('Neplatná položka v mojich snoch.');
   if (item.deleted === true) return { id: item.id, changedAt: item.changedAt, deleted: true };
   const name = String(item.name || '').trim();
   const locationName = String(item.locationName || '').trim();

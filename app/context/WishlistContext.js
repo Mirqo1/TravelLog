@@ -16,7 +16,7 @@ export function WishlistProvider({ children }) {
   useEffect(() => {
     const token = { notebookId, alive: true, busy: false, loaded: false };
     active.current = token;
-    setSnapshot(null); setMessage('Načítavam wishlist…');
+    setSnapshot(null); setMessage('Načítavam moje sny…');
     const current = () => token.alive && active.current === token;
     const cloudCurrent = () => current() && account?.uid && getCloudAccount()?.uid === account.uid;
     const publish = items => { if (current()) setSnapshot({ notebookId, items }); };
@@ -24,7 +24,7 @@ export function WishlistProvider({ children }) {
       if (!token.loaded || token.busy || AppState.currentState !== 'active' || !cloudCurrent()) return;
       token.busy = true;
       try {
-        setMessage('Zálohujem wishlist…');
+        setMessage('Zálohujem moje sny…');
         const remote = mergeWishes(await readCloudWishlist(account.uid));
         if (!cloudCurrent()) return;
         let local = await wishlistStore(notebookId, remote);
@@ -44,11 +44,11 @@ export function WishlistProvider({ children }) {
         const latest = await wishlistStore(notebookId);
         publish(latest);
         if (current()) setMessage(latest.every(item => remoteById.get(item.id) === JSON.stringify(item))
-          ? 'Wishlist je zálohovaný. Synchronizácia prebieha automaticky.'
+          ? 'Moje sny sú zálohované. Synchronizácia prebieha automaticky.'
           : 'Zmena je uložená v telefóne; čaká na ďalšiu synchronizáciu.');
       } catch (error) {
         if (current()) setMessage(error.code === 'permission-denied'
-          ? 'Uložené v telefóne. Cloud wishlistu potrebuje aktualizovať pravidlá Firebase.'
+          ? 'Uložené v telefóne. Cloud pre Moje sny potrebuje aktualizovať pravidlá Firebase.'
           : 'Uložené v telefóne. Synchronizáciu skúsime znova po pripojení.');
       } finally { token.busy = false; }
     };
@@ -58,15 +58,15 @@ export function WishlistProvider({ children }) {
       token.loaded = true; publish(items);
       setMessage(account ? 'Čakám na synchronizáciu…' : 'Uložené v tomto telefóne. Pre cloud používaj prihlásený účet.');
       sync();
-    }).catch(() => { if (current()) setMessage('Wishlist sa nepodarilo načítať. Skús aplikáciu znovu otvoriť.'); });
+    }).catch(() => { if (current()) setMessage('Moje sny sa nepodarilo načítať. Skús aplikáciu znovu otvoriť.'); });
     const timer = setInterval(sync, 30000);
     const listener = AppState.addEventListener('change', state => { if (state === 'active') sync(); });
     return () => { token.alive = false; clearInterval(timer); listener.remove(); };
   }, [notebookId, account?.uid]);
   const mutate = async (data, remove = false) => {
     const token = active.current;
-    if (!token?.loaded || token.notebookId !== notebookId) throw new Error('Počkaj na načítanie wishlistu.');
-    if (!remove && !premium) throw new Error('Pridávanie a úpravy wishlistu sú súčasťou Premium.');
+    if (!token?.loaded || token.notebookId !== notebookId) throw new Error('Počkaj na načítanie mojich snov.');
+    if (!remove && !premium) throw new Error('Pridávanie a úpravy mojich snov sú súčasťou Premium.');
     await saveWish(notebookId, data, remove);
     if (!token.alive || active.current !== token) return;
     const items = await wishlistStore(notebookId);

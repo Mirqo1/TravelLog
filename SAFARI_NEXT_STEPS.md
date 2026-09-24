@@ -107,3 +107,15 @@ Its current button placement in Map is not satisfactory and should be relocated.
 A possible destination is a Visits / Moje sny switch within Trips, sharing search
 and avoiding an additional bottom-navigation tab. This is a suggestion, not an
 approved placement. Defer rename/relocation until the final design is agreed.
+
+## Implemented follow-up — Home, year jumps and Moje sny
+
+The user rejected year filtering and approved jumping within the complete list.
+The timeline now navigates by activity date: oldest year left, current year right,
+live thumb/year feedback, release to jump. Other years remain accessible by normal
+scrolling. Gaps go to the next available year in list order; country/text filters
+remain active. Non-date sorting switches to newest when using the timeline.
+Home reuses the approved splash mark with tight transparent bounds and retains
+the slogan. Moje sny is the second section in Trips; its Map header shortcut is
+removed. Storage paths remain unchanged. This supersedes the earlier unapproved
+filtering suggestion. See REVIEW_FIXES.md for checks and device acceptance.

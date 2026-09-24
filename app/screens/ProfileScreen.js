@@ -102,7 +102,7 @@ export default function ProfileScreen({ navigation }) {
     <View style={styles.card}>
       {[{ label: 'Uložené návštevy', value: stats.totalTrips, icon: 'place', route: 'Trips' },
         { label: 'Navštívené krajiny', value: stats.countriesVisited, icon: 'public', route: 'Map' }].map((item) => (
-        <Pressable key={item.route} accessibilityRole="button" onPress={() => item.route === 'Map' ? navigation.navigate('Map', { overviewRequest: Date.now() }) : navigation.navigate('Trips', { countryCode: null, countryName: null })}
+        <Pressable key={item.route} accessibilityRole="button" onPress={() => item.route === 'Map' ? navigation.navigate('Map', { overviewRequest: Date.now() }) : navigation.navigate('Trips', { section: 'visits', countryCode: null, countryName: null })}
           style={({ pressed }) => [styles.row, pressed && { opacity: 0.6 }]}>
           <View style={styles.rowIcon}><MaterialIcons name={item.icon} color={theme.primary} size={22} /></View>
           <Text style={styles.rowLabel}>{item.label}</Text>

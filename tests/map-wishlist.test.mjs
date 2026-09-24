@@ -54,5 +54,5 @@ assert.equal(byType(tree,'WishlistEditor').props.place.id, wish.id);
 assert.equal(byType(tree,'WishlistEditor').props.place.notes, wish.notes);
 byType(tree,'WishlistEditor').props.onClose();
 premium = false; tree = render(); assert.equal(button(tree), undefined);
-assert.ok(nodes(tree).find(n => n.type === 'Pressable' && n.props.accessibilityLabel?.startsWith('Otvoriť wishlist')));
+assert.equal(nodes(tree).find(n => n.type === 'Pressable' && n.props.accessibilityLabel?.startsWith('Otvoriť wishlist')), undefined, 'Dreams list entry moved into Trips');
 console.log('PASS: persistent Premium action, cancel/retry map selection, POI editor, overview decluttering, saved-item reuse and Free wishlist access.');

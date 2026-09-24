@@ -44,7 +44,7 @@ export function WishlistEditor({ place, onClose }) {
     if (locked.current) return;
     locked.current = true; setBusy(true);
     try { await save(draft); onClose(); }
-    catch (error) { Alert.alert('Wishlist', error.message); }
+    catch (error) { Alert.alert('Moje sny', error.message); }
     finally { locked.current = false; setBusy(false); }
   };
   return <Shell onClose={() => { if (!locked.current) onClose(); }}>
@@ -63,14 +63,14 @@ export function WishlistEditor({ place, onClose }) {
         <Text style={styles.label}>Moje poznámky</Text>
         <TextInput onFocus={onFocus} accessibilityLabel="Moje poznámky" style={[styles.input, { minHeight: 100, textAlignVertical: 'top' }]} multiline maxLength={2000}
           value={draft.notes || ''} editable={!busy} onChangeText={notes => setDraft(old => ({ ...old, notes }))} placeholder="Čo tu chcem vidieť…" />
-        <Button disabled={busy || !draft.name?.trim()} onPress={submit}>{busy ? 'Ukladám…' : 'Uložiť do wishlistu'}</Button>
+        <Button disabled={busy || !draft.name?.trim()} onPress={submit}>{busy ? 'Ukladám…' : 'Uložiť medzi moje sny'}</Button>
         <Pressable accessibilityRole="button" disabled={busy} onPress={onClose} style={styles.link}><Text style={[styles.muted, { textAlign: 'center' }]}>Zrušiť</Text></Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   </Shell>;
 }
 
-export default function WishlistModal({ visible, onClose, onMap }) {
+export default function WishlistModal({ visible, onClose, onMap, embedded = false, header }) {
   const { items, premium, preview, ready, message, remove, sync } = useWishlist();
   const { addTrip } = useTrips();
   const [editing, setEditing] = useState(null);
@@ -97,27 +97,29 @@ export default function WishlistModal({ visible, onClose, onMap }) {
   }
   const normalized = text => String(text).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const filtered = items.filter(item => normalized(`${item.name} ${item.locationName}`).includes(normalized(query)));
-  const removeItem = item => Alert.alert('Odstrániť z wishlistu?', item.name, [
-    { text: 'Zrušiť', style: 'cancel' }, { text: 'Odstrániť', style: 'destructive', onPress: () => remove(item).catch(error => Alert.alert('Wishlist', error.message)) },
+  const removeItem = item => Alert.alert('Odstrániť z mojich snov?', item.name, [
+    { text: 'Zrušiť', style: 'cancel' }, { text: 'Odstrániť', style: 'destructive', onPress: () => remove(item).catch(error => Alert.alert('Moje sny', error.message)) },
   ]);
-  return <Shell onClose={onClose}>
-    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
-      <View style={styles.headingRow}>
-        <Text style={[styles.title, { flex: 1 }]}>Chcem navštíviť</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="Zavrieť wishlist" onPress={onClose} style={styles.iconButton}>
+  const Container = embedded ? View : Shell;
+  return <Container onClose={onClose} style={{ flex: 1 }}>
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, embedded && { padding: 0, paddingBottom: 24 }]}>
+      {header}
+      {!embedded ? <View style={styles.headingRow}>
+        <Text style={[styles.title, { flex: 1 }]}>Moje sny</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Zavrieť moje sny" onPress={onClose} style={styles.iconButton}>
           <MaterialIcons name="close" size={24} color={theme.text} />
         </Pressable>
-      </View>
-      <Text style={styles.muted}>Wishlist · Premium{preview ? ' · testovací prístup' : ''}</Text>
+      </View> : null}
+      <Text style={styles.muted}>Moje sny · Premium{preview ? ' · testovací prístup' : ''}</Text>
       <View style={styles.headingRow}>
         <Text accessibilityLiveRegion="polite" style={[styles.muted, { flex: 1 }]}>{message}</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="Synchronizovať wishlist" onPress={sync} style={styles.iconButton}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Synchronizovať moje sny" onPress={sync} style={styles.iconButton}>
           <MaterialIcons name="sync" size={22} color={theme.primary} />
         </Pressable>
       </View>
       {!premium ? <Text style={styles.muted}>Nové miesta môžeš ukladať s Premium. Svoje uložené miesta môžeš naďalej prezerať, odstrániť alebo zaznamenať ako návštevu.</Text> : null}
       <Button disabled={!premium || !ready} onPress={() => { onClose(); onMap(); }}>+ Vybrať miesto na mape</Button>
-      <TextInput accessibilityLabel="Hľadať vo wishliste" style={styles.input} value={query} onChangeText={setQuery} placeholder="Hľadať v uložených miestach" />
+      <TextInput accessibilityLabel="Hľadať v mojich snoch" style={styles.input} value={query} onChangeText={setQuery} placeholder="Hľadať v uložených miestach" />
       {!filtered.length ? <Text style={styles.muted}>{!ready ? 'Načítavam…' : query ? 'Žiadne zodpovedajúce miesta.' : 'Tvoje budúce dobrodružstvá začínajú tu. Vyber miesto na mape a ulož si ho.'}</Text> : null}
       {filtered.map(item => <View key={item.id} style={styles.card}>
         <View style={styles.headingRow}>
@@ -140,7 +142,7 @@ export default function WishlistModal({ visible, onClose, onMap }) {
       </View>)}
 
     </ScrollView>
-  </Shell>;
+  </Container>;
 }
 const styles = StyleSheet.create({
   headingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

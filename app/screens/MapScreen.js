@@ -1,5 +1,4 @@
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import WishlistModal, { WishlistEditor } from '../components/WishlistModal';
+import { WishlistEditor } from '../components/WishlistModal';
 import { useWishlist } from '../context/WishlistContext';
 import { displayVisitDate } from '../utils/visitDate';
 import { theme } from '../theme';
@@ -21,7 +20,6 @@ export default function MapScreen({ route, navigation }) {
   const isFocused = useIsFocused();
   const { premium, items: wishes } = useWishlist();
   const [pickingWish, setPickingWish] = useState(false);
-  const [wishlistOpen, setWishlistOpen] = useState(false);
   const [wishDraft, setWishDraft] = useState(null);
   const wishHandled = useRef(null);
   const { trips, addTrip, updateTrip, deleteTrip } = useTrips();
@@ -162,12 +160,7 @@ export default function MapScreen({ route, navigation }) {
     <View style={styles.container}>
       <View style={styles.mapHeader}>
         <Text style={[styles.header, { flex: 1 }]}>Mapa návštev</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel={`Otvoriť wishlist, ${wishes.length} miest`}
-          style={({ pressed }) => [styles.wishlistEntry, pressed && { opacity: 0.65 }]}
-          onPress={() => { setPickingWish(false); setWishlistOpen(true); }}>
-          <MaterialIcons name="bookmark-border" size={21} color={theme.primary} />
-          <Text style={styles.wishlistEntryText}>Wishlist{wishes.length ? ` · ${wishes.length}` : ''}</Text>
-        </Pressable>
+
       </View>
       <MapTypeToggle value={mapType} onChange={setMapType} />
       <View style={styles.searchRow}>
@@ -224,7 +217,7 @@ export default function MapScreen({ route, navigation }) {
           ))}
           {wishMarkers.map(group => <Marker key={'wishes:' + group.trips.map(item => item.id).sort().join('|')}
             coordinate={group.coordinate} anchor={{ x: 0.5, y: 0.5 }} zIndex={2}
-            accessibilityLabel={group.trips.length === 1 ? `Chcem navštíviť: ${group.trips[0].name}` : `Wishlist: ${group.trips.length} miest`}
+            accessibilityLabel={group.trips.length === 1 ? `Chcem navštíviť: ${group.trips[0].name}` : `Moje sny: ${group.trips.length} miest`}
             onPress={event => { event.stopPropagation(); handleWishCluster(group); }}>
             <View style={styles.wishMarker}><Text style={styles.wishMarkerText}>☆{group.trips.length > 1 ? ` ${group.trips.length}` : ''}</Text></View>
           </Marker>)}
@@ -246,8 +239,6 @@ export default function MapScreen({ route, navigation }) {
         }}><Text style={[styles.buttonText, { color: theme.primary }]}>☆ Chcem navštíviť</Text></Pressable> : null}
       </View>
       {wishDraft ? <WishlistEditor place={wishDraft} onClose={() => setWishDraft(null)} /> : null}
-      <WishlistModal visible={wishlistOpen} onClose={() => setWishlistOpen(false)}
-        onMap={item => navigation.setParams({ wishRequest: Date.now(), wishPlace: item || null })} />
       <AddPlaceModal visible={modalVisible} title="Pridať návštevu" coordinates={selectedCoordinate}
         onClose={() => setModalVisible(false)} onSave={async (trip) => {
           await addTrip(trip); setModalVisible(false); setSelectedCoordinate(null);

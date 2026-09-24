@@ -1,7 +1,11 @@
+import WishlistModal from '../components/WishlistModal';
+import VisitYearTimeline from '../components/VisitYearTimeline';
+import { visitYear, yearRange, yearJumpIndex } from '../utils/visitYears';
 import { theme } from '../theme';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  AccessibilityInfo,
   Alert,
   FlatList,
   RefreshControl,
@@ -27,7 +31,17 @@ export default function TripsScreen({ route, navigation }) {
   const { trips, loading, refreshing, refreshTrips, updateTrip, deleteTrip } = useTrips();
   const countryCode = route.params?.countryCode;
   const listRef = useRef(null);
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 10 });
   useEffect(() => { setSearch(''); listRef.current?.scrollToOffset({ offset: 0, animated: false }); }, [countryCode]);
+  const [section, setSection] = useState(route.params?.section || 'visits');
+  useEffect(() => { setSection(route.params?.section || 'visits'); }, [route.params?.section, route.params?.sectionRequest, countryCode]);
+  const [draggingYear, setDraggingYear] = useState(false);
+  const [visibleYear, setVisibleYear] = useState(new Date().getFullYear());
+  const [jumpRequest, setJumpRequest] = useState(null);
+  const [jumpMessage, setJumpMessage] = useState('');
+  const jump = useRef(null), retryTimer = useRef(null);
+  const cancelJump = () => { jump.current = null; clearTimeout(retryTimer.current); };
+  useEffect(() => cancelJump, []);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [selectedTrip, setSelectedTrip] = useState(null);
@@ -58,6 +72,60 @@ export default function TripsScreen({ route, navigation }) {
 
     return result;
   }, [search, sortBy, trips, countryCode]);
+
+  const range = useMemo(() => yearRange(trips), [trips]);
+  const listData = useRef(filteredTrips); listData.current = filteredTrips;
+  const onViewableItemsChanged = useRef(({ viewableItems }) => {
+    const first = viewableItems.find(entry => entry.isViewable && entry.item);
+    const year = visitYear(first?.item);
+    if (year) setVisibleYear(year);
+    if (jump.current && viewableItems.some(entry => entry.item?.id === jump.current.id)) {
+      jump.current = null; clearTimeout(retryTimer.current);
+    }
+  }).current;
+  const attemptJump = () => {
+    const pending = jump.current;
+    if (!pending) return;
+    const index = listData.current.findIndex(item => item.id === pending.id);
+    if (index < 0) { cancelJump(); return; }
+    listRef.current?.scrollToIndex({ index, animated: false, viewPosition: 0 });
+  };
+  const retryJump = info => {
+    const pending = jump.current;
+    if (!pending) return;
+    if (++pending.attempts > 12) {
+      cancelJump(); setJumpMessage('Presný skok sa nepodaril. Môžeš pokračovať posúvaním zoznamu.'); return;
+    }
+    listRef.current?.scrollToOffset({ offset: Math.max(0, info.averageItemLength * info.index), animated: false });
+    clearTimeout(retryTimer.current);
+    retryTimer.current = setTimeout(attemptJump, 180);
+  };
+  useEffect(() => {
+    cancelJump();
+    if (!jumpRequest || section !== 'visits') return;
+    const index = yearJumpIndex(filteredTrips, jumpRequest.year, sortBy === 'oldest');
+    if (index < 0) { setJumpMessage('Pre aktuálne filtre nie sú dostupné žiadne návštevy.'); return; }
+    const actualYear = visitYear(filteredTrips[index]);
+    const message = actualYear === jumpRequest.year ? `Návštevy v roku ${actualYear}`
+      : `Rok ${jumpRequest.year} nemá zodpovedajúce návštevy. Presúvam na rok ${actualYear}.`;
+    setJumpMessage(message); AccessibilityInfo.announceForAccessibility(message);
+    jump.current = { id: filteredTrips[index].id, attempts: 0 };
+    retryTimer.current = setTimeout(attemptJump, 80);
+    return cancelJump;
+  }, [jumpRequest]);
+  useEffect(() => { cancelJump(); setJumpRequest(null); setJumpMessage(''); }, [search, countryCode, section]);
+  const selectYear = year => {
+    if (sortBy !== 'newest' && sortBy !== 'oldest') setSortBy('newest');
+    setJumpRequest({ year, request: Date.now() });
+  };
+  const sectionTabs = <View style={styles.sectionTabs} accessibilityRole="tablist">
+    {[['visits', 'Návštevy'], ['dreams', 'Moje sny']].map(([key, label]) =>
+      <Pressable key={key} accessibilityRole="tab" accessibilityState={{ selected: section === key }}
+        onPress={() => { cancelJump(); setSection(key); navigation.setParams({ section: key }); }}
+        style={[styles.sectionTab, section === key && styles.sectionTabActive]}>
+        <Text style={[styles.sectionLabel, section === key && { color: theme.primary, fontWeight: '800' }]}>{label}</Text>
+      </Pressable>)}
+  </View>;
 
   const requestDelete = (trip) => {
     Alert.alert('Zmazať výlet?', `Naozaj chceš vymazať ${trip.name}?`, [
@@ -92,13 +160,19 @@ export default function TripsScreen({ route, navigation }) {
   return (
     <View style={styles.container}>
 
-      <FlatList
+      {section === 'dreams' ? <WishlistModal visible embedded header={sectionTabs} onClose={() => {}}
+        onMap={item => navigation.navigate('Map', { wishRequest: Date.now(), wishPlace: item || null })} /> : <FlatList
+        scrollEnabled={!draggingYear}
+        onScrollBeginDrag={cancelJump}
+        onScrollToIndexFailed={retryJump}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig.current}
         ref={listRef}
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         ListHeaderComponent={<View style={styles.listHeader}>
-      <Text style={styles.header}>Návštevy</Text>
+      {sectionTabs}
       {countryCode ? <Pressable onPress={() => navigation.setParams({ countryCode: null, countryName: null })} accessibilityRole="button" accessibilityLabel="Zrušiť filter krajiny" style={[styles.chip, styles.countryFilter]}>
         <Text>{route.params.countryName || countryCode} · Zrušiť filter ×</Text>
       </Pressable> : null}
@@ -120,7 +194,7 @@ export default function TripsScreen({ route, navigation }) {
         ].map(([value, label]) => (
           <Text
             key={value}
-            onPress={() => setSortBy(value)}
+            onPress={() => { cancelJump(); setJumpRequest(null); setJumpMessage(''); setSortBy(value); }}
             style={[styles.chip, sortBy === value && styles.chipActive]}
           >
             {label}
@@ -128,21 +202,28 @@ export default function TripsScreen({ route, navigation }) {
         ))}
       </View>
 
+      {trips.length > 0 ? <VisitYearTimeline min={range.min} max={range.max} value={visibleYear}
+        onSelect={selectYear} onDragging={setDraggingYear} /> : null}
+      {jumpMessage ? <Text accessibilityLiveRegion="polite" style={styles.jumpMessage}>{jumpMessage}</Text> : null}
         </View>}
         data={filteredTrips}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
+          <View>
+          {visitYear(item) !== visitYear(filteredTrips[index - 1]) && (sortBy === 'newest' || sortBy === 'oldest') ?
+            <Text style={styles.yearHeading}>{visitYear(item) || 'Bez dátumu'}</Text> : null}
           <PlaceListItem
             trip={item}
             onDetail={() => setSelectedTrip(item)}
             onEdit={() => setEditingTrip(item)}
             onDelete={() => requestDelete(item)}
           />
+          </View>
         )}
         ListEmptyComponent={<Text style={styles.empty}>{search.trim() ? 'Žiadna návšteva nezodpovedá hľadaniu.' : 'Zatiaľ nemáš žiadne výlety.'}</Text>}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshTrips} />}
         contentContainerStyle={styles.listContent}
-      />
+      />}
 
       <TripDetailsModal
         visible={Boolean(selectedTrip)}
@@ -168,6 +249,11 @@ export default function TripsScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
+  sectionTabs: { flexDirection: 'row', borderBottomWidth: 1, borderColor: theme.border, marginBottom: 16 },
+  sectionTab: { flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderBottomWidth: 3, borderColor: 'transparent' },
+  sectionTabActive: { borderColor: theme.primary }, sectionLabel: { color: theme.muted, fontSize: 18 },
+  yearHeading: { fontSize: 20, fontWeight: '800', color: theme.primary, paddingTop: 8, paddingBottom: 12 },
+  jumpMessage: { color: theme.muted, paddingBottom: 12 },
   listHeader: { paddingBottom: 12 },
   countryFilter: { alignSelf: 'flex-start', marginBottom: 16, minHeight: 44, justifyContent: 'center' },
   loader: {

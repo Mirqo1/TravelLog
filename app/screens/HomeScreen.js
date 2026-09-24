@@ -1,4 +1,3 @@
-import WishlistModal from '../components/WishlistModal';
 import { useWishlist } from '../context/WishlistContext';
 import { countryDisplayName } from '../utils/mapVisits';
 import { displayVisitDate } from '../utils/visitDate';
@@ -16,7 +15,6 @@ import { useTrips } from '../context/TripsContext';
 
 export default function HomeScreen({ navigation }) {
   const { loading, error, stats, trips, updateTrip, deleteTrip, refreshTrips } = useTrips();
-  const [wishlistOpen, setWishlistOpen] = useState(false);
   const { items: wishes } = useWishlist();
   const [countriesOpen, setCountriesOpen] = useState(false);
   const { account, status, message } = useCloudSync();
@@ -40,8 +38,7 @@ export default function HomeScreen({ navigation }) {
   return <>
     <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
       <View style={styles.brand}>
-        <Image source={require('../../assets/compass-foreground.png')} style={{ width: 100, height: 100 }} resizeMode="contain" accessibilityLabel="Kompas" />
-        <Text style={styles.brandName}>TravelLog</Text>
+        <Image source={require('../../assets/home-brand.png')} style={{ width: 138, height: 142 }} resizeMode="contain" accessibilityLabel="TravelLog – kompas" />
         <Text style={styles.muted}>Tvoje miesta. Tvoje príbehy.</Text>
       </View>
       {error ? <View style={styles.card}>
@@ -49,15 +46,15 @@ export default function HomeScreen({ navigation }) {
         <Pressable onPress={refreshTrips} style={styles.linkButton}><Text style={styles.link}>Skúsiť načítať znova</Text></Pressable>
       </View> : null}
       <AddVisitButton />
-      <Pressable accessibilityRole="button" style={styles.card} onPress={() => setWishlistOpen(true)}>
-        <Text style={styles.sectionTitle}>Chcem navštíviť · {wishes.length}</Text>
-        <Text style={styles.muted}>Wishlist · Premium · miesta na budúce cesty</Text>
+      <Pressable accessibilityRole="button" style={styles.card} onPress={() => navigation.navigate('Trips', { section: 'dreams', sectionRequest: Date.now() })}>
+        <Text style={styles.sectionTitle}>Moje sny · {wishes.length}</Text>
+        <Text style={styles.muted}>Premium · miesta na budúce cesty</Text>
       </Pressable>
       <View style={styles.statsRow}>
         {[{ label: 'Návštevy', value: stats.totalTrips, icon: 'place', route: 'Trips' },
           { label: 'Krajiny', value: stats.countriesVisited, icon: 'public', route: 'Map' }].map((item) => (
           <Pressable key={item.route} accessibilityRole="button" accessibilityLabel={`${item.label}: ${item.value}. Otvoriť ${item.route}`}
-            onPress={() => item.route === 'Map' ? setCountriesOpen(true) : navigation.navigate('Trips', { countryCode: null })} style={({ pressed }) => [styles.card, styles.stat, pressed && styles.pressed]}>
+            onPress={() => item.route === 'Map' ? setCountriesOpen(true) : navigation.navigate('Trips', { section: 'visits', countryCode: null })} style={({ pressed }) => [styles.card, styles.stat, pressed && styles.pressed]}>
             <View style={{ alignItems: 'center' }}><MaterialIcons name={item.icon} color={theme.primary} size={22} /></View>
             <Text style={styles.statValue}>{item.value}</Text><Text style={styles.muted}>{item.label}</Text>
           </Pressable>
@@ -65,7 +62,7 @@ export default function HomeScreen({ navigation }) {
       </View>
       <View style={styles.sectionRow}>
         <Text style={styles.sectionTitle}>Posledné návštevy</Text>
-        <Pressable accessibilityRole="button" onPress={() => navigation.navigate('Trips', { countryCode: null })} style={styles.linkButton}>
+        <Pressable accessibilityRole="button" onPress={() => navigation.navigate('Trips', { section: 'visits', countryCode: null })} style={styles.linkButton}>
           <Text style={styles.link}>Zobraziť všetky</Text>
         </Pressable>
       </View>
@@ -90,10 +87,8 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.muted}>{backupMessage}</Text></View>
       </View>
     </ScrollView>
-    <WishlistModal visible={wishlistOpen} onClose={() => setWishlistOpen(false)}
-      onMap={item => navigation.navigate('Map', { wishRequest: Date.now(), wishPlace: item || null })} />
     <CountriesModal visible={countriesOpen} trips={trips} onClose={() => setCountriesOpen(false)}
-      onCountry={(country) => { setCountriesOpen(false); navigation.navigate('Trips', { countryCode: country.code, countryName: countryDisplayName(country) }); }}
+      onCountry={(country) => { setCountriesOpen(false); navigation.navigate('Trips', { section: 'visits', countryCode: country.code, countryName: countryDisplayName(country) }); }}
       onMap={() => { setCountriesOpen(false); navigation.navigate('Map', { overviewRequest: Date.now() }); }} />
     <TripDetailsModal visible={Boolean(selectedTrip)} trip={selectedTrip} onClose={() => setSelectedId(null)}
       onEdit={() => { setEditingTrip(selectedTrip); setSelectedId(null); }} onDelete={removeSelected} />
@@ -108,7 +103,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: 'transparent' },
   container: { padding: 20, paddingBottom: 28, gap: 14 },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  brand: { alignItems: 'center', paddingVertical: 16, gap: 7 },
+  brand: { alignItems: 'center', paddingVertical: 12, gap: 12 },
   brandIcon: { width: 64, height: 64, borderRadius: 22, backgroundColor: theme.primary, alignItems: 'center', justifyContent: 'center' },
   brandName: { fontSize: 30, fontWeight: '800', color: theme.text, letterSpacing: -0.5 },
   statsRow: { flexDirection: 'row', gap: 12 },

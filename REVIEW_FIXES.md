@@ -191,3 +191,26 @@ upload/restore remains unimplemented and is not claimed enabled by this change.
   cancel/retry pick, POI editor, overview/nearby markers, saved-item reuse and Free
   list access. Existing map-navigation regression checks and Android export pass.
   Native marker appearance and touch handling still need phone acceptance.
+
+## Year navigation, Moje sny in Trips, unified Home mark (2026-09-23)
+
+- User explicitly selected jumping through the full visit list, not year filtering.
+  Timeline spans oldest activity year to current year, displays year continuously
+  at the thumb while dragging and jumps on release, keeping all matching visits.
+  Gaps go to the next available year in list order with an explanatory message.
+  Nonchronological sorting switches to newest; country/text filters stay active.
+- Year headings make continued browsing across years clear. Timeline remains in
+  the scrolling header. Deep FlatList jumps retry estimated offsets until cells
+  are measured, with bounded retries; manual list scrolling cancels pending jumps.
+- Trips gains Visits / Moje sny sections; dreams content is embedded, not another
+  bottom tab. Home shortcut opens that section. Map list button is removed while
+  Premium add/pick action and planned markers stay available.
+- User-facing Wishlist text renamed to Moje sny. Existing storage keys, cloud
+  paths, entitlement policy and saved data are unchanged.
+- Home uses the same outlined compass/wordmark artwork as the approved splash,
+  tightly cropped with transparent background. Slogan retained with 12 px spacing.
+  PNG generation source is scripts/generate-home-brand.cjs; font license retained.
+- Actual component harness checks slider live feedback and release-only commit,
+  year jumps without filtering, retry cancellation and section switching. Existing
+  map/wishlist regression checks and Android Hermes export pass. Physical-device
+  gesture and long-list layout acceptance remain to be checked in the signed APK.
