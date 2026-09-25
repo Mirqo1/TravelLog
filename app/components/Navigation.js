@@ -1,10 +1,11 @@
+import { theme } from '../theme';
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import HomeScreen from '../screens/HomeScreen';
 import TripsScreen from '../screens/TripsScreen';
-import AddTripScreen from '../screens/AddTripScreen';
 import MapScreen from '../screens/MapScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { useAuth } from '../context/AuthContext';
@@ -13,78 +14,52 @@ const Tab = createBottomTabNavigator();
 const TAB_ICONS = {
   Home: 'home',
   Trips: 'format-list-bulleted',
-  'Add Trip': 'add-circle-outline',
   Map: 'map',
   Profile: 'person',
 };
 
 function AuthScreen() {
-  const { loginWithEmail, registerWithEmail, signInWithGoogleIdToken } = useAuth();
+  const { loginWithEmail, registerWithEmail, resetPassword, continueAsGuest, authError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [googleToken, setGoogleToken] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [message, setMessage] = useState('');
-
-  const handleAction = async (action) => {
-    try {
-      await action(email.trim(), password);
-      setMessage('Prihlásenie/registrácia úspešná.');
-    } catch (error) {
-      setMessage(error.message);
-    }
+  const [busy, setBusy] = useState(false);
+  const run = async (action) => {
+    if (busy) return;
+    setBusy(true); setMessage('');
+    try { await action(); } catch (error) { setMessage(error.message); }
+    finally { setBusy(false); }
   };
-
-  const handleGoogleSignIn = async () => {
-    try {
-      await signInWithGoogleIdToken(googleToken.trim());
-      setMessage('Google Sign-In úspešný.');
-    } catch (error) {
-      setMessage(error.message);
-    }
-  };
-
-  return (
-    <View style={styles.authContainer}>
+  return <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.authContainer, { flex: undefined, flexGrow: 1 }]}>
       <Text style={styles.authHeader}>TravelLog</Text>
-      <Text style={styles.authSubheader}>Prihlás sa a spravuj svoje výlety na mape aj offline.</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        autoCapitalize="none"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Heslo"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
+      <Text style={styles.authSubheader}>Účet uchová tvoje návštevy aj pri zmene telefónu. Fotografie zatiaľ zostávajú v zariadení.</Text>
+      <TextInput style={styles.input} placeholder="Tvoje meno (pri registrácii)" value={displayName} onChangeText={setDisplayName} maxLength={50} editable={!busy} />
+      <TextInput style={styles.input} placeholder="Email" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" value={email} onChangeText={setEmail} editable={!busy} />
+      <TextInput style={styles.input} placeholder="Heslo" secureTextEntry value={password} onChangeText={setPassword} editable={!busy} />
       <View style={styles.actions}>
-        <Pressable style={styles.authButton} onPress={() => handleAction(loginWithEmail)}>
-          <Text style={styles.authButtonText}>Prihlásiť</Text>
-        </Pressable>
-        <Pressable style={styles.authButton} onPress={() => handleAction(registerWithEmail)}>
-          <Text style={styles.authButtonText}>Registrovať</Text>
-        </Pressable>
+        <Pressable disabled={busy} style={styles.authButton} onPress={() => run(() => loginWithEmail(email, password))}><Text style={styles.authButtonText}>Prihlásiť</Text></Pressable>
+        <Pressable disabled={busy} style={styles.authButton} onPress={() => run(async () => {
+          if (displayName.trim().length < 2) throw new Error('Zadaj svoje meno alebo prezývku.');
+          await registerWithEmail(email, password, displayName);
+        })}><Text style={styles.authButtonText}>Vytvoriť účet</Text></Pressable>
       </View>
-      <TextInput
-        style={styles.input}
-        placeholder="Google ID token (test)"
-        value={googleToken}
-        onChangeText={setGoogleToken}
-      />
-      <Pressable style={styles.googleButton} onPress={handleGoogleSignIn}>
-        <Text style={styles.authButtonText}>Google Sign-In</Text>
-      </Pressable>
-      {message ? <Text style={styles.message}>{message}</Text> : null}
-    </View>
-  );
+      <Pressable disabled={busy} style={{ padding: 16 }} onPress={() => run(async () => {
+        if (!email.trim()) throw new Error('Najprv zadaj email.');
+        await resetPassword(email); setMessage('Ak účet existuje, dostaneš email na obnovu hesla.');
+      })}><Text style={{ color: theme.primary, textAlign: 'center' }}>Zabudnuté heslo</Text></Pressable>
+      <Pressable disabled={busy} style={{ padding: 16 }} onPress={() => run(continueAsGuest)}><Text style={{ color: theme.primary, textAlign: 'center' }}>Pokračovať bez účtu</Text></Pressable>
+      <Text style={styles.authSubheader}>Bez účtu sú návštevy uložené iba v tomto telefóne.</Text>
+      {busy ? <ActivityIndicator /> : null}
+      {message || authError ? <Text accessibilityLiveRegion="polite" style={styles.message}>{message || authError}</Text> : null}
+    </ScrollView>
+  </KeyboardAvoidingView>;
 }
 
 export default function Navigation() {
   const { user, loading } = useAuth();
+  const insets = useSafeAreaInsets();
 
   if (loading) {
     return (
@@ -100,11 +75,17 @@ export default function Navigation() {
 
   return (
     <Tab.Navigator
+      key={user.uid}
+      safeAreaInsets={{ bottom: insets.bottom + 8 }}
       screenOptions={({ route }) => ({
         headerShown: false,
+        sceneStyle: { backgroundColor: 'transparent' },
+        // Let the navigator include the device's bottom safe-area inset.
+        tabBarStyle: { backgroundColor: theme.background, borderTopColor: theme.border },
         tabBarShowIcon: true,
-        tabBarActiveTintColor: '#2563eb',
-        tabBarInactiveTintColor: '#6b7280',
+        tabBarActiveTintColor: '#3B2D1F',
+        tabBarInactiveTintColor: '#918678',
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '700' },
         tabBarIcon: ({ color, size }) => (
           <MaterialIcons name={TAB_ICONS[route.name] || 'circle'} size={size} color={color} />
         ),
@@ -112,7 +93,6 @@ export default function Navigation() {
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Trips" component={TripsScreen} />
-      <Tab.Screen name="Add Trip" component={AddTripScreen} />
       <Tab.Screen name="Map" component={MapScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
@@ -129,7 +109,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 16,
-    backgroundColor: '#f9fafb',
+    backgroundColor: theme.background,
   },
   authHeader: {
     fontSize: 26,
@@ -137,12 +117,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   authSubheader: {
-    color: '#4b5563',
+    color: theme.muted,
     marginBottom: 16,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: theme.border,
     borderRadius: 8,
     backgroundColor: '#fff',
     marginBottom: 10,
@@ -157,13 +137,13 @@ const styles = StyleSheet.create({
   authButton: {
     flex: 1,
     borderRadius: 8,
-    backgroundColor: '#2563eb',
+    backgroundColor: theme.primary,
     alignItems: 'center',
     paddingVertical: 10,
   },
   googleButton: {
     borderRadius: 8,
-    backgroundColor: '#111827',
+    backgroundColor: theme.text,
     alignItems: 'center',
     paddingVertical: 10,
     marginBottom: 10,
@@ -173,6 +153,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   message: {
-    color: '#4b5563',
+    color: theme.muted,
   },
 });

@@ -66,9 +66,9 @@ export const onAuthStateChanged = (authInstance, callback) => {
   };
 };
 
-export const registerWithEmail = async (email, password) => {
+export const registerWithEmail = async (email, password, displayName) => {
   await hydrateUser();
-  return completeAuth(createMockUser({ email, provider: 'password' }));
+  return completeAuth(createMockUser({ email, displayName: String(displayName || '').trim(), provider: 'password' }));
 };
 
 export const loginWithEmail = async (email, password) => {
@@ -91,4 +91,13 @@ export const signInWithGoogleIdToken = async (idToken) => {
 export const logout = async () => {
   await hydrateUser();
   await persistUser(null);
+};
+
+export const updateDisplayName = async (displayName) => {
+  await hydrateUser();
+  const nextName = String(displayName || '').trim();
+  if (!currentUser) throw new Error('Najprv sa prihlás.');
+  if (nextName.length < 2) throw new Error('Meno musí mať aspoň 2 znaky.');
+  await persistUser({ ...currentUser, displayName: nextName });
+  return currentUser;
 };

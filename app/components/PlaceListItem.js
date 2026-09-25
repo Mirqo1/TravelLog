@@ -1,5 +1,8 @@
+import { displayVisitDate } from '../utils/visitDate';
+import { theme } from '../theme';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { VisitPhotoCover } from './VisitPhotos';
 import { Swipeable } from 'react-native-gesture-handler';
 
 const renderRating = (rating) => {
@@ -20,10 +23,10 @@ export default function PlaceListItem({ trip, onDetail, onEdit, onDelete }) {
   const renderRightActions = () => (
     <View style={styles.rightActions}>
       <Pressable style={[styles.swipeAction, styles.editAction]} onPress={onEdit}>
-        <Text style={styles.swipeText}>Edit</Text>
+        <Text style={styles.swipeText}>Upraviť</Text>
       </Pressable>
       <Pressable style={[styles.swipeAction, styles.deleteAction]} onPress={onDelete}>
-        <Text style={styles.swipeText}>Delete</Text>
+        <Text style={styles.swipeText}>Vymazať</Text>
       </Pressable>
     </View>
   );
@@ -34,9 +37,10 @@ export default function PlaceListItem({ trip, onDetail, onEdit, onDelete }) {
         <Text style={styles.name}>{trip.name}</Text>
         <Text style={styles.meta}>{trip.locationName || 'Bez lokality'}</Text>
         <Text style={styles.meta}>
-          {trip.date} • {renderRating(trip.rating)}
+          {displayVisitDate(trip)} • {renderRating(trip.rating)}
         </Text>
-        <Text style={styles.notes}>{trip.description || trip.notes || 'Bez poznámky'}</Text>
+        <VisitPhotoCover photos={trip.photos} />
+        <Text numberOfLines={3} style={styles.notes}>{trip.description || trip.notes || 'Bez poznámky'}</Text>
         {trip.syncStatus && trip.syncStatus !== 'synced' ? <Text style={styles.pending}>Čaká na synchronizáciu</Text> : null}
       </Pressable>
     </Swipeable>
@@ -46,22 +50,22 @@ export default function PlaceListItem({ trip, onDetail, onEdit, onDelete }) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 20,
+    padding: 16,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.border,
   },
   name: {
     fontSize: 16,
     fontWeight: '700',
   },
   meta: {
-    color: '#374151',
+    color: theme.text,
     marginTop: 2,
   },
   notes: {
-    color: '#4b5563',
+    color: theme.muted,
     marginTop: 6,
   },
   pending: {
@@ -80,7 +84,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   detailAction: {
-    backgroundColor: '#2563eb',
+    backgroundColor: theme.primary,
   },
   editAction: {
     backgroundColor: '#0f766e',

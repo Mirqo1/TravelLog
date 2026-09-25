@@ -1,11 +1,22 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { compareTripsNewest } from '../utils/tripOrder';
+import { mergeBackup, normalizeTags } from '../utils/backup';
+import { mergeSync, sameVisitContent } from '../utils/syncMerge';
+
 const TRIPS_STORAGE_PREFIX = 'travellog/mock-trips/';
 const PROFILE_STORAGE_PREFIX = 'travellog/mock-profile/';
+const writes = new Map();
+const exclusive = (userId, action) => {
+  const next = (writes.get(userId) || Promise.resolve()).catch(() => {}).then(action);
+  writes.set(userId, next);
+  next.finally(() => { if (writes.get(userId) === next) writes.delete(userId); }).catch(() => {});
+  return next;
+};
 
 const today = () => new Date().toISOString();
 const todayDate = () => today().slice(0, 10);
-const byDateDesc = (left, right) => String(right.date || '').localeCompare(String(left.date || ''));
+const byDateDesc = compareTripsNewest;
 
 const toNumber = (value) => {
   const parsed = Number(value);
@@ -18,15 +29,18 @@ const normalizeTrip = (trip = {}, id = trip.id) => ({
   name: String(trip.name || '').trim(),
   description: String(trip.description || '').trim(),
   locationName: String(trip.locationName || '').trim(),
+  countryCode: String(trip.countryCode || '').trim().toUpperCase(),
   location: {
     latitude: toNumber(trip.location?.latitude ?? trip.latitude),
     longitude: toNumber(trip.location?.longitude ?? trip.longitude),
   },
   date: String(trip.date || todayDate()),
+  visitTime: String(trip.visitTime || ''),
   rating: Math.min(5, Math.max(0, Math.round(toNumber(trip.rating)))),
   photos: Array.isArray(trip.photos) ? trip.photos : [],
   notes: String(trip.notes || '').trim(),
-  createdAt: trip.createdAt || today(),
+  tags: normalizeTags(trip.tags),
+  createdAt: trip.createdAt || '',
   updatedAt: trip.updatedAt || today(),
   syncStatus: trip.syncStatus || 'synced',
 });
@@ -98,36 +112,65 @@ const sampleTrips = (userId) =>
 const tripsKey = (userId) => `${TRIPS_STORAGE_PREFIX}${userId}`;
 const profileKey = (userId) => `${PROFILE_STORAGE_PREFIX}${userId}`;
 
-const readTrips = async (userId) => {
+const readNotebook = async (userId) => {
   const raw = await AsyncStorage.getItem(tripsKey(userId));
-  if (!raw) {
-    const seeded = sampleTrips(userId);
-    await AsyncStorage.setItem(tripsKey(userId), JSON.stringify(seeded));
-    return seeded;
-  }
-
+  if (!raw) return { trips: [], base: [], imports: [] };
   try {
-    return JSON.parse(raw).map((trip) => normalizeTrip(trip, trip.id));
+    const parsed = JSON.parse(raw);
+    const state = Array.isArray(parsed) ? { trips: parsed, base: [], imports: [] } : parsed;
+    if (!Array.isArray(state.trips) || !Array.isArray(state.base) || !Array.isArray(state.imports)) throw new Error('format');
+    return { ...state, trips: state.trips.map(trip => normalizeTrip(trip, trip.id)) };
   } catch (error) {
-    const seeded = sampleTrips(userId);
-    await AsyncStorage.setItem(tripsKey(userId), JSON.stringify(seeded));
-    return seeded;
+    throw new Error('Uložené návštevy sa nepodarilo načítať. Pôvodné dáta zostali zachované.');
   }
 };
-
-const saveTrips = async (userId, trips) => {
-  const normalized = trips.map((trip) => normalizeTrip(trip, trip.id)).sort(byDateDesc);
-  await AsyncStorage.setItem(tripsKey(userId), JSON.stringify(normalized));
-  return normalized;
+const readTrips = async (userId) => (await readNotebook(userId)).trips;
+const writeNotebook = async (userId, state) => {
+  const trips = state.trips.map(trip => normalizeTrip({ ...trip, userId }, trip.id)).sort(byDateDesc);
+  // One durable write stores both visits and the merge baseline. A process exit
+  // cannot leave an updated baseline paired with yesterday's local records.
+  await AsyncStorage.setItem(tripsKey(userId), JSON.stringify(userId.startsWith('cloud-') ? { ...state, trips } : trips));
+  return trips;
 };
+const saveTrips = async (userId, trips) => writeNotebook(userId, { ...await readNotebook(userId), trips });
 
-export const getTrips = async (userId) => {
+export const mergeRemoteNotebook = (userId, remote) => exclusive(userId, async () => {
+  const state = await readNotebook(userId);
+  const merged = mergeSync(state.base, state.trips, remote?.trips || []);
+  const conflicts = (state.conflicts || 0) + merged.conflicts;
+  const trips = await writeNotebook(userId, { ...state, trips: merged.trips, base: remote?.trips || [], conflicts });
+  return { trips, conflicts };
+});
+export const acknowledgeNotebook = (userId, saved) => exclusive(userId, async () => {
+  const state = await readNotebook(userId);
+  await writeNotebook(userId, { ...state, base: saved.trips, lastSaved: saved.savedAt });
+});
+export const getNotebookState = (userId) => exclusive(userId, () => readNotebook(userId));
+export const importGuestNotebook = (userId, guestId) => exclusive(userId, async () => {
+  if (!userId.startsWith('cloud-') || !guestId || guestId.startsWith('cloud-')) throw new Error('Neplatný prenos návštev.');
+  const state = await readNotebook(userId);
+  if (state.imports.includes(guestId)) return state.trips;
+  const source = await getTrips(guestId);
+  const merged = mergeSync([], state.trips, source);
+  return writeNotebook(userId, { ...state, trips: merged.trips, imports: [...state.imports, guestId], conflicts: (state.conflicts || 0) + merged.conflicts });
+});
+
+export const getTrips = (userId) => exclusive(userId, async () => {
   const trips = await readTrips(userId);
   return [...trips].sort(byDateDesc);
-};
+});
 
-export const addTrip = async (userId, tripData) => {
+export const restoreTripsBackup = (userId, incoming) => exclusive(userId, async () => {
+  const current = await readTrips(userId);
+  // Keep a pre-restore copy in case a later release changes merge behaviour.
+  await AsyncStorage.setItem(`${tripsKey(userId)}/before-restore`, JSON.stringify(current));
+  return saveTrips(userId, mergeBackup(current, incoming, userId));
+});
+
+export const addTrip = (userId, tripData, wishlistId = null) => exclusive(userId, async () => {
   const trips = await readTrips(userId);
+  const stableId = wishlistId ? `wishlist-visit-${wishlistId}` : null;
+  if (stableId && trips.some(trip => trip.id === stableId)) return trips.find(trip => trip.id === stableId);
   const created = normalizeTrip(
     {
       ...tripData,
@@ -136,13 +179,13 @@ export const addTrip = async (userId, tripData) => {
       updatedAt: today(),
       syncStatus: 'synced',
     },
-    `mock-${Date.now()}`,
+    stableId || `mock-${Date.now()}-${Math.random().toString(36).slice(2)}`,
   );
   await saveTrips(userId, [...trips, created]);
   return created;
-};
+});
 
-export const updateTrip = async (userId, tripId, tripData) => {
+export const updateTrip = (userId, tripId, tripData) => exclusive(userId, async () => {
   const trips = await readTrips(userId);
   const existing = trips.find((trip) => trip.id === tripId);
 
@@ -154,6 +197,7 @@ export const updateTrip = async (userId, tripId, tripData) => {
     {
       ...existing,
       ...tripData,
+      createdAt: existing.createdAt,
       userId,
       location: {
         latitude: tripData.location?.latitude ?? existing.location?.latitude,
@@ -165,20 +209,24 @@ export const updateTrip = async (userId, tripId, tripData) => {
     tripId,
   );
 
+  // Photos belong to this device. Changing only the gallery must not mark
+  // shared visit text as a new remote edit.
+  if (sameVisitContent(existing, updated)) updated.updatedAt = existing.updatedAt;
+
   await saveTrips(
     userId,
     trips.map((trip) => (trip.id === tripId ? updated : trip)),
   );
   return updated;
-};
+});
 
-export const deleteTrip = async (userId, tripId) => {
+export const deleteTrip = (userId, tripId) => exclusive(userId, async () => {
   const trips = await readTrips(userId);
   await saveTrips(
     userId,
     trips.filter((trip) => trip.id !== tripId),
   );
-};
+});
 
 export const getUserProfile = async (userId) => {
   const raw = await AsyncStorage.getItem(profileKey(userId));
@@ -200,3 +248,13 @@ export const getUserProfile = async (userId) => {
   await AsyncStorage.setItem(profileKey(userId), JSON.stringify(profile));
   return profile;
 };
+
+// Atomic, photo-only restore. A form edit or deletion during a download wins.
+export const restoreVisitPhotos = (userId, tripId, photos, expected, isCurrent) => exclusive(userId, async () => {
+  const trips = await readTrips(userId);
+  if (!isCurrent()) return false;
+  const trip = trips.find(item => item.id === tripId);
+  if (!trip || (trip.photos || []).length || expected !== '[]') return false;
+  await saveTrips(userId, trips.map(item => item.id === tripId ? { ...item, photos } : item));
+  return true;
+});

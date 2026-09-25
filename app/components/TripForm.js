@@ -1,12 +1,26 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { normalizeTags } from '../utils/backup';
+import { usePhotoAccess } from '../hooks/usePhotoAccess';
+import { theme } from '../theme';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import VisitPhotoEditor from './VisitPhotoEditor';
+import { useTrips } from '../context/TripsContext';
+import { getTrips } from '../services/tripsService';
+import { photoList, MAX_VISIT_PHOTOS } from '../utils/visitPhotos';
+import { importVisitPhoto, discardUnusedDrafts, deleteManagedPhoto } from '../services/visitPhotoService';
+import CountryPicker from './CountryPicker';
+import VisitCalendar from './VisitCalendar';
+import { displayDate, localDate, localTime, parseVisitDate, validVisitTime } from '../utils/visitDate';
+import { countries } from '../utils/mapVisits';
+import { applyLocationSelection } from '../utils/locationSelection';
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = localDate;
 
 const toDraft = (trip = {}) => ({
   name: trip.name || '',
   description: trip.description || '',
   locationName: trip.locationName || '',
+  countryCode: trip.countryCode || '',
   latitude:
     trip.location?.latitude === 0 || trip.location?.latitude
       ? String(trip.location.latitude)
@@ -19,9 +33,11 @@ const toDraft = (trip = {}) => ({
       : trip.longitude
         ? String(trip.longitude)
         : '',
-  date: trip.date || today(),
+  date: displayDate(trip.date || today()),
+  visitTime: trip.visitTime || (trip.id || trip.date ? '' : localTime()),
   rating: Number(trip.rating || 0),
   notes: trip.notes || '',
+  tags: normalizeTags(trip.tags).join(', '),
 });
 
 export default function TripForm({
@@ -32,20 +48,53 @@ export default function TripForm({
   onSubmit,
   onCancel,
   isSubmitting = false,
+  onInputFocus,
 }) {
+  const { notebookId } = useTrips();
+  const { canAddPhotos: canEditTags } = usePhotoAccess();
+  const draftOwner = useRef(notebookId);
+  const mounted = useRef(true);
+  const createdPhotos = useRef([]);
+  const [photos, setPhotos] = useState(() => photoList(initialValues?.photos));
+  const [photosBusy, setPhotosBusy] = useState(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      discardUnusedDrafts([...createdPhotos.current], () => getTrips(draftOwner.current));
+    };
+  }, []);
+  const importPhotos = async (assets) => {
+    const imported = [];
+    try {
+      for (const asset of assets) {
+        if (!mounted.current) break;
+        const photo = await importVisitPhoto(asset);
+        if (!mounted.current) { await deleteManagedPhoto(photo); break; }
+        createdPhotos.current.push(photo); imported.push(photo);
+      }
+    } finally {
+      // Successfully processed selections remain available even if one file fails.
+      if (mounted.current) setPhotos(current => [...current, ...imported].slice(0, MAX_VISIT_PHOTOS));
+      else await Promise.all(imported.map(deleteManagedPhoto));
+    }
+  };
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const submitLock = useRef(false);
+  const lastSelection = useRef(null);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(() => toDraft(initialValues));
 
   useEffect(() => {
     setForm(toDraft(initialValues));
+    setPhotos(photoList(initialValues?.photos));
   }, [initialValues]);
 
   useEffect(() => {
     if (externalLocation) {
-      setForm((current) => ({
-        ...current,
-        latitude: String(externalLocation.latitude),
-        longitude: String(externalLocation.longitude),
-      }));
+      const previous = lastSelection.current;
+      lastSelection.current = externalLocation;
+      setForm((current) => applyLocationSelection(current, previous, externalLocation));
     }
   }, [externalLocation]);
 
@@ -57,9 +106,14 @@ export default function TripForm({
     return `Lat: ${form.latitude}, Lng: ${form.longitude}`;
   }, [form.latitude, form.longitude]);
 
-  const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+  const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value,
+    ...(['latitude', 'longitude', 'locationName'].includes(field) ? { countryCode: '' } : {}),
+  }));
 
   const handleSubmit = async () => {
+    if (submitLock.current || isSubmitting || photosBusy) return;
+    submitLock.current = true;
+    setSaving(true);
     try {
       const latitude = Number(form.latitude);
       const longitude = Number(form.longitude);
@@ -68,22 +122,33 @@ export default function TripForm({
         throw new Error('Názov výletu je povinný.');
       }
 
-      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      if (!form.latitude.trim() || !form.longitude.trim() || !Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
         throw new Error('Vyber platnú polohu.');
       }
+
+      const date = parseVisitDate(form.date);
+      if (!date) throw new Error('Zadaj existujúci dátum, napr. 22.9.2026, alebo ho vyber v kalendári.');
+      if (form.visitTime && !validVisitTime(form.visitTime)) throw new Error('Čas musí byť vo formáte HH:MM, napr. 14:30.');
+      if (form.countryCode && !countries.some((country) => country.code === form.countryCode.toUpperCase())) throw new Error('Zadaj platný dvojpísmenový kód krajiny, napr. SK alebo HU.');
 
       await onSubmit({
         name: form.name.trim(),
         description: form.description.trim(),
         locationName: form.locationName.trim(),
+        countryCode: form.countryCode.toUpperCase(),
         location: { latitude, longitude },
-        date: form.date || today(),
+        date,
+        visitTime: form.visitTime || '',
         rating: form.rating,
         notes: form.notes.trim(),
-        photos: [],
+        tags: normalizeTags(canEditTags ? form.tags : initialValues?.tags),
+        photos,
       });
     } catch (error) {
       Alert.alert('Formulár', error.message);
+    } finally {
+      submitLock.current = false;
+      setSaving(false);
     }
   };
 
@@ -91,19 +156,22 @@ export default function TripForm({
     <View style={styles.card}>
       <Text style={styles.title}>{title}</Text>
       <TextInput
+        onFocus={onInputFocus}
         style={styles.input}
         placeholder="Názov výletu"
         value={form.name}
         onChangeText={(value) => updateField('name', value)}
       />
       <TextInput
+        onFocus={onInputFocus}
         style={[styles.input, styles.multiline]}
         multiline
-        placeholder="Popis"
+        placeholder="Popis návštevy"
         value={form.description}
         onChangeText={(value) => updateField('description', value)}
       />
       <TextInput
+        onFocus={onInputFocus}
         style={styles.input}
         placeholder="Lokalita (napr. Bratislava, Slovensko)"
         value={form.locationName}
@@ -111,6 +179,7 @@ export default function TripForm({
       />
       <View style={styles.row}>
         <TextInput
+        onFocus={onInputFocus}
           style={[styles.input, styles.halfInput]}
           placeholder="Latitude"
           keyboardType="numeric"
@@ -118,6 +187,7 @@ export default function TripForm({
           onChangeText={(value) => updateField('latitude', value)}
         />
         <TextInput
+        onFocus={onInputFocus}
           style={[styles.input, styles.halfInput]}
           placeholder="Longitude"
           keyboardType="numeric"
@@ -126,12 +196,21 @@ export default function TripForm({
         />
       </View>
       <Text style={styles.helper}>{coordinatesPreview}</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Dátum (YYYY-MM-DD)"
-        value={form.date}
-        onChangeText={(value) => updateField('date', value)}
-      />
+      <Text style={styles.sectionLabel}>Krajina</Text>
+      <CountryPicker value={form.countryCode} onChange={(value) => updateField('countryCode', value)} />
+      <Text style={styles.helper}>Ak automaticky určená krajina nesedí, vyber správnu.</Text>
+      <Text style={styles.sectionLabel}>Dátum návštevy</Text>
+      <View style={styles.row}>
+        <TextInput onFocus={onInputFocus} style={[styles.input, styles.halfInput]} placeholder="DD.MM.RRRR" value={form.date}
+          accessibilityLabel="Dátum návštevy" onChangeText={(value) => updateField('date', value)} />
+        <Pressable accessibilityRole="button" accessibilityState={{ expanded: calendarOpen }} style={[styles.button, styles.secondary]}
+          onPress={() => { Keyboard.dismiss(); setCalendarOpen((open) => !open); }}><Text style={styles.secondaryText}>Kalendár</Text></Pressable>
+      </View>
+      {calendarOpen ? <VisitCalendar value={form.date} onSelect={(date) => { updateField('date', displayDate(date)); setCalendarOpen(false); }} /> : null}
+      <Text style={styles.sectionLabel}>Čas návštevy</Text>
+      <TextInput onFocus={onInputFocus} style={styles.input} placeholder="HH:MM (nepovinné)" value={form.visitTime}
+        accessibilityLabel="Čas návštevy" maxLength={5} onChangeText={(value) => updateField('visitTime', value)} />
+      <Pressable accessibilityRole="button" onPress={() => updateField('visitTime', '')} style={{ paddingVertical: 8 }}><Text style={{ color: theme.primary }}>Čas nepoznám</Text></Pressable>
       <View style={styles.ratingRow}>
         <Text style={styles.sectionLabel}>Hodnotenie</Text>
         <View style={styles.ratingButtons}>
@@ -147,21 +226,30 @@ export default function TripForm({
         </View>
       </View>
       <TextInput
+        onFocus={onInputFocus}
         style={[styles.input, styles.multiline]}
         multiline
         placeholder="Poznámky"
         value={form.notes}
         onChangeText={(value) => updateField('notes', value)}
       />
-      <Text style={styles.helper}>Fotogaléria: placeholder pripravený pre budúce nahrávanie fotiek.</Text>
+      {canEditTags ? <View style={{ gap: 6 }}>
+        <Text style={styles.sectionLabel}>Štítky · Premium</Text>
+        <TextInput onFocus={onInputFocus} style={styles.input} value={form.tags}
+          accessibilityLabel="Štítky návštevy" placeholder="rodina, turistika, múzeum"
+          maxLength={320} onChangeText={(value) => updateField('tags', value)} />
+        <Text style={styles.helper}>Oddeľ čiarkou. Najviac 8 štítkov po 30 znakov; nájdeš ich aj cez vyhľadávanie.</Text>
+      </View> : form.tags ? <Text style={styles.helper}>Štítky: {form.tags}</Text> : null}
+      <VisitPhotoEditor photos={photos} onChange={setPhotos} onImport={importPhotos}
+        disabled={saving || isSubmitting} onBusy={setPhotosBusy} />
       <View style={styles.actions}>
         {onCancel ? (
-          <Pressable style={[styles.button, styles.secondary]} onPress={onCancel}>
+          <Pressable style={[styles.button, styles.secondary]} disabled={saving} onPress={onCancel}>
             <Text style={styles.secondaryText}>Zrušiť</Text>
           </Pressable>
         ) : null}
-        <Pressable style={[styles.button, styles.primary]} disabled={isSubmitting} onPress={handleSubmit}>
-          <Text style={styles.primaryText}>{isSubmitting ? 'Ukladám...' : submitLabel}</Text>
+        <Pressable style={[styles.button, styles.primary]} disabled={isSubmitting || saving || photosBusy} onPress={handleSubmit}>
+          <Text style={styles.primaryText}>{isSubmitting || saving ? 'Ukladám...' : submitLabel}</Text>
         </Pressable>
       </View>
     </View>
@@ -174,17 +262,17 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.border,
     gap: 10,
   },
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: theme.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -202,12 +290,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   helper: {
-    color: '#6b7280',
+    color: theme.muted,
     fontSize: 13,
   },
   sectionLabel: {
     fontWeight: '600',
-    color: '#111827',
+    color: theme.text,
   },
   ratingRow: {
     gap: 8,
@@ -227,11 +315,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   ratingButtonActive: {
-    backgroundColor: '#2563eb',
-    borderColor: '#2563eb',
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   ratingText: {
-    color: '#2563eb',
+    color: theme.primary,
     fontWeight: '700',
   },
   ratingTextActive: {
@@ -250,13 +338,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   secondary: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: theme.border,
   },
   primary: {
-    backgroundColor: '#2563eb',
+    backgroundColor: theme.primary,
   },
   secondaryText: {
-    color: '#111827',
+    color: theme.text,
     fontWeight: '600',
   },
   primaryText: {

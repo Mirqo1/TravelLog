@@ -44,7 +44,7 @@ Užívateľ klikne na miesto, ktoré navštívil → aplikácia zobrazí mapu sv
 ### Backend (Serverless)
 - **Database:** Firebase Firestore
 - **Authentication:** Firebase Auth (email + heslo + Google Sign-In)
-- **Storage:** Firebase Storage (fotky, dáta)
+- **Storage:** Firestore (údaje návštev), Google Disk používateľa (zálohy fotografií; nastavenie v `GOOGLE_DRIVE_SETUP.md`)
 - **Hosting:** Firebase Hosting
 
 ### External Services
