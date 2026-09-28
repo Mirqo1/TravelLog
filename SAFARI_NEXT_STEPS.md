@@ -17,7 +17,7 @@
 1. Confirm backup/restore, then finish app-wide real login, explicit local migration and cloud photo storage. Backup/restore should remain available to Free users so their memories are not hostage to a subscription.
 2. Central translation dictionaries, English fallback/default, Slovak first additional language; switch in Profile and persist preference. More languages are added as reviewed translations. Arbitrary languages do not appear automatically; place names and personal notes should not be silently translated.
 3. Premium visit fields: photo gallery, longer journal, tags; cloud permissions and quotas checked on the server, not just by hiding a button. Existing photos schema already exists but attachments and storage are unfinished.
-4. Sharing: render a preview card from the user's photo, name, location and visit date, allow selection of included information, then export/save or open the system share sheet. The user chooses the destination and submits. A destination app must support receiving images; no promise that Strava or every network can accept an automatic post. Do not silently include private notes. Keep Google map/review content out of exported art until applicable terms are checked.
+4. Sharing: an initial Premium/preview card is available in visit detail: choose a local photo (or no photo), optionally show place/date, inspect the image, and share a JPEG using the system sheet. Private notes, rating, coordinates and Google map/review content are excluded. The user chooses the receiving app and completes posting. A destination app must support receiving JPEG files; Strava and other networks might not. Phone visual acceptance and production entitlement enforcement remain pending.
 5. Admin/test access: server-assigned admin claim, test-account Free/Premium preview, separate production billing entitlement. No public password or unrestricted premium switch in the app.
 6. Google reviews: optional lower-priority enhancement via official Places API; must resolve a Google Place ID (Photon/OSM IDs are not interchangeable), show Google and author attribution and source links, follow ordering/caching/EEA conditions, and budget API usage. Not scraping. Check paid-app terms before putting this specifically behind a paywall.
 7. New name: shortlist first, then check domains/store names and relevant trademarks. The current name remains a working title until a replacement is chosen. The compass remains reusable.
@@ -145,3 +145,14 @@ Existing Premium claims are forcibly refreshed on foreground activation; UI
 continues to use preview-package test access. Production billing, trusted claim
 issuance and server-side enforcement for new premium cloud operations remain
 unimplemented. Existing photos now remain visible without Premium.
+
+## Share card implementation (2026-09-28)
+
+From a visit detail, Preview/Premium can open a photo-based share card, choose
+one existing device-local photo or no photo, and choose whether the place and
+visit date appear. Share action captures ONLY the preview card as a JPEG with
+react-native-view-shot and opens expo-sharing. It excludes map/review content,
+private notes, rating and coordinates. No automatic posting or upload takes
+place. `react-native-view-shot@5.1.0` is an Expo SDK 57 bundled version; run
+`npm ci --include=dev` after Git pull before the native Android build. Physical
+Android preview and recipient-app behavior still need acceptance testing.

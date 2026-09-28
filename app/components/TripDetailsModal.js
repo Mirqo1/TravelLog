@@ -1,18 +1,23 @@
 import { normalizeTags } from '../utils/backup';
 import { displayVisitDate } from '../utils/visitDate';
 import { theme } from '../theme';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { VisitPhotoGallery } from './VisitPhotos';
 import { validLocation } from '../utils/mapVisits';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { usePhotoAccess } from '../hooks/usePhotoAccess';
+import TripShareModal from './TripShareModal';
 
 const ratingText = (value) => {
   const rating = Math.max(0, Math.min(5, Math.round(Number(value) || 0)));
   return rating ? '★'.repeat(rating) + '☆'.repeat(5 - rating) : 'Bez hodnotenia';
 };
 export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDelete }) {
+  const [shareOpen, setShareOpen] = useState(false);
+  const { canAddPhotos: canShare } = usePhotoAccess();
+  useEffect(() => { if (!visible) setShareOpen(false); }, [visible]);
   if (!trip) return null;
   const hasLocation = validLocation(trip.location);
   return <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
@@ -55,6 +60,9 @@ export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDel
         {trip.notes ? <View style={styles.card}><Text style={styles.heading}>Poznámky</Text>
           <Text style={styles.body}>{trip.notes}</Text></View> : null}
         {!trip.description && !trip.notes ? <Text style={styles.empty}>Pridaj pár slov, aby ti táto návšteva ožila aj po rokoch.</Text> : null}
+        {canShare ? <Pressable accessibilityRole="button" onPress={() => setShareOpen(true)} style={styles.share}>
+          <Text style={styles.shareText}>Zdieľať kartu návštevy</Text>
+        </Pressable> : null}
         <Pressable accessibilityRole="button" onPress={onEdit} style={styles.edit}>
           <Text style={styles.editText}>Upraviť návštevu</Text>
         </Pressable>
@@ -62,6 +70,7 @@ export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDel
           <Text style={styles.deleteText}>Vymazať návštevu</Text>
         </Pressable>
       </ScrollView>
+      <TripShareModal visible={shareOpen && visible} trip={trip} onClose={() => setShareOpen(false)} />
     </SafeAreaView></SafeAreaProvider>
   </Modal>;
 }
@@ -91,6 +100,8 @@ const styles = StyleSheet.create({
   coordinates: { fontSize: 12, color: theme.muted },
   empty: { color: theme.muted, fontSize: 15, lineHeight: 23 },
   edit: { backgroundColor: theme.primary, borderRadius: 14, padding: 16, alignItems: 'center' },
+  share: { backgroundColor: theme.surface, borderColor: theme.border, borderWidth: 1, borderRadius: 14, padding: 16, alignItems: 'center' },
+  shareText: { color: theme.primary, fontWeight: '700', fontSize: 16 },
   editText: { color: '#fff', fontWeight: '700', fontSize: 16 },
   delete: { padding: 14, alignItems: 'center' },
   deleteText: { color: '#b91c1c', fontWeight: '600' },
