@@ -16,6 +16,8 @@ const escapeQuery = value => String(value).replace(/\\/g, '\\\\').replace(/'/g, 
 const fileFields = 'id,name,size,md5Checksum,modifiedTime,appProperties';
 const metadataPhotos = photos => photoList(photos).filter(p => typeof p === 'object');
 const albumQuery = owner => `appProperties has { key='owner' and value='${owner}' } and appProperties has { key='kind' and value='album' }`;
+const photoQuery = owner => `appProperties has { key='owner' and value='${owner}' } and appProperties has { key='kind' and value='photo' }`;
+const CLEANUP_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const albumName = (owner, tripId, deviceId) => `tl-${owner}-${Native.sha256(tripId)}-${deviceId}.json`;
 export function validatePhotoManifest(data, owner) {
   if (data?.version !== 1 || data.owner !== owner || typeof data.tripId !== 'string' || !data.tripId
@@ -231,5 +233,47 @@ export function createDriveSession({ uid, binding, isCurrent, wifiOnly = () => t
     }
     report({ status: 'restored', message: `Obnovené fotografie: ${restored}.${skipped ? ` Preskočené návštevy: ${skipped} (už majú fotky alebo nie sú v tomto účte).` : ''}` });
   }
-  return { authorize, backup, restore, stop, check };
+  // Only collect completed uploads that no album on ANY device references.
+  // Old album manifests remain authoritative even if this phone has no photos.
+  async function findUnreferencedPhotos() {
+    check(true);
+    const albums = await list(albumQuery(owner));
+    const referenced = new Set();
+    for (const file of albums) {
+      if (!/^[\w-]+$/.test(file.id) || !Number.isFinite(Number(file.size)) || Number(file.size) > 50000)
+        throw fault('INVALID_BACKUP', 'Niektorú zálohu sa nedá bezpečne skontrolovať. Nič sme nezmazali.');
+      const { data } = await request(`${API}/files/${file.id}?alt=media`);
+      const album = validatePhotoManifest(data, owner);
+      for (const p of album.photos) referenced.add(p.driveId);
+    }
+    const files = await list(photoQuery(owner));
+    const cutoff = Date.now() - CLEANUP_AGE_MS;
+    return files.filter(file => /^[\w-]+$/.test(file.id) && !referenced.has(file.id)
+      && file.appProperties?.owner === owner && file.appProperties?.kind === 'photo'
+      && file.name === `tl-${owner}-${file.md5Checksum}.jpg`
+      && /^[a-f0-9]{32}$/.test(file.md5Checksum || '')
+      && Number.isFinite(Number(file.size)) && Number(file.size) > 0
+      && Number.isFinite(Date.parse(file.modifiedTime)) && Date.parse(file.modifiedTime) < cutoff);
+  }
+  async function cleanupPreview() {
+    check(true); await authorize();
+    const files = await findUnreferencedPhotos();
+    return { count: files.length, bytes: files.reduce((sum, file) => sum + Number(file.size), 0),
+      ids: files.map(file => file.id) };
+  }
+  async function cleanup(preview) {
+    check(true); await authorize();
+    if (!preview || !Array.isArray(preview.ids) || !preview.ids.length) return { count: 0, bytes: 0 };
+    let removed = 0, bytes = 0;
+    // Always recalculate after confirmation: a second device might have published
+    // an album since the user viewed the preview.
+    for (const id of preview.ids) {
+      const file = (await findUnreferencedPhotos()).find(item => item.id === id);
+      if (!file) continue;
+      await request(`${API}/files/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      removed++; bytes += Number(file.size);
+    }
+    return { count: removed, bytes };
+  }
+  return { authorize, backup, restore, cleanupPreview, cleanup, stop, check };
 }

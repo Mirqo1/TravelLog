@@ -69,8 +69,13 @@ The existing Maps API key is not a replacement for user authorization to Drive.
   Interrupted restores can be rerun; verified downloaded files are reused.
 - New uploads require Premium/admin or this preview app's test access. Connecting
   and restoring existing backups remain available without Premium.
-- Images already removed from an album remain as backup blobs. No automatic
-  remote deletion or cross-notebook local garbage collection in this release.
+- The Profile offers a confirmed cleanup preview for completed uploads older
+  than 7 days that NO device album manifest references. It rechecks every
+  album before each deletion and stops on an unreadable manifest. Deleted-visit
+  photos still referenced by old albums are deliberately retained; this is NOT
+  a full per-photo deletion or a substitute for coordinated device sync.
+  Drive files belong to the linked Firebase UID and Drive permissionId; the
+  cleanup never deletes another account's files or the phone's local photos.
   Disconnect stops this installation's transfers and preserves data; it does not
   revoke Google's app grant or delete the hidden backup. Google account settings
   can revoke the grant. Profile avatars and legacy URL/string images are excluded.
@@ -109,8 +114,20 @@ On the first phone connect Drive, add two photos, wait for confirmation outside
 Profile, restart and check no duplicate uploads. Disconnect network during upload,
 retry, and check quota/revocation messages if applicable. On a SECOND phone sign
 into the SAME Firebase account, wait for text visits, connect the SAME Google
-account, then Restore photographs. Check cover order and full-size export. Do not
+account, then Restore photographs. Also check Moje sny and visit tags after
+automatic text sync. Check cover order and full-size export. Try the cleanup
+preview before deleting anything: photographs still linked in any album must
+remain excluded. The emulator tests confirm separate device journals and
+protection of referenced files; the real second-phone path still needs user
+acceptance. Do not
 uninstall the only copy to simulate loss before this acceptance test succeeds.
+
+Production Premium enforcement still needs a trusted entitlement issuer and
+server checks before selling a subscription. The preview package intentionally
+unlocks test features. Firebase UID owner rules and client custom-claim checks
+do not alone prevent a modified client from using its own Drive authorization;
+there is no server-side Google Drive upload proxy in this project yet. Do not
+advertise the current client gate as billing enforcement.
 
 Official references:
 - https://developer.android.com/identity/authorization

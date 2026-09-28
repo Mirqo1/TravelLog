@@ -16,7 +16,9 @@ export function usePhotoAccess() {
       const user = getCloudAccount();
       if (!user || user.uid !== account?.uid) { if (active) setAccess(null); return; }
       try {
-        const { claims } = await user.getIdTokenResult();
+        // Refresh entitlements when returning to the app so revoked/granted
+        // claims do not remain cached until the old token expires.
+        const { claims } = await user.getIdTokenResult(true);
         if (active) setAccess({ uid: user.uid, allowed: photoAccess(packageName, claims).canAddPhotos });
       } catch { if (active) setAccess(null); }
     };

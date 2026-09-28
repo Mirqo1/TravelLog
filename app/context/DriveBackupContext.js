@@ -17,6 +17,7 @@ export function DriveBackupProvider({ children }) {
   const [saved, setSaved] = useState(null);
   const [state, setState] = useState({ status: 'disconnected', message: '' });
   const [busy, setBusy] = useState(false);
+  const [cleanupPlan, setCleanupPlan] = useState(null);
   const operation = useRef(null);
   const epoch = useRef(0);
   const live = useRef(null);
@@ -30,7 +31,7 @@ export function DriveBackupProvider({ children }) {
     setBusy(false);
   };
   useEffect(() => {
-    stop(); setSaved(null); setState({ status: 'disconnected', message: '' });
+    stop(); setCleanupPlan(null); setSaved(null); setState({ status: 'disconnected', message: '' });
     let active = true;
     if (uid) AsyncStorage.getItem(driveSettingsKey(uid)).then(raw => {
       if (!active) return;
@@ -56,7 +57,7 @@ export function DriveBackupProvider({ children }) {
       wifiOnly: () => live.current.config?.wifiOnly !== false });
     operation.current = session; setBusy(true);
     const report = update => { if (valid()) setState(previous => ({ ...previous, ...update })); };
-    report({ status: mode === 'connect' ? 'connecting' : mode === 'restore' ? 'restoring' : 'uploading', message: 'Pripájam Google Disk…' });
+    report({ status: mode === 'connect' ? 'connecting' : mode === 'restore' ? 'restoring' : mode.startsWith('cleanup') ? 'checking' : 'uploading', message: 'Pripájam Google Disk…' });
     try {
       if (mode === 'connect') {
         const identity = await session.authorize(true, !current.config); session.check();
@@ -64,6 +65,15 @@ export function DriveBackupProvider({ children }) {
         await AsyncStorage.setItem(driveSettingsKey(runUid), JSON.stringify(next)); session.check();
         setSaved({ uid: runUid, config: next });
         report({ status: 'pending', message: 'Disk je pripojený. Fotky čakajú na zálohovanie.' });
+      } else if (mode === 'cleanupPreview') {
+        const plan = await session.cleanupPreview(); session.check();
+        setCleanupPlan(plan);
+        report({ status: 'checked', message: plan.count ? `Nájdených nepotrebných súborov: ${plan.count}.` : 'Bez nepotrebných súborov.' });
+      } else if (mode === 'cleanup') {
+        if (!cleanupPlan?.count) return;
+        setCleanupPlan(null);
+        const result = await session.cleanup(cleanupPlan); session.check();
+        report({ status: 'cleaned', message: `Uvoľnené: ${result.count} súborov. Ostatné fotografie ostali v zálohe.` });
       } else if (mode === 'restore') {
         await session.restore({ readTrips: () => getTrips(`cloud-${runUid}`), report,
           attachPhotos: (id, photos, expected) => restoreVisitPhotos(`cloud-${runUid}`, id, photos, expected, valid) });
@@ -106,6 +116,7 @@ export function DriveBackupProvider({ children }) {
   }, [uid, identity, fingerprint, loading, ready, canAddPhotos]);
   async function disconnect() {
     stop();
+    setCleanupPlan(null);
     const previousUid = uid;
     await AsyncStorage.removeItem(driveSettingsKey(previousUid));
     if (live.current.uid === previousUid) {
@@ -119,8 +130,8 @@ export function DriveBackupProvider({ children }) {
     await AsyncStorage.setItem(driveSettingsKey(uid), JSON.stringify(next));
     if (live.current.uid === uid) setSaved({ uid, config: next });
   }
-  return <Context.Provider value={{ ...state, busy, config, ready, available: driveAvailable, signedIn: !!uid,
+  return <Context.Provider value={{ ...state, cleanupPlan, busy, config, ready, available: driveAvailable, signedIn: !!uid,
     canUpload: canAddPhotos, connect: () => perform('connect'), backup: () => perform('backup'),
-    restore: () => perform('restore'), disconnect, setWifiOnly }}>{children}</Context.Provider>;
+    restore: () => perform('restore'), cleanupPreview: () => perform('cleanupPreview'), cleanup: () => perform('cleanup'), disconnect, setWifiOnly }}>{children}</Context.Provider>;
 }
 export const useDriveBackup = () => useContext(Context);

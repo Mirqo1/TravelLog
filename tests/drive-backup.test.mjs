@@ -50,7 +50,7 @@ globalThis.fetch = async (url, opts) => {
   if (failStatus) return response({ error: { errors: [{ reason: failStatus === 403 ? 'storageQuotaExceeded' : 'expired' }] } }, failStatus);
   if (u.pathname.endsWith('/about')) return response({ user: { permissionId: wrongIdentity ? 'another-drive' : binding.permissionId, emailAddress: binding.email } });
   if (opts.method === 'POST' && u.searchParams.get('uploadType') === 'resumable') {
-    const id = 'f' + (++seq); remote.set(id, { ...JSON.parse(opts.body), id, complete: false });
+    const id = 'f' + (++seq); remote.set(id, { ...JSON.parse(opts.body), id, complete: false, modifiedTime: '2026-09-01T00:00:00Z' });
     latestLocation = 'https://www.googleapis.com/upload/session?id=' + id;
     return response(null, 200, { location: latestLocation });
   }
@@ -63,6 +63,7 @@ globalThis.fetch = async (url, opts) => {
     remote.set(id, { ...metadata, id, content, size: 1000, complete: true, modifiedTime: String(seq).padStart(8, '0') }); return response({ id });
   }
   const id = u.pathname.split('/').at(-1);
+  if (opts.method === 'DELETE') { assert.ok(remote.delete(id)); return response(null, 204); }
   if (opts.method === 'PATCH') {
     if (failAlbum) throw new Error('album response lost');
     Object.assign(remote.get(id), { content: JSON.parse(opts.body), modifiedTime: String(++seq).padStart(8, '0') }); albums++; return response({ id });
@@ -73,7 +74,8 @@ globalThis.fetch = async (url, opts) => {
   const q = u.searchParams.get('q');
   if (changeAccountOnList) active = false;
   const match = q.match(/name = '([^']+)'/);
-  return response({ files: [...remote.values()].filter(f => f.complete && (match ? f.name === match[1] : f.appProperties.kind === 'album' && f.appProperties.owner === hash('alice'))) });
+  const kind = q?.includes("value='photo'") ? 'photo' : 'album';
+  return response({ files: [...remote.values()].filter(f => f.complete && (match ? f.name === match[1] : f.appProperties.kind === kind && f.appProperties.owner === hash('alice'))) });
 };
 let trips = [{ id: 'visit-1', photos: [photo] }];
 const make = (options = {}) => createDriveSession({ uid: 'alice', binding, isCurrent: () => active, wifiOnly: () => true, ...options });
@@ -90,8 +92,33 @@ try {
   await backup(make()); assert.equal(uploads, 1); assert.equal(albums, 1); // restart reuses uploaded blob
   await backup(make()); assert.equal(uploads, 1); assert.equal(albums, 1); // no duplicate on unchanged notebook
   assert.equal(reports.at(-1).status, 'saved');
+  assert.equal((await make().cleanupPreview()).count, 0, 'Referenced photo cannot be cleaned');
+  // Second device has separate journal but sees the same album and can restore.
+  memory.clear(); disk.clear(); trips = [{ id: 'visit-1', photos: [] }];
+  await make().restore({ readTrips: async () => structuredClone(trips), report: r => reports.push(r),
+    attachPhotos: async (_, images) => { trips[0].photos = images; return true; } });
+  assert.equal(trips[0].photos[0].id, photo.id);
+  assert.equal((await make().cleanupPreview()).count, 0, 'Second phone album still protects photo');
+  trips = [{ id: 'visit-1', photos: [photo] }]; disk.set(photoUri(photo), image);
+  const orphan = { id: 'orphan1', name: `tl-${owner}-${image.md5}.jpg`, size: 300,
+    md5Checksum: image.md5, appProperties: { owner, kind: 'photo' }, complete: true, modifiedTime: '2026-09-01T00:00:00Z' };
+  remote.set(orphan.id, orphan);
+  const plan = await make().cleanupPreview(); assert.deepEqual(plan, { count: 1, bytes: 300, ids: ['orphan1'] });
+  const albumFile = [...remote.values()].find(f => f.appProperties.kind === 'album');
+  remote.set('bad-album', { ...albumFile, id: 'bad-album', content: { ...albumFile.content, photos: [{ invalid: true }] } });
+  await assert.rejects(make().cleanup(plan), e => e.code === 'INVALID_BACKUP');
+  assert.ok(remote.has(orphan.id), 'Invalid album must stop all deletions'); remote.delete('bad-album');
+  // A new album published after the preview protects a previously orphaned file.
+  const secondAlbum = { ...remote.get([...remote.keys()].find(id => remote.get(id).appProperties.kind === 'album')) };
+  const lateId = 'late-album'; remote.set(lateId, { ...secondAlbum, id: lateId,
+    content: { ...secondAlbum.content, tripId: 'other-visit', photos: [{ ...secondAlbum.content.photos[0], driveId: orphan.id }] } });
+  assert.deepEqual(await make().cleanup(plan), { count: 0, bytes: 0 }); assert.ok(remote.has(orphan.id));
+  remote.delete(lateId);
+  assert.deepEqual(await make().cleanup(plan), { count: 1, bytes: 300 }); assert.ok(!remote.has(orphan.id));
+  const fresh = { ...orphan, id: 'fresh1', modifiedTime: new Date().toISOString() }; remote.set('fresh1', fresh);
+  assert.equal((await make().cleanupPreview()).count, 0, 'Recent uploads must not be cleaned'); remote.delete('fresh1');
   assert.ok(!JSON.stringify([...memory]).includes('private-access-token'));
-  console.log('PASS: Wi-Fi/offline gates, Drive identity binding, durable interrupted upload recovery, blob reuse, no stored tokens.');
+  console.log('PASS: Wi-Fi/offline gates, account binding, second-device recovery, orphan preview/recheck/deletion, blob reuse, no stored tokens.');
 
   disk.clear(); trips = [{ id: 'visit-1', photos: [] }];
   let attached = 0;

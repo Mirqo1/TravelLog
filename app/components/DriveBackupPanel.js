@@ -26,6 +26,13 @@ export default function DriveBackupPanel() {
             'Prihlás sa do rovnakého účtu TravelLog aj Google ako na pôvodnom telefóne. Najprv počkaj na načítanie návštev. Doplníme fotky do návštev bez fotografií; existujúce galérie ani texty neprepíšeme.',
             [{ text: 'Zrušiť', style: 'cancel' }, { text: 'Obnoviť', onPress: action(drive.restore) }]))}
           {button('Obnoviť pripojenie', drive.connect)}
+          {button('Vyhľadať nepotrebné nahrané fotky', drive.cleanupPreview)}
+          {drive.cleanupPlan?.count > 0 ? <View style={styles.cleanup}>
+            <Text style={styles.note}>Našli sme {drive.cleanupPlan.count} nahraných fotiek bez odkazu z galérie ({(drive.cleanupPlan.bytes / (1024 * 1024)).toFixed(1)} MB). Fotky, ktoré niektorý telefón stále eviduje v zálohe, sa nemažú.</Text>
+            {button('Uvoľniť toto miesto', () => Alert.alert('Natrvalo vymazať nepotrebné súbory?',
+              'Fotky bez odkazu z akejkoľvek zálohovanej galérie sa vymažú z Google Disku. Pred vymazaním ich aplikácia znovu skontroluje.',
+              [{ text: 'Zrušiť', style: 'cancel' }, { text: 'Vymazať', style: 'destructive', onPress: action(drive.cleanup) }]))}
+          </View> : null}
           {button('Odpojiť Disk', () => Alert.alert('Odpojiť Google Disk?', 'Zastaví sa zálohovanie v tomto telefóne. Fotky v telefóne aj zálohy na Disku zostanú zachované.',
             [{ text: 'Zrušiť', style: 'cancel' }, { text: 'Odpojiť', onPress: action(drive.disconnect) }]))}
           {!drive.canUpload ? <Text style={styles.note}>Nové zálohy vyžadujú Premium. Existujúce si môžeš obnoviť aj bez neho.</Text> : null}
@@ -35,7 +42,7 @@ export default function DriveBackupPanel() {
           {!!drive.message && <Text style={styles.note}>{drive.message}</Text>}
         </>}
         <Text style={styles.note}>Automatické zálohovanie funguje vo všetkých záložkách, kým je aplikácia otvorená. Po jej zatvorení alebo bez siete fotky čakajú na ďalšie otvorenie. Stav „zálohované“ sa zobrazí až po dokončení prenosu.</Text>
-        <Text style={styles.note}>Odstránenie fotky v aplikácii zatiaľ neuvoľní jej miesto v zálohe na Disku. Odpojenie Disku zálohu nevymaže.</Text>
+        <Text style={styles.note}>Odstránenie fotky v aplikácii môže ponechať jej staršiu zálohu na inom zariadení. Kontrola miesta bezpečne vymaže iba súbory, na ktoré už neodkazuje žiadna uložená galéria. Odpojenie Disku zálohu nevymaže.</Text>
       </>}
   </View>;
 }
@@ -44,6 +51,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, fontWeight: '700', color: theme.text },
   note: { color: theme.muted, lineHeight: 20, fontSize: 13 }, email: { color: theme.text, fontWeight: '600' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  cleanup: { gap: 8 },
   button: { minHeight: 46, justifyContent: 'center', alignItems: 'center', borderRadius: 12, padding: 10, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface },
   primaryButton: { backgroundColor: theme.primary, borderColor: theme.primary },
   buttonText: { fontWeight: '700', color: theme.primary },

@@ -129,8 +129,19 @@ Labels remain readable/searchable after expiry and survive ordinary edits,
 local persistence and text backup/sync. Legacy backups remain compatible.
 Entitlement gate follows the photo UI; production server enforcement is pending.
 
-Drive cleanup remains pending: removing a local photo/visit does not delete
-its cloud blob. Plan a confirmed cleanup preview protecting photos referenced
-by other device manifests. Google Drive settings / Manage apps can remove ALL
-hidden TravelLog backup data, not individual photos. Disconnect backup on all
-connected devices first to avoid automatic re-upload.
+Drive cleanup: Profile now previews and can delete photo uploads older than seven
+days only if no album manifest on any device references them. It rechecks before
+each deletion. This helps interrupted uploads but does not yet remove photos
+retained by an old device's album manifest after a photo or visit is deleted.
+Future work: synchronized photo deletion across devices, then a full safe photo
+reclaim flow. Manual clearing of all hidden data via Drive / Manage apps remains
+a complete backup reset; disconnect devices first to prevent re-upload.
+
+Second-device simulation now tests separate device journals and real album
+restore in the Drive service double. Physical second-phone acceptance, including
+Firebase visits, Dreams and restored photos, still needs user verification.
+
+Existing Premium claims are forcibly refreshed on foreground activation; UI
+continues to use preview-package test access. Production billing, trusted claim
+issuance and server-side enforcement for new premium cloud operations remain
+unimplemented. Existing photos now remain visible without Premium.

@@ -4,6 +4,7 @@ const raw = await readFile('app/context/DriveBackupContext.js', 'utf8');
 const memory = new Map(), listeners = [], timers = new Map();
 let account = { uid: 'alice' }, premium = true, index = 0, slots = [], pendingEffects = [], timerId = 0;
 let backupCalls = 0, restoreCalls = 0, stopCalls = 0, heldBackup = null;
+let previewCalls = 0, cleanupCalls = 0;
 const hooks = {
   createContext: () => ({}), useContext: () => {},
   useRef(value) { const i = index++; slots[i] ??= { current: value }; return slots[i]; },
@@ -28,6 +29,8 @@ globalThis.driveContextDouble = { ...hooks, AppState: appState,
     backup: async ({ report }) => { backupCalls++; if (heldBackup) await heldBackup.promise;
       if (isCurrent()) report({ status: 'saved', message: uid }); return '2026-09-23T10:00:00Z'; },
     restore: async ({ report }) => { restoreCalls++; report({ status: 'restored', message: uid }); },
+    cleanupPreview: async () => { previewCalls++; return { count: 1, bytes: 300, ids: ['orphan1'] }; },
+    cleanup: async plan => { cleanupCalls++; assert.deepEqual(plan.ids, ['orphan1']); return { count: 1, bytes: 300 }; },
   }), driveAvailable: true, driveSettingsKey: stateKey, galleryFingerprint: JSON.stringify,
   setInterval: fn => { const id = ++timerId; timers.set(id, fn); return id; },
   setTimeout: fn => { const id = ++timerId; timers.set(id, fn); return id; },
@@ -59,6 +62,8 @@ appState.currentState = 'background'; for (const fn of timers.values()) fn(); aw
 appState.currentState = 'active'; listeners.forEach(fn => fn('active')); await tick(); assert.equal(backupCalls, 2);
 premium = false; value = render(); await value.backup(); assert.equal(backupCalls, 2);
 await value.restore(); assert.equal(restoreCalls, 1);
+await value.cleanupPreview(); value = render(); assert.equal(previewCalls, 1); assert.equal(value.cleanupPlan.count, 1);
+await value.cleanup(); value = render(); assert.equal(cleanupCalls, 1); assert.equal(value.cleanupPlan, null);
 console.log('PASS: app-wide foreground autosave, background gate, premium upload gate, non-premium restore.');
 premium = true; value = render();
 let release; heldBackup = { promise: new Promise(r => { release = r; }) };

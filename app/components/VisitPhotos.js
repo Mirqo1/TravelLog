@@ -5,7 +5,6 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { theme } from '../theme';
 import { photoKey, photoList } from '../utils/visitPhotos';
 import { photoUri, exportVisitPhoto } from '../services/visitPhotoService';
-import { usePhotoAccess } from '../hooks/usePhotoAccess';
 
 export function VisitPhotoImage({ photo, thumbnail = false, style, resizeMode = 'cover' }) {
   const uri = photoUri(photo, thumbnail);
@@ -18,9 +17,8 @@ export function VisitPhotoImage({ photo, thumbnail = false, style, resizeMode = 
   return <Image source={{ uri }} style={style} resizeMode={resizeMode} onError={() => setFailed(true)} accessibilityLabel="Fotografia návštevy" />;
 }
 export function VisitPhotoCover({ photos }) {
-  const { canAddPhotos } = usePhotoAccess();
   const items = photoList(photos);
-  if (!canAddPhotos || !items.length) return null;
+  if (!items.length) return null;
   return <View style={styles.coverFrame}>
     <VisitPhotoImage photo={items[0]} thumbnail style={styles.cover} />
     <View style={styles.count}><MaterialIcons name="photo-library" size={14} color="#fff" /><Text style={styles.countText}>{items.length}</Text></View>
@@ -53,7 +51,7 @@ export function VisitPhotoGallery({ photos, title }) {
       {items.map((item, i) => <Pressable key={photoKey(item)} accessibilityRole="button" accessibilityLabel={`Otvoriť fotografiu ${i + 1}`}
         onPress={() => setSelected(photoKey(item))}><VisitPhotoImage photo={item} thumbnail style={styles.thumb} /></Pressable>)}
     </ScrollView>
-    <Text style={styles.note}>Iba v tomto telefóne · záloha fotografií na Google Disk ešte nie je pripojená.</Text>
+    <Text style={styles.note}>Fotografie v telefóne môžeš zálohovať na svoj Google Disk cez Profil.</Text>
     <Modal visible={!!photo} animationType="fade" onRequestClose={() => setSelected(null)}>
       <SafeAreaProvider><SafeAreaView style={styles.viewer}>
         <View style={styles.viewerBar}><Text style={styles.viewerTitle} numberOfLines={2}>{title}</Text>
