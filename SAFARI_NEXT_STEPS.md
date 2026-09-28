@@ -156,3 +156,10 @@ private notes, rating and coordinates. No automatic posting or upload takes
 place. `react-native-view-shot@5.1.0` is an Expo SDK 57 bundled version; run
 `npm ci --include=dev` after Git pull before the native Android build. Physical
 Android preview and recipient-app behavior still need acceptance testing.
+
+Share card visual revision (2026-09-29): remove the border and rounded card
+corners. The selected photo fills the complete 4:5 export; all card information
+sits in a translucent dark panel at the bottom. The brand row uses the exact
+compass logo artwork instead of a star. The photo-free variant retains the same
+layout on a plain safari-coloured canvas. User photo, text toggles and privacy
+defaults are unchanged. Device visual acceptance is still pending.

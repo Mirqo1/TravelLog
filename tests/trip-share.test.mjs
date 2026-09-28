@@ -25,7 +25,9 @@ const mocks = { React, ...hooks,
   photoUri: photo => photo.uri,
 };
 globalThis.shareMocks = mocks;
-const raw = (await readFile('app/components/TripShareModal.js', 'utf8')).replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm, '');
+const raw = (await readFile('app/components/TripShareModal.js', 'utf8'))
+  .replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm, '')
+  .replace("require('../../assets/compass-foreground.png')", "'COMPASS_IMAGE'");
 const transformed = transformSync(raw, { configFile: false, babelrc: false, plugins: ['@babel/plugin-transform-react-jsx'] }).code;
 const mod = await import('data:text/javascript;base64,' + Buffer.from(`const {${Object.keys(mocks).join(',')}}=globalThis.shareMocks;\n` + transformed).toString('base64'));
 const trip = { id: 'one', name: 'Zoo Košice', locationName: 'Košice, Slovensko', date: '2026-09-28',
@@ -43,9 +45,17 @@ assert.ok(labels().includes('2026-09-28'));
 assert.ok(!labels().includes('private diary'));
 assert.ok(!labels().includes('latitude'));
 assert.ok(!labels().includes('rating'));
+assert.equal(card().props.style.borderWidth, undefined);
+assert.equal(card().props.style.borderRadius, undefined);
+const cover = nodes(card()).find(n => n.type === 'Image' && n.props.source?.uri === 'file:///p1.jpg');
+assert.equal(cover.props.style.width, '100%');
+assert.equal(cover.props.style.height, '100%');
+const caption = nodes(card()).find(n => n.type === 'View' && n.props.style?.backgroundColor?.startsWith('rgba('));
+assert.equal(caption.props.style.bottom, 0);
+assert.ok(nodes(caption).some(n => n.type === 'Image' && n.props.source === 'COMPASS_IMAGE'));
 let share = nodes(tree).find(n => n.type === 'Pressable' && n.children.some(c => JSON.stringify(c).includes('Načítavam fotografiu')));
 assert.equal(share.props.disabled, true);
-nodes(card()).find(n => n.type === 'Image').props.onLoad(); tree = render();
+cover.props.onLoad(); tree = render();
 share = nodes(tree).find(n => n.type === 'Pressable' && n.children.some(c => JSON.stringify(c).includes('Zdieľať obrázok')));
 await share.props.onPress(); assert.equal(captured, 1); assert.equal(shared[0][0], 'file:///share.jpg');
 const dateChoice = nodes(tree).find(n => n.props.accessibilityRole === 'checkbox' && JSON.stringify(n).includes('dátum'));

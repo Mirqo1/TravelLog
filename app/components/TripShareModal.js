@@ -46,12 +46,16 @@ export default function TripShareModal({ visible, trip, onClose }) {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.intro}>Takto bude vyzerať obrázok. Poznámky, hodnotenie ani súradnice doň nepridávame.</Text>
         <View ref={card} collapsable={false} style={styles.card}>
-          {photo ? <View style={styles.photoFrame}>
-            <Image key={selected} source={{ uri }} resizeMode="cover" style={styles.photo}
-              onLoad={() => setReadyPhoto(selected)} onError={() => setReadyPhoto(null)} />
-          </View> : <View style={styles.photoPlaceholder}><Text style={styles.symbol}>✦</Text></View>}
+          {photo ? <Image key={selected} source={{ uri }} resizeMode="cover" style={styles.photo}
+            onLoad={() => setReadyPhoto(selected)} onError={() => setReadyPhoto(null)} />
+            : <View style={styles.photoPlaceholder} />}
           <View style={styles.caption}>
-            <Text style={styles.wordmark}>✦  TravelLog</Text>
+            <View style={styles.brand}>
+              <View style={styles.logoClip}>
+                <Image source={require('../../assets/compass-foreground.png')} style={styles.logo} />
+              </View>
+              <Text style={styles.wordmark}>TravelLog</Text>
+            </View>
             <Text style={[styles.name, trip.name.length > 55 && styles.longName]} numberOfLines={4}>{trip.name}</Text>
             {includePlace && !!trip.locationName && <Text style={styles.info} numberOfLines={2}>{trip.locationName}</Text>}
             {includeDate && !!trip.date && <Text style={styles.info}>{displayVisitDate(trip)}</Text>}
@@ -89,15 +93,18 @@ const styles = StyleSheet.create({
   close: { padding: 15 }, link: { color: theme.primary, fontWeight: '700' },
   content: { alignItems: 'center', padding: 20, paddingBottom: 40, gap: 16 },
   intro: { color: theme.muted, lineHeight: 20, alignSelf: 'stretch' },
-  card: { width: '100%', maxWidth: 320, height: 400, backgroundColor: theme.surface, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: theme.border },
-  photoFrame: { height: 182, backgroundColor: theme.primarySoft }, photo: { width: '100%', height: '100%' },
-  photoPlaceholder: { height: 116, backgroundColor: theme.primarySoft, justifyContent: 'center', alignItems: 'center' },
-  symbol: { color: theme.primary, fontSize: 42 },
-  caption: { flex: 1, paddingHorizontal: 20, paddingVertical: 10, gap: 4 },
-  wordmark: { fontSize: 13, fontWeight: '800', letterSpacing: 1, color: theme.primary },
-  name: { color: theme.text, fontSize: 22, fontWeight: '800', lineHeight: 26 },
+  card: { width: '100%', maxWidth: 320, height: 400, backgroundColor: theme.primarySoft, overflow: 'hidden' },
+  photo: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
+  photoPlaceholder: { ...StyleSheet.absoluteFillObject, backgroundColor: theme.primarySoft },
+  caption: { position: 'absolute', left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(37, 28, 20, 0.78)', paddingHorizontal: 20, paddingVertical: 16, gap: 5 },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 },
+  logoClip: { width: 32, height: 32, overflow: 'hidden' },
+  logo: { position: 'absolute', width: 64, height: 64, left: -16, top: -16 },
+  wordmark: { fontSize: 14, fontWeight: '800', letterSpacing: 1, color: '#F6F0E4' },
+  name: { color: '#fff', fontSize: 22, fontWeight: '800', lineHeight: 26 },
   longName: { fontSize: 18, lineHeight: 21 },
-  info: { color: theme.muted, fontSize: 13, lineHeight: 18 },
+  info: { color: '#F4E5C5', fontSize: 13, lineHeight: 18 },
   label: { alignSelf: 'stretch', fontWeight: '700', color: theme.text },
   picker: { alignItems: 'center', gap: 8 },
   emptyPhoto: { width: 76, height: 68, alignItems: 'center', justifyContent: 'center', borderRadius: 10, borderWidth: 1, borderColor: theme.border, padding: 5 },
