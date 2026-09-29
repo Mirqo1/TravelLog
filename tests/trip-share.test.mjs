@@ -85,6 +85,7 @@ assert.ok(cover, 'The prepared crop appears above the original photo');
 assert.equal(cover.props.style[1].opacity, 0, 'Incomplete crop cannot flash beige in preview');
 cover.props.onLoad(); tree = render();
 const photoArea = nodes(card()).find(n => n.type === 'View' && n.props.onMoveShouldSetPanResponder);
+assert.equal(photoArea, card(), 'Gesture lives on the non-collapsible card, not on an empty overlay');
 assert.equal(photoArea.props.onMoveShouldSetPanResponder(null, { dx: 10, dy: 0 }), true);
 assert.equal(photoArea.props.onStartShouldSetPanResponder(), true, 'Photo drag wins over parent scrolling');
 photoArea.props.onPanResponderGrant();

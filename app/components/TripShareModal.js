@@ -62,6 +62,14 @@ export default function TripShareModal({ visible, trip, onClose }) {
   const size = sourceSize || (photo?.width > 0 && photo?.height > 0 ? { width: photo.width, height: photo.height } : null);
   const geometry = photo && size ? coverGeometry(size.width, size.height, frameWidth, 400) : null;
   boundsRef.current = geometry;
+  useEffect(() => {
+    if (!visible || !uri || size || !Image.getSize) return;
+    let active = true;
+    Image.getSize(uri, (width, height) => {
+      if (active && width > 0 && height > 0) setSourceSize({ width, height });
+    }, () => {});
+    return () => { active = false; };
+  }, [visible, uri, size?.width, size?.height]);
   const prepareCrop = async nextOffset => {
     if (!uri || !size) return;
     const rect = cropRect(size.width, size.height, frameWidth, 400, nextOffset);
@@ -129,7 +137,7 @@ export default function TripShareModal({ visible, trip, onClose }) {
       </View>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.intro}>Takto bude vyzerať obrázok. Poznámky, hodnotenie ani súradnice doň nepridávame.</Text>
-        <View ref={card} collapsable={false} style={styles.card}
+        <View ref={card} collapsable={false} style={styles.card} {...pan.panHandlers}
           onLayout={event => setFrameWidth(event.nativeEvent.layout.width)}>
           {photo ? <>
             <Image source={{ uri: photoUri(photo, true) || uri }} resizeMode="cover" style={styles.photo} />
@@ -148,7 +156,6 @@ export default function TripShareModal({ visible, trip, onClose }) {
               style={{ position: 'absolute', width: geometry.width, height: geometry.height,
                 left: (frameWidth - geometry.width) / 2 + offset.x,
                 top: (400 - geometry.height) / 2 + offset.y }} />}
-            <View style={styles.dragLayer} {...pan.panHandlers} />
           </>
             : <View style={styles.photoPlaceholder} />}
           <View style={styles.caption}>
@@ -163,7 +170,9 @@ export default function TripShareModal({ visible, trip, onClose }) {
             {includeDate && !!trip.date && <Text style={styles.info}>{displayVisitDate(trip)}</Text>}
           </View>
         </View>
-        {photo && <Text style={styles.intro}>Potiahni fotografiu v náhľade. Výrez uvidíš počas posúvania a po pustení prsta sa pripraví na zdieľanie.</Text>}
+        {photo && <Text style={styles.intro}>{geometry?.limitX || geometry?.limitY
+          ? 'Potiahni fotografiu v náhľade. Výrez uvidíš počas posúvania a po pustení prsta sa pripraví na zdieľanie.'
+          : size ? 'Fotografia už presne vypĺňa formát karty, takže ju bez priblíženia nemožno posunúť.' : 'Načítavam rozmery fotografie…'}</Text>}
         {!!cropError && <Text style={styles.error}>{cropError}</Text>}
         {photos.length ? <>
           <Text style={styles.label}>Fotografia</Text>
@@ -203,7 +212,6 @@ const styles = StyleSheet.create({
   intro: { color: theme.muted, lineHeight: 20, alignSelf: 'stretch' },
   card: { width: '100%', maxWidth: 320, height: 400, backgroundColor: theme.primarySoft, overflow: 'hidden' },
   photo: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
-  dragLayer: { ...StyleSheet.absoluteFillObject },
   error: { color: '#b91c1c', alignSelf: 'stretch' },
   photoPlaceholder: { ...StyleSheet.absoluteFillObject, backgroundColor: theme.primarySoft },
   caption: { position: 'absolute', left: 0, right: 0, bottom: 0,

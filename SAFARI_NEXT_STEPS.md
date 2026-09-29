@@ -193,6 +193,14 @@ The already used gallery thumbnail is rendered below the original full image,
 which replaces it only after loading, to avoid a beige gap when switching photos.
 Physical Android acceptance is still needed for the preview and drag gesture.
 
+Third phone feedback: dragging still did not respond. The empty transparent
+gesture overlay was removed; PanResponder now attaches to the card's existing
+`collapsable={false}` native view and captures touches before the parent scroll.
+Image dimensions also fall back to `Image.getSize` for old photo records. The
+UI explains when a photo already has the exact 4:5 card ratio, where there is
+no surplus image area to move without zooming. Verify touch on a landscape
+photo after the next Android build.
+
 Further sharing ideas from Miroslav: sharing a complete visit would require a
 receiver flow and a clear distinction between a read-only copy and a link to
 live data, with private notes and photos opt-in. Groups and inviting another
