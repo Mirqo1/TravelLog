@@ -11,7 +11,6 @@ import TripsScreen from '../screens/TripsScreen';
 import MapScreen from '../screens/MapScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { useAuth } from '../context/AuthContext';
-import { SwipeScreen, SwipeTabBar } from './SwipeTabs';
 
 const Tab = createBottomTabNavigator();
 const TAB_ICONS = {
@@ -20,8 +19,6 @@ const TAB_ICONS = {
   Map: 'map',
   Profile: 'person',
 };
-const SwipeHome = props => <SwipeScreen {...props}><HomeScreen {...props} /></SwipeScreen>;
-const SwipeProfile = props => <SwipeScreen {...props}><ProfileScreen {...props} /></SwipeScreen>;
 
 function AuthScreen() {
   const { language, setLanguage } = useLanguage();
@@ -91,10 +88,8 @@ export default function Navigation() {
     <Tab.Navigator
       key={user.uid}
       safeAreaInsets={{ bottom: insets.bottom + 8 }}
-      tabBar={props => <SwipeTabBar {...props} />}
       screenOptions={({ route }) => ({
         headerShown: false,
-        animation: 'shift',
         tabBarLabel: t(route.name),
         sceneStyle: { backgroundColor: 'transparent' },
         // Let the navigator include the device's bottom safe-area inset.
@@ -108,10 +103,10 @@ export default function Navigation() {
         ),
       })}
     >
-      <Tab.Screen name="Home" component={SwipeHome} />
+      <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Trips" component={TripsScreen} />
       <Tab.Screen name="Map" component={MapScreen} />
-      <Tab.Screen name="Profile" component={SwipeProfile} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }

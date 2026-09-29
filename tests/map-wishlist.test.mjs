@@ -18,7 +18,7 @@ const hooks = {
    const old = slots[i]; slots[i] = { deps }; effects.push(() => { old?.cleanup?.(); slots[i].cleanup = fn(); });
  } },
 };
-const hostNames = ['SwipeScreen','MaterialIcons','WishlistModal','WishlistEditor','Modal','Pressable','ScrollView','Text','TextInput','View',
+const hostNames = ['MaterialIcons','WishlistModal','WishlistEditor','Modal','Pressable','ScrollView','Text','TextInput','View',
   'SafeAreaProvider','SafeAreaView','MapView','Heatmap','Marker','AddPlaceModal','TripDetailsModal','MapTypeToggle'];
 const mocks = { t, useLanguage, ...hooks, ...map, ...Object.fromEntries(hostNames.map(n => [n,n])),
  React: { createElement: (type, props, ...children) => ({ type, props: props || {}, children: children.flat(Infinity).filter(x => x !== null && x !== false && x !== undefined) }) },

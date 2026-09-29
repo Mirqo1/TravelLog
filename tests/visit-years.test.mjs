@@ -24,7 +24,7 @@ const hooks={
  useEffect(fn,deps){const i=index++;if(!slots[i]||deps.some((d,n)=>d!==slots[i].deps[n])){const prev=slots[i];slots[i]={deps};effects.push(()=>{prev?.cleanup?.();slots[i].cleanup=fn();});}},
 };
 const React={createElement:(type,props,...children)=>({type,props:props||{},children:children.flat(Infinity).filter(v=>v!==false&&v!=null)})};
-const names=['View','Text','TextInput','Pressable','FlatList','RefreshControl','ActivityIndicator','AddVisitButton','AddPlaceModal','PlaceListItem','TripDetailsModal','WishlistModal','SwipeScreen','VisitYearTimeline'];
+const names=['View','Text','TextInput','Pressable','FlatList','RefreshControl','ActivityIndicator','AddVisitButton','AddPlaceModal','PlaceListItem','TripDetailsModal','WishlistModal','VisitYearTimeline'];
 const mocks={t,useLanguage,...hooks,...years,React,...Object.fromEntries(names.map(n=>[n,n])),theme:{},StyleSheet:{create:v=>v},
  useWishlist:()=>({items:[],ready:true}),AccessibilityInfo:{announceForAccessibility(){}},Alert:{alert(){}},countries:[],countryDisplayName:()=>'',countryForTrip:t=>({code:t.countryCode}),displayVisitDate:t=>t.date,
  compareTripsNewest:(a,b)=>b.date.localeCompare(a.date),useTrips:()=>({trips,loading:false,refreshing:false}),

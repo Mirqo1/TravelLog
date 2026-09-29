@@ -56,39 +56,4 @@ slots = []; effects = []; render(); await new Promise(resolve => setImmediate(re
 assert.equal(tree.props.value.language, 'sk', 'Saved language returns after restarting');
 assert.equal(i18n.normalizeLanguage('xx'), 'en');
 
-const { adjacentTab, swipeDirection } = await load(await read('app/utils/tabSwipe.js'));
-const routes = ['Home', 'Trips', 'Map', 'Profile'].map(name => ({ name }));
-assert.equal(swipeDirection({ dx: -80, dy: 4, numberActiveTouches: 1 }, true), 1);
-assert.equal(adjacentTab(routes, 'Trips', 1), 'Map');
-assert.equal(adjacentTab(routes, 'Home', -1), null);
-assert.equal(adjacentTab(routes, 'Profile', 1), null);
-assert.equal(swipeDirection({ dx: 80, dy: 60, numberActiveTouches: 1 }, true), 0, 'Vertical scrolling cannot switch tabs');
-assert.equal(swipeDirection({ dx: 20, dy: 0, numberActiveTouches: 1 }, true), 0, 'Short drags cannot switch tabs');
-assert.equal(swipeDirection({ dx: 100, dy: 0, numberActiveTouches: 2 }, true), 0, 'Multi-touch cannot switch tabs');
-
-// Exercise actual responder callbacks: ordinary taps stay with the tab buttons;
-// keyboard input and cancelled gestures cannot navigate.
-slots = []; effects = [];
-const listeners = new Map(), navigated = [];
-let keyboardVisible = false;
-globalThis.swipeDouble = { ...hooks, useRef(value) { const i = index++; slots[i] ??= { current: value }; return slots[i]; },
-  React: globalThis.languageDouble.React, View: 'View', BottomTabBar: 'BottomTabBar',
-  adjacentTab, swipeDirection, Keyboard: { isVisible: () => keyboardVisible,
-    addListener: (event, callback) => { listeners.set(event, callback); return { remove() {} }; } },
-  PanResponder: { create: handlers => ({ panHandlers: handlers }) },
-};
-const swipeSource = (await read('app/components/SwipeTabs.js')).replace(/^import .*;\n/gm, '');
-const swipeCode = transformSync(swipeSource, { configFile: false, babelrc: false, plugins: ['@babel/plugin-transform-react-jsx'] }).code;
-const { SwipeTabBar } = await load(`const {${Object.keys(globalThis.swipeDouble).join(',')}}=globalThis.swipeDouble;\n${swipeCode}`);
-index = 0;
-const bar = SwipeTabBar({ state: { routes, index: 1 }, navigation: { navigate: name => navigated.push(name) } });
-effects.forEach(fn => fn()); effects = [];
-const gesture = { dx: -80, dy: 4, numberActiveTouches: 1 };
-assert.equal(bar.props.onStartShouldSetPanResponder(), false);
-assert.equal(bar.props.onMoveShouldSetPanResponder(null, gesture), true);
-bar.props.onPanResponderRelease(null, gesture); assert.deepEqual(navigated, ['Map']);
-listeners.get('keyboardDidShow')(); keyboardVisible = true;
-assert.equal(bar.props.onMoveShouldSetPanResponder(null, gesture), false);
-bar.props.onPanResponderRelease(null, gesture); assert.deepEqual(navigated, ['Map']);
-assert.equal(bar.children[0].type, 'BottomTabBar', 'The stock bar retains its safe-area handling');
-console.log('PASS: English fallback, Slovak UI, interpolation, unchanged user text, persistent language, failed-save protection and deliberate one-finger tab swipes.');
+console.log('PASS language translations and persisted settings');

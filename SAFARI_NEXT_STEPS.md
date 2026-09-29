@@ -216,11 +216,9 @@ and on the initial account screen. UI dictionaries are centralized; personal
 visit text is preserved. Country labels follow the selected language where
 Intl.DisplayNames is available. Additional languages require reviewed translations.
 
-Main tabs now support deliberate horizontal swipes on the bottom menu. Home and
-Profile also support content swipes. Trips supports its section header and Map
-its title header; map pan/pinch, visit-card actions, year slider and photo gestures
-are preserved. Vertical scroll, short drags, multi-touch and keyboard input do
-not change tabs. See LANGUAGE_AND_NAVIGATION.md for checks and device acceptance.
+Miroslav confirmed English/Slovak language switching works. Tab-switching swipes were removed at his request after conflicts during phone testing. Normal bottom tab navigation is restored; map, photo, timeline and visit-card gestures remain. See LANGUAGE_AND_NAVIGATION.md for checks.
+
+App renaming is being discussed; choose the name before changing branding.
 
 The unrequested visit-calendar browsing feature was removed at Miroslav's
 request. Keep work within recorded requirements; the calendar in the visit form

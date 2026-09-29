@@ -1,6 +1,5 @@
 import { t } from '../i18n';
 import { useLanguage } from '../context/LanguageContext';
-import { SwipeScreen } from '../components/SwipeTabs';
 import { WishlistEditor } from '../components/WishlistModal';
 import { useWishlist } from '../context/WishlistContext';
 import { displayVisitDate } from '../utils/visitDate';
@@ -162,10 +161,10 @@ export default function MapScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-      <SwipeScreen navigation={navigation} route={{ name: 'Map' }} style={styles.mapHeader}>
+      <View style={styles.mapHeader}>
         <Text style={[styles.header, { flex: 1 }]}>{t("Mapa návštev")}</Text>
 
-      </SwipeScreen>
+      </View>
       <MapTypeToggle value={mapType} onChange={setMapType} />
       <View style={styles.searchRow}>
         <TextInput value={query} onChangeText={changeQuery} placeholder={t("Napr. Big Ben London")}

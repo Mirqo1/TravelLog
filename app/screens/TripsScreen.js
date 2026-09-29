@@ -1,6 +1,5 @@
 import { t } from '../i18n';
 import { useLanguage } from '../context/LanguageContext';
-import { SwipeScreen } from '../components/SwipeTabs';
 import { useWishlist } from '../context/WishlistContext';
 import WishlistModal from '../components/WishlistModal';
 import VisitYearTimeline from '../components/VisitYearTimeline';
@@ -124,14 +123,14 @@ export default function TripsScreen({ route, navigation }) {
     if (sortBy !== 'newest' && sortBy !== 'oldest') setSortBy('newest');
     setJumpRequest({ year, request: Date.now() });
   };
-  const sectionTabs = <SwipeScreen navigation={navigation} route={{ name: 'Trips' }} style={null}><View style={styles.sectionTabs} accessibilityRole="tablist">
+  const sectionTabs = <View style={styles.sectionTabs} accessibilityRole="tablist">
     {[['visits', t("Návštevy")], ['dreams', t("Moje sny")]].map(([key, label]) =>
       <Pressable key={key} accessibilityRole="tab" accessibilityState={{ selected: section === key }}
         onPress={() => { cancelJump(); setSection(key); navigation.setParams({ section: key }); }}
         style={[styles.sectionTab, section === key && styles.sectionTabActive]}>
         <Text style={[styles.sectionLabel, section === key && { color: '#fff' }]}>{label} · {key === 'visits' ? trips.length : dreamsReady ? dreams.length : '…'}</Text>
       </Pressable>)}
-  </View></SwipeScreen>;
+  </View>;
 
   const requestDelete = (trip) => {
     Alert.alert(t("Zmazať výlet?"), t("Naozaj chceš vymazať {0}?", {0: trip.name}), [

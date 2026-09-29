@@ -1,4 +1,4 @@
-# Languages and tab gestures
+# Languages and navigation
 
 The app defaults to English. English and Slovak are selectable in Profile →
 App language, or on the initial account screen. The selection is saved on the
@@ -11,17 +11,11 @@ subscribe to LanguageContext; async service messages are translated when shown.
 Additional languages require a reviewed dictionary and an explicit supported
 language entry. Unknown language preferences fall back to English.
 
-Swipe left for the next main tab and right for the previous one. The ends do
-not wrap. All tabs support swipes across the existing bottom bar. Home and
-Profile also support content swipes; Trips supports its Visits / My dreams
-header, and Map supports its title header. Cards in Trips, the year slider,
-photo viewers, share cropping and the map keep their existing gestures.
-Vertical scrolling, short drags, multi-touch and gestures with an open keyboard
-do not switch tabs. The native bottom inset and extra 8px clearance are retained.
+Tab-switching swipe handlers and their animated transition were removed after phone feedback. Main screens use the normal bottom tab buttons. The native bottom inset and extra 8px clearance are retained. Map, photo and visit-card gestures are unchanged.
 
-Checks: `node tests/language-and-swipe.test.mjs`, existing map, wishlist, share
+Checks: `node tests/language.test.mjs`, existing map, wishlist, share
 and year-navigation checks, and Expo's Android JavaScript export. A physical
-Android gesture and visual review is still required. No new native dependency
+Android visual review is still required. No new native dependency
 or clean prebuild is needed for this update.
 
 Phone acceptance:
@@ -29,7 +23,7 @@ Phone acceptance:
 - Restart and confirm Slovak returns, including tabs, forms and backup messages.
 - Switch back to English; check countries and My dreams.
 - Confirm personal visit text and photos are unchanged.
-- Swipe left/right on the bottom bar, Home/Profile content and Trips/Map headers.
+- Switch screens using the bottom tab buttons; horizontal drags must not switch tabs.
 - Check map pan/pinch, card actions, year dragging and photo/crop gestures.
 - Check normal vertical scrolling and typing with the keyboard open.
 - Check the bottom menu still clears the phone's system navigation bar.
