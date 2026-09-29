@@ -163,3 +163,19 @@ sits in a translucent dark panel at the bottom. The brand row uses the exact
 compass logo artwork instead of a star. The photo-free variant retains the same
 layout on a plain safari-coloured canvas. User photo, text toggles and privacy
 defaults are unchanged. Device visual acceptance is still pending.
+
+Share interaction revision (2026-09-29): the selected photo can be dragged
+within its 4:5 preview to position the exported crop. An optional accompanying
+message is entered outside the card. On Android an image and nonempty message
+are passed together to the system share chooser; an empty message still uses
+expo-sharing's image-only path. The receiving app decides whether it accepts
+and displays the text. This native change requires a rebuilt Android APK;
+physical crop, share-sheet and recipient-app acceptance remain pending.
+
+Further sharing ideas from Miroslav: sharing a complete visit would require a
+receiver flow and a clear distinction between a read-only copy and a link to
+live data, with private notes and photos opt-in. Groups and inviting another
+person to a visit require membership/invitation records, access revocation,
+Firestore rules, and a photo-sharing design: Drive's hidden app data is private
+to each account and cannot grant group members access. Specify ownership,
+editing rights, removal, and notification behavior before implementing them.

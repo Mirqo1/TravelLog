@@ -1,12 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { requireOptionalNativeModule } from 'expo-modules-core';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import { theme } from '../theme';
 import { displayVisitDate } from '../utils/visitDate';
 import { photoKey, photoList } from '../utils/visitPhotos';
 import { photoUri } from '../services/visitPhotoService';
+import { clampCrop, coverGeometry } from '../utils/shareCrop';
+
+const nativeShare = Platform.OS === 'android' ? requireOptionalNativeModule('TravelLogDrive') : null;
 
 const localPhotos = photos => photoList(photos).filter(photo => /^(file:|content:)/.test(photoUri(photo) || ''));
 
@@ -16,23 +20,53 @@ export default function TripShareModal({ visible, trip, onClose }) {
   const [includeDate, setIncludeDate] = useState(true);
   const [readyPhoto, setReadyPhoto] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const [frameWidth, setFrameWidth] = useState(320);
+  const [sourceSize, setSourceSize] = useState(null);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
   const card = useRef(null);
+  const drag = useRef({ x: 0, y: 0 });
+  const offsetRef = useRef(offset);
+  const boundsRef = useRef(null);
   const photos = localPhotos(trip?.photos);
   useEffect(() => {
     if (!visible) return;
     setSelected(photos.length ? photoKey(photos[0]) : null);
-    setIncludePlace(true); setIncludeDate(true); setReadyPhoto(null);
+    setIncludePlace(true); setIncludeDate(true); setReadyPhoto(null); setMessage('');
+    setSourceSize(null); setOffset({ x: 0, y: 0 }); offsetRef.current = { x: 0, y: 0 };
   }, [visible, trip?.id]);
   const photo = photos.find(item => photoKey(item) === selected);
   const uri = photo ? photoUri(photo) : null;
+  const geometry = photo && sourceSize ? coverGeometry(sourceSize.width, sourceSize.height, frameWidth, 400) : null;
+  boundsRef.current = geometry;
+  const pan = useRef(PanResponder.create({
+    onMoveShouldSetPanResponder: (_, gesture) => !!boundsRef.current &&
+      (boundsRef.current.limitX > 0 || boundsRef.current.limitY > 0) &&
+      (Math.abs(gesture.dx) > 3 || Math.abs(gesture.dy) > 3),
+    onPanResponderGrant: () => { drag.current = { ...offsetRef.current }; },
+    onPanResponderMove: (_, gesture) => {
+      const next = clampCrop({ x: drag.current.x + gesture.dx, y: drag.current.y + gesture.dy }, boundsRef.current);
+      offsetRef.current = next; setOffset(next);
+    },
+    onPanResponderTerminationRequest: () => false,
+  })).current;
+  const selectPhoto = value => {
+    setSelected(value); setReadyPhoto(null); setSourceSize(null);
+    const zero = { x: 0, y: 0 }; offsetRef.current = zero; setOffset(zero);
+  };
   const available = !photo || readyPhoto === selected;
   const share = async () => {
     if (busy || !card.current || !available) return;
     setBusy(true);
     try {
-      if (!await Sharing.isAvailableAsync()) throw new Error('Zdieľanie obrázkov nie je na tomto zariadení dostupné.');
       const image = await captureRef(card.current, { format: 'jpg', quality: 0.9, result: 'tmpfile', width: 1080, height: 1350 });
-      await Sharing.shareAsync(image, { mimeType: 'image/jpeg', dialogTitle: 'Zdieľať návštevu', UTI: 'public.jpeg' });
+      if (message.trim()) {
+        if (!nativeShare?.shareImageWithText) throw new Error('Zdieľanie obrázka s textom vyžaduje novú Android verziu aplikácie.');
+        await nativeShare.shareImageWithText(image, message.trim());
+      } else {
+        if (!await Sharing.isAvailableAsync()) throw new Error('Zdieľanie obrázkov nie je na tomto zariadení dostupné.');
+        await Sharing.shareAsync(image, { mimeType: 'image/jpeg', dialogTitle: 'Zdieľať návštevu', UTI: 'public.jpeg' });
+      }
     } catch (error) { Alert.alert('Zdieľanie návštevy', error.message || 'Obrázok sa nepodarilo vytvoriť.'); }
     finally { setBusy(false); }
   };
@@ -45,9 +79,18 @@ export default function TripShareModal({ visible, trip, onClose }) {
       </View>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.intro}>Takto bude vyzerať obrázok. Poznámky, hodnotenie ani súradnice doň nepridávame.</Text>
-        <View ref={card} collapsable={false} style={styles.card}>
-          {photo ? <Image key={selected} source={{ uri }} resizeMode="cover" style={styles.photo}
-            onLoad={() => setReadyPhoto(selected)} onError={() => setReadyPhoto(null)} />
+        <View ref={card} collapsable={false} style={styles.card}
+          onLayout={event => setFrameWidth(event.nativeEvent.layout.width)}>
+          {photo ? <View style={styles.photoArea} {...pan.panHandlers}>
+            <Image key={selected} source={{ uri }} resizeMode={geometry ? 'stretch' : 'cover'}
+              style={geometry ? { position: 'absolute', width: geometry.width, height: geometry.height,
+                left: (frameWidth - geometry.width) / 2 + offset.x, top: (400 - geometry.height) / 2 + offset.y } : styles.photo}
+              onLoad={event => {
+                const source = event?.nativeEvent?.source;
+                setSourceSize({ width: source?.width || photo.width || 320, height: source?.height || photo.height || 400 });
+                setReadyPhoto(selected);
+              }} onError={() => setReadyPhoto(null)} />
+          </View>
             : <View style={styles.photoPlaceholder} />}
           <View style={styles.caption}>
             <View style={styles.brand}>
@@ -61,14 +104,15 @@ export default function TripShareModal({ visible, trip, onClose }) {
             {includeDate && !!trip.date && <Text style={styles.info}>{displayVisitDate(trip)}</Text>}
           </View>
         </View>
+        {photo && <Text style={styles.intro}>Potiahni fotografiu v náhľade a uprav jej výrez.</Text>}
         {photos.length ? <>
           <Text style={styles.label}>Fotografia</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.picker}>
             <Pressable accessibilityRole="button" accessibilityState={{ selected: !photo }}
-              onPress={() => { setSelected(null); setReadyPhoto(null); }} style={[styles.emptyPhoto, !photo && styles.selected]}><Text style={styles.muted}>Bez fotky</Text></Pressable>
+              onPress={() => selectPhoto(null)} style={[styles.emptyPhoto, !photo && styles.selected]}><Text style={styles.muted}>Bez fotky</Text></Pressable>
             {photos.map(item => <Pressable key={photoKey(item)} accessibilityRole="button"
               accessibilityLabel="Vybrať fotografiu na zdieľanie" accessibilityState={{ selected: selected === photoKey(item) }}
-              onPress={() => { setSelected(photoKey(item)); setReadyPhoto(null); }}
+              onPress={() => selectPhoto(photoKey(item))}
               style={[styles.thumbnailFrame, selected === photoKey(item) && styles.selected]}>
               <Image source={{ uri: photoUri(item, true) }} style={styles.thumbnail} />
             </Pressable>)}
@@ -78,9 +122,13 @@ export default function TripShareModal({ visible, trip, onClose }) {
           onPress={() => setIncludePlace(value => !value)} style={styles.choice}><Text style={styles.check}>{includePlace ? '☑' : '□'}</Text><Text style={styles.choiceText}>Zobraziť lokalitu</Text></Pressable>}
         {!!trip.date && <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: includeDate }}
           onPress={() => setIncludeDate(value => !value)} style={styles.choice}><Text style={styles.check}>{includeDate ? '☑' : '□'}</Text><Text style={styles.choiceText}>Zobraziť dátum návštevy</Text></Pressable>}
+        <Text style={styles.label}>Sprievodný text (voliteľný)</Text>
+        <TextInput value={message} onChangeText={setMessage} multiline maxLength={1000}
+          placeholder="Napíš niečo ku zdieľanej fotke…" placeholderTextColor={theme.muted}
+          accessibilityLabel="Sprievodný text k zdieľanej fotografii" style={styles.message} />
         <Pressable accessibilityRole="button" disabled={busy || !available} style={[styles.share, (busy || !available) && styles.disabled]}
           onPress={share}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.shareText}>{!available ? 'Načítavam fotografiu…' : 'Zdieľať obrázok'}</Text>}</Pressable>
-        <Text style={styles.intro}>Vyberieš aplikáciu v systémovej ponuke. Obrázok sa nikam neodosiela automaticky.</Text>
+        <Text style={styles.intro}>Vyberieš aplikáciu v systémovej ponuke. Sprievodný text je mimo obrázka; cieľová aplikácia môže rozhodnúť, či ho použije. Nič sa neodosiela automaticky.</Text>
       </ScrollView>
     </SafeAreaView></SafeAreaProvider>
   </Modal>;
@@ -95,6 +143,7 @@ const styles = StyleSheet.create({
   intro: { color: theme.muted, lineHeight: 20, alignSelf: 'stretch' },
   card: { width: '100%', maxWidth: 320, height: 400, backgroundColor: theme.primarySoft, overflow: 'hidden' },
   photo: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
+  photoArea: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
   photoPlaceholder: { ...StyleSheet.absoluteFillObject, backgroundColor: theme.primarySoft },
   caption: { position: 'absolute', left: 0, right: 0, bottom: 0,
     backgroundColor: 'rgba(37, 28, 20, 0.78)', paddingHorizontal: 20, paddingVertical: 16, gap: 5 },
@@ -113,6 +162,8 @@ const styles = StyleSheet.create({
   thumbnail: { width: '100%', height: '100%', borderRadius: 6 },
   selected: { borderWidth: 2, borderColor: theme.primary },
   choice: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', minHeight: 42, gap: 8 },
+  message: { alignSelf: 'stretch', minHeight: 76, maxHeight: 150, padding: 12, borderWidth: 1, borderColor: theme.border,
+    borderRadius: 10, backgroundColor: theme.surface, color: theme.text, textAlignVertical: 'top' },
   check: { color: theme.primary, fontSize: 23 }, choiceText: { color: theme.text, fontSize: 15 },
   share: { alignSelf: 'stretch', minHeight: 48, backgroundColor: theme.primary, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   shareText: { color: '#fff', fontWeight: '700', fontSize: 16 }, disabled: { opacity: 0.5 },

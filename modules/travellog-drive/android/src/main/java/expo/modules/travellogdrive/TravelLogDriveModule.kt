@@ -3,8 +3,11 @@ package expo.modules.travellogdrive
 import android.accounts.Account
 import android.app.Activity
 import android.content.Context
+import android.content.ClipData
+import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import com.google.android.gms.auth.api.identity.AuthorizationRequest
@@ -12,11 +15,13 @@ import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.ClearTokenRequest
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.Scope
+import androidx.core.content.FileProvider
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.functions.Queues
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.security.MessageDigest
+import java.io.File
 
 class TravelLogDriveModule : Module() {
   private val scope = "https://www.googleapis.com/auth/drive.appdata"
@@ -96,6 +101,33 @@ class TravelLogDriveModule : Module() {
       mapOf("online" to (caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true),
         "wifi" to (caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true))
     }
+    AsyncFunction("shareImageWithText") { fileUrl: String, text: String, promise: Promise ->
+      try {
+        val activity = appContext.currentActivity ?: throw IllegalStateException("Aplikácia nie je otvorená.")
+        val uri = Uri.parse(fileUrl)
+        if (uri.scheme != "file") throw IllegalArgumentException("Fotografia musí byť lokálny súbor.")
+        val original = File(uri.path ?: throw IllegalArgumentException("Chýba cesta k fotografii."))
+        if (!original.isFile) throw IllegalArgumentException("Fotografia už nie je dostupná.")
+        val directory = File(activity.cacheDir, "travellog-share")
+        directory.mkdirs()
+        directory.listFiles()?.filter { it.lastModified() < System.currentTimeMillis() - 24 * 60 * 60 * 1000L }
+          ?.forEach { it.delete() }
+        val shared = File(directory, "visit-${System.currentTimeMillis()}.jpg")
+        original.copyTo(shared, overwrite = true)
+        val content = FileProvider.getUriForFile(activity, activity.packageName + ".SharingFileProvider", shared)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+          type = "image/jpeg"
+          putExtra(Intent.EXTRA_STREAM, content)
+          putExtra(Intent.EXTRA_TEXT, text)
+          clipData = ClipData.newRawUri("TravelLog", content)
+          addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        activity.startActivity(Intent.createChooser(intent, "Zdieľať návštevu"))
+        promise.resolve(null)
+      } catch (error: Exception) {
+        promise.reject("SHARE_FAILED", error.message ?: "Zdieľanie zlyhalo.", error)
+      }
+    }.runOnQueue(Queues.MAIN)
     OnDestroy { handler.post { fail("CANCELLED", "Pripojenie bolo ukončené.") } }
   }
 }

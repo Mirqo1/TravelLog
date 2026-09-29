@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { transformSync } from '@babel/core';
 
-let index = 0, slots = [], effects = [], shared = [], captured = 0;
+let index = 0, slots = [], effects = [], shared = [], captured = 0, nativeShared = [];
 const hooks = {
   useState(initial) { const i = index++; if (!(i in slots)) slots[i] = initial;
     return [slots[i], next => { slots[i] = typeof next === 'function' ? next(slots[i]) : next; }]; },
@@ -17,12 +17,21 @@ const React = { createElement(type, props, ...children) {
 } };
 const mocks = { React, ...hooks,
   ActivityIndicator: 'ActivityIndicator', Alert: { alert: message => { throw Error(message); } }, Image: 'Image',
-  Modal: 'Modal', Pressable: 'Pressable', ScrollView: 'ScrollView', Text: 'Text', View: 'View',
+  Modal: 'Modal', Pressable: 'Pressable', ScrollView: 'ScrollView', Text: 'Text', TextInput: 'TextInput', View: 'View',
+  PanResponder: { create: handlers => ({ panHandlers: handlers }) }, Platform: { OS: 'android' },
+  requireOptionalNativeModule: () => ({ shareImageWithText: async (...args) => nativeShared.push(args) }),
   SafeAreaProvider: 'SafeAreaProvider', SafeAreaView: 'SafeAreaView', theme: { border: '', text: '', muted: '', primary: '', primarySoft: '', surface: '', background: '' },
   StyleSheet: { create: data => data }, captureRef: async ref => { assert.deepEqual(ref, { card: true }); captured++; return 'file:///share.jpg'; },
   Sharing: { isAvailableAsync: async () => true, shareAsync: async (uri, options) => { shared.push([uri, options]); } },
   displayVisitDate: trip => trip.date, photoList: photos => photos || [], photoKey: photo => photo.id,
   photoUri: photo => photo.uri,
+  coverGeometry: (sourceWidth, sourceHeight, frameWidth, frameHeight) => {
+    const scale = Math.max(frameWidth / sourceWidth, frameHeight / sourceHeight);
+    const width = sourceWidth * scale, height = sourceHeight * scale;
+    return { width, height, limitX: Math.max(0, (width - frameWidth) / 2), limitY: Math.max(0, (height - frameHeight) / 2) };
+  },
+  clampCrop: (offset, bounds) => ({ x: Math.max(-bounds.limitX, Math.min(bounds.limitX, offset.x)),
+    y: Math.max(-bounds.limitY, Math.min(bounds.limitY, offset.y)) }),
 };
 globalThis.shareMocks = mocks;
 const raw = (await readFile('app/components/TripShareModal.js', 'utf8'))
@@ -47,7 +56,7 @@ assert.ok(!labels().includes('latitude'));
 assert.ok(!labels().includes('rating'));
 assert.equal(card().props.style.borderWidth, undefined);
 assert.equal(card().props.style.borderRadius, undefined);
-const cover = nodes(card()).find(n => n.type === 'Image' && n.props.source?.uri === 'file:///p1.jpg');
+let cover = nodes(card()).find(n => n.type === 'Image' && n.props.source?.uri === 'file:///p1.jpg');
 assert.equal(cover.props.style.width, '100%');
 assert.equal(cover.props.style.height, '100%');
 const caption = nodes(card()).find(n => n.type === 'View' && n.props.style?.backgroundColor?.startsWith('rgba('));
@@ -55,9 +64,22 @@ assert.equal(caption.props.style.bottom, 0);
 assert.ok(nodes(caption).some(n => n.type === 'Image' && n.props.source === 'COMPASS_IMAGE'));
 let share = nodes(tree).find(n => n.type === 'Pressable' && n.children.some(c => JSON.stringify(c).includes('Načítavam fotografiu')));
 assert.equal(share.props.disabled, true);
-cover.props.onLoad(); tree = render();
+cover.props.onLoad({ nativeEvent: { source: { width: 800, height: 400 } } }); tree = render();
+cover = nodes(card()).find(n => n.type === 'Image' && n.props.source?.uri === 'file:///p1.jpg');
+assert.equal(cover.props.style.width, 800);
+const photoArea = nodes(card()).find(n => n.type === 'View' && n.props.onMoveShouldSetPanResponder);
+assert.equal(photoArea.props.onMoveShouldSetPanResponder(null, { dx: 10, dy: 0 }), true);
+photoArea.props.onPanResponderGrant();
+photoArea.props.onPanResponderMove(null, { dx: 500, dy: 0 }); tree = render();
+cover = nodes(card()).find(n => n.type === 'Image' && n.props.source?.uri === 'file:///p1.jpg');
+assert.equal(cover.props.style.left, 0); // The image edge never leaves empty space in the card.
 share = nodes(tree).find(n => n.type === 'Pressable' && n.children.some(c => JSON.stringify(c).includes('Zdieľať obrázok')));
 await share.props.onPress(); assert.equal(captured, 1); assert.equal(shared[0][0], 'file:///share.jpg');
+const input = nodes(tree).find(n => n.type === 'TextInput');
+input.props.onChangeText('  Môj výlet  '); tree = render();
+share = nodes(tree).find(n => n.type === 'Pressable' && n.children.some(c => JSON.stringify(c).includes('Zdieľať obrázok')));
+await share.props.onPress(); assert.deepEqual(nativeShared[0], ['file:///share.jpg', 'Môj výlet']);
+assert.equal(shared.length, 1);
 const dateChoice = nodes(tree).find(n => n.props.accessibilityRole === 'checkbox' && JSON.stringify(n).includes('dátum'));
 dateChoice.props.onPress(); tree = render(); assert.ok(!labels().includes('2026-09-28'));
-console.log('PASS: share preview excludes private diary/coordinates/rating, image loading gate, explicit destination choice and optional date.');
+console.log('PASS: share preview excludes private diary/coordinates/rating, crop stays within frame, optional caption is separate, empty caption uses plain file share.');
