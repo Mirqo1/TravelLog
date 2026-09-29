@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { theme } from '../theme';
 import { photoKey, photoList } from '../utils/visitPhotos';
-import { photoUri, exportVisitPhoto } from '../services/visitPhotoService';
+import { photoUri } from '../services/visitPhotoService';
 
 export function VisitPhotoImage({ photo, thumbnail = false, style, resizeMode = 'cover' }) {
   const uri = photoUri(photo, thumbnail);
@@ -27,7 +27,6 @@ export function VisitPhotoCover({ photos }) {
 export function VisitPhotoGallery({ photos, title }) {
   const items = photoList(photos);
   const [selected, setSelected] = useState(null);
-  const [exporting, setExporting] = useState(false);
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
   const pager = useRef(null);
   const photo = items.find(item => photoKey(item) === selected);
@@ -37,13 +36,6 @@ export function VisitPhotoGallery({ photos, title }) {
     if (nextIndex < 0 || nextIndex >= items.length) return;
     setSelected(photoKey(items[nextIndex]));
     pager.current?.scrollToIndex({ index: nextIndex, animated: true });
-  };
-  const share = async () => {
-    if (exporting) return;
-    setExporting(true);
-    try { await exportVisitPhoto(photo); }
-    catch (error) { Alert.alert('Fotografia', error.message); }
-    finally { setExporting(false); }
   };
   return <View style={styles.gallery}>
     <Text style={styles.heading}>Fotografie <Text style={styles.subtle}>· {items.length}</Text></Text>
@@ -80,9 +72,6 @@ export function VisitPhotoGallery({ photos, title }) {
           <Text style={styles.white}>{index + 1} / {items.length}</Text>
           <Pressable accessibilityRole="button" disabled={index >= items.length - 1} onPress={() => showPhoto(index + 1)} style={[styles.control, index >= items.length - 1 && styles.disabled]}><Text style={styles.white}>Ďalšia ›</Text></Pressable>
         </View>
-        <Pressable accessibilityRole="button" disabled={exporting} style={styles.export} onPress={share}>
-          {exporting ? <ActivityIndicator color="#fff" /> : <Text style={styles.white}>Uložiť alebo zdieľať fotografiu</Text>}
-        </Pressable>
       </SafeAreaView></SafeAreaProvider>
     </Modal>
   </View>;
@@ -102,5 +91,4 @@ const styles = StyleSheet.create({
   viewerBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, gap: 8 },
   viewerTitle: { color: '#fff', flex: 1, fontWeight: '600', fontSize: 16 },
   white: { color: '#fff', textAlign: 'center' }, control: { padding: 14 }, disabled: { opacity: 0.3 },
-  export: { margin: 16, padding: 16, borderRadius: 12, backgroundColor: theme.primary },
 });
