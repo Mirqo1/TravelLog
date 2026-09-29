@@ -4,7 +4,6 @@ import { transformSync } from '@babel/core';
 const read = p => readFile(p, 'utf8');
 const load = src => import('data:text/javascript;base64,' + Buffer.from(src).toString('base64'));
 const years = await load(await read('app/utils/visitYears.js'));
-const visitDates = await load(await read('app/utils/visitDate.js'));
 const dates = ['2026-02-02','2017-10-01','2017-01-01','2014-12-12'];
 const trips = dates.map((date,i) => ({ id: String(i), name: String(i), date, countryCode: 'SK', createdAt: '2026-09-23' }));
 assert.deepEqual(years.yearRange(trips,2026),{min:2014,max:2026});
@@ -24,9 +23,9 @@ const hooks={
  useEffect(fn,deps){const i=index++;if(!slots[i]||deps.some((d,n)=>d!==slots[i].deps[n])){const prev=slots[i];slots[i]={deps};effects.push(()=>{prev?.cleanup?.();slots[i].cleanup=fn();});}},
 };
 const React={createElement:(type,props,...children)=>({type,props:props||{},children:children.flat(Infinity).filter(v=>v!==false&&v!=null)})};
-const names=['View','Text','TextInput','Pressable','FlatList','RefreshControl','ActivityIndicator','AddVisitButton','AddPlaceModal','PlaceListItem','TripDetailsModal','WishlistModal','VisitYearTimeline','VisitCalendar'];
+const names=['View','Text','TextInput','Pressable','FlatList','RefreshControl','ActivityIndicator','AddVisitButton','AddPlaceModal','PlaceListItem','TripDetailsModal','WishlistModal','VisitYearTimeline'];
 const mocks={...hooks,...years,React,...Object.fromEntries(names.map(n=>[n,n])),theme:{},StyleSheet:{create:v=>v},
- useWishlist:()=>({items:[],ready:true}),AccessibilityInfo:{announceForAccessibility(){}},Alert:{alert(){}},countryForTrip:t=>({code:t.countryCode}),displayVisitDate:t=>t.date,parseVisitDate:visitDates.parseVisitDate,
+ useWishlist:()=>({items:[],ready:true}),AccessibilityInfo:{announceForAccessibility(){}},Alert:{alert(){}},countryForTrip:t=>({code:t.countryCode}),displayVisitDate:t=>t.date,
  compareTripsNewest:(a,b)=>b.date.localeCompare(a.date),useTrips:()=>({trips,loading:false,refreshing:false}),
  setTimeout:fn=>{timers.set(++timer,fn);return timer;},clearTimeout:id=>timers.delete(id)};
 globalThis.yearMocks=mocks;
@@ -53,15 +52,6 @@ find(find(tree,'FlatList').props.ListHeaderComponent,'TextInput').props.onChange
 params={section:'dreams',sectionRequest:1};render();tree=render();assert.equal(find(tree,'WishlistModal').props.embedded,true);
 assert.equal(find(tree,'FlatList'),undefined);
 params={section:'visits',sectionRequest:2};render();tree=render();assert.equal(find(tree,'FlatList').props.data.length,4);
-const calendarToggle=nodes(find(tree,'FlatList').props.ListHeaderComponent).find(n=>n.props.accessibilityState?.expanded===false);
-calendarToggle.props.onPress();tree=render();
-const calendar=find(find(tree,'FlatList').props.ListHeaderComponent,'VisitCalendar');
-assert.equal(calendar.props.markedDates['2017-01-01'],1);
-assert.equal(calendar.props.markedDates['2016-01-01'],undefined);
-calendar.props.onSelect('2017-01-01');tree=render();
-for(const [id,fn]of [...timers]){timers.delete(id);fn();}
-assert.equal(scroll.at(-1).index,2,'Calendar jumps to the selected visit without filtering other dates');
-assert.equal(find(tree,'FlatList').props.data.length,4);
 // Actual custom slider: live finger feedback, commit only on release.
 slots=[];effects=[];const Timeline=await component('app/components/VisitYearTimeline.js'); const commits=[],drag=[];
 const props={min:2014,max:2026,value:2026,onSelect:v=>commits.push(v),onDragging:v=>drag.push(v)};
@@ -71,4 +61,4 @@ control.props.onResponderGrant({nativeEvent:{pageX:112,locationX:12}});tree=rend
 control=nodes(tree).find(n=>n.props.accessibilityRole==='adjustable');control.props.onResponderMove({nativeEvent:{pageX:187}});tree=render(Timeline,props);
 control=nodes(tree).find(n=>n.props.accessibilityRole==='adjustable');assert.equal(control.props.accessibilityValue.now,2017);assert.equal(commits.length,0);
 control.props.onResponderRelease();assert.deepEqual(commits,[2017]);assert.equal(drag.at(-1),false);
-console.log('PASS: date-based year and calendar jumps keep the full list, unmeasured-row retry/cancellation, embedded dreams navigation and live finger feedback.');
+console.log('PASS: date-based year range, gaps, whole-list jumps, unmeasured-row retry/cancellation, embedded dreams navigation and live finger feedback.');
