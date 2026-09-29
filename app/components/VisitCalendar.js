@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { calendarDays, localDate, parseVisitDate } from '../utils/visitDate';
 import { theme } from '../theme';
 const months = ['Január', 'Február', 'Marec', 'Apríl', 'Máj', 'Jún', 'Júl', 'August', 'September', 'Október', 'November', 'December'];
-export default function VisitCalendar({ value, onSelect }) {
+export default function VisitCalendar({ value, onSelect, markedDates, onlyMarked = false }) {
   const [month, setMonth] = useState(() => {
     const date = parseVisitDate(value) || localDate();
     return new Date(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, 1, 12);
@@ -20,9 +20,15 @@ export default function VisitCalendar({ value, onSelect }) {
       {calendarDays(month.getFullYear(), month.getMonth()).map((day, index) => {
         const date = day ? localDate(new Date(month.getFullYear(), month.getMonth(), day, 12)) : '';
         const selected = date && date === parseVisitDate(value);
-        return <Pressable key={index} disabled={!day} accessibilityRole="button" accessibilityLabel={date}
-          accessibilityState={{ selected: Boolean(selected), disabled: !day }} onPress={() => onSelect(date)}
-          style={[styles.day, selected && styles.selected]}><Text style={selected ? { color: '#fff' } : { color: theme.text }}>{day || ''}</Text></Pressable>;
+        const count = markedDates?.[date] || 0;
+        const disabled = !day || (onlyMarked && !count);
+        return <Pressable key={index} disabled={disabled} accessibilityRole="button"
+          accessibilityLabel={count ? `${date}, ${count} ${count === 1 ? 'návšteva' : 'návštevy'}` : date}
+          accessibilityState={{ selected: Boolean(selected), disabled }} onPress={() => onSelect(date)}
+          style={[styles.day, selected && styles.selected]}>
+          <Text style={{ color: selected ? '#fff' : disabled ? theme.muted : theme.text }}>{day || ''}</Text>
+          {!!count && <View style={[styles.mark, selected && styles.selectedMark]} />}
+        </Pressable>;
       })}
     </View>
   </View>;
@@ -34,5 +40,7 @@ const styles = StyleSheet.create({
   arrow: { padding: 16 }, grid: { flexDirection: 'row', flexWrap: 'wrap' },
   weekday: { width: '14.2857%', textAlign: 'center', color: theme.muted, paddingVertical: 8 },
   day: { width: '14.2857%', minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
+  mark: { width: 5, height: 5, borderRadius: 3, backgroundColor: theme.primary, marginTop: 3 },
+  selectedMark: { backgroundColor: '#fff' },
   selected: { backgroundColor: theme.primary },
 });

@@ -1,6 +1,7 @@
 import { useWishlist } from '../context/WishlistContext';
 import WishlistModal from '../components/WishlistModal';
 import VisitYearTimeline from '../components/VisitYearTimeline';
+import VisitCalendar from '../components/VisitCalendar';
 import { visitYear, yearRange, yearJumpIndex } from '../utils/visitYears';
 import { theme } from '../theme';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -23,7 +24,7 @@ import TripDetailsModal from '../components/TripDetailsModal';
 import { useTrips } from '../context/TripsContext';
 
 import { countryForTrip } from '../utils/mapVisits';
-import { displayVisitDate } from '../utils/visitDate';
+import { displayVisitDate, parseVisitDate } from '../utils/visitDate';
 import { compareTripsNewest } from '../utils/tripOrder';
 
 const normalizeSearch = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -41,6 +42,7 @@ export default function TripsScreen({ route, navigation }) {
   const [visibleYear, setVisibleYear] = useState(new Date().getFullYear());
   const [jumpRequest, setJumpRequest] = useState(null);
   const [jumpMessage, setJumpMessage] = useState('');
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const jump = useRef(null), retryTimer = useRef(null);
   const cancelJump = () => { jump.current = null; clearTimeout(retryTimer.current); };
   useEffect(() => cancelJump, []);
@@ -76,6 +78,11 @@ export default function TripsScreen({ route, navigation }) {
   }, [search, sortBy, trips, countryCode]);
 
   const range = useMemo(() => yearRange(trips), [trips]);
+  const visitsByDay = useMemo(() => filteredTrips.reduce((days, trip) => {
+    const date = parseVisitDate(trip.date);
+    if (date) days[date] = (days[date] || 0) + 1;
+    return days;
+  }, {}), [filteredTrips]);
   const listData = useRef(filteredTrips); listData.current = filteredTrips;
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
     const first = viewableItems.find(entry => entry.isViewable && entry.item);
@@ -105,20 +112,29 @@ export default function TripsScreen({ route, navigation }) {
   useEffect(() => {
     cancelJump();
     if (!jumpRequest || section !== 'visits') return;
-    const index = yearJumpIndex(filteredTrips, jumpRequest.year, sortBy === 'oldest');
+    const index = jumpRequest.id
+      ? filteredTrips.findIndex(trip => trip.id === jumpRequest.id)
+      : yearJumpIndex(filteredTrips, jumpRequest.year, sortBy === 'oldest');
     if (index < 0) { setJumpMessage('Pre aktuálne filtre nie sú dostupné žiadne návštevy.'); return; }
     const actualYear = visitYear(filteredTrips[index]);
-    const message = actualYear === jumpRequest.year ? `Návštevy v roku ${actualYear}`
+    const message = jumpRequest.id ? `Návštevy dňa ${displayVisitDate(filteredTrips[index])}`
+      : actualYear === jumpRequest.year ? `Návštevy v roku ${actualYear}`
       : `Rok ${jumpRequest.year} nemá zodpovedajúce návštevy. Presúvam na rok ${actualYear}.`;
-    setJumpMessage(actualYear === jumpRequest.year ? '' : message); AccessibilityInfo.announceForAccessibility(message);
+    setJumpMessage(jumpRequest.id || actualYear === jumpRequest.year ? '' : message); AccessibilityInfo.announceForAccessibility(message);
     jump.current = { id: filteredTrips[index].id, attempts: 0 };
     retryTimer.current = setTimeout(attemptJump, 80);
     return cancelJump;
   }, [jumpRequest]);
   useEffect(() => { cancelJump(); setJumpRequest(null); setJumpMessage(''); }, [search, countryCode, section]);
+  useEffect(() => { setCalendarOpen(false); }, [countryCode, section]);
   const selectYear = year => {
     if (sortBy !== 'newest' && sortBy !== 'oldest') setSortBy('newest');
     setJumpRequest({ year, request: Date.now() });
+  };
+  const selectDay = date => {
+    const visit = filteredTrips.find(trip => parseVisitDate(trip.date) === date);
+    setCalendarOpen(false);
+    if (visit) setJumpRequest({ id: visit.id, request: Date.now() });
   };
   const sectionTabs = <View style={styles.sectionTabs} accessibilityRole="tablist">
     {[['visits', 'Návštevy'], ['dreams', 'Moje sny']].map(([key, label]) =>
@@ -206,6 +222,14 @@ export default function TripsScreen({ route, navigation }) {
 
       {trips.length > 0 ? <VisitYearTimeline min={range.min} max={range.max} value={visibleYear}
         onSelect={selectYear} onDragging={setDraggingYear} /> : null}
+      {filteredTrips.length > 0 ? <>
+        <Pressable accessibilityRole="button" accessibilityState={{ expanded: calendarOpen }}
+          onPress={() => setCalendarOpen(open => !open)} style={styles.calendarToggle}>
+          <Text style={styles.calendarToggleText}>Kalendár návštev {calendarOpen ? '▴' : '▾'}</Text>
+        </Pressable>
+        {calendarOpen ? <VisitCalendar key={filteredTrips[0].date} value={filteredTrips[0].date}
+          markedDates={visitsByDay} onlyMarked onSelect={selectDay} /> : null}
+      </> : null}
       {jumpMessage ? <Text accessibilityLiveRegion="polite" style={styles.jumpMessage}>{jumpMessage}</Text> : null}
         </View>}
         data={filteredTrips}
@@ -256,6 +280,8 @@ const styles = StyleSheet.create({
   sectionTabActive: { backgroundColor: theme.primary }, sectionLabel: { color: theme.primary, fontWeight: '700', textAlign: 'center' },
   yearHeading: { fontSize: 20, fontWeight: '800', color: theme.primary, paddingTop: 8, paddingBottom: 12 },
   jumpMessage: { color: theme.muted, paddingBottom: 12 },
+  calendarToggle: { alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
+  calendarToggleText: { color: theme.primary, fontWeight: '700' },
   listHeader: { paddingBottom: 12 },
   countryFilter: { alignSelf: 'flex-start', marginBottom: 16, minHeight: 44, justifyContent: 'center' },
   loader: {
