@@ -15,7 +15,10 @@ export function resizeWithin(width, height, maxEdge) {
   return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
 }
 
-export const photoAccess = (packageName, claims = {}) => ({
-  preview: packageName === 'com.miroslavu19.travellog.preview',
-  canAddPhotos: packageName === 'com.miroslavu19.travellog.preview' || claims.premium === true || claims.admin === true,
-});
+export function photoAccess(packageName, claims = {}, mode = 'auto') {
+  const preview = packageName === 'com.miroslavu19.travellog.preview';
+  const canTest = preview || claims.admin === true || claims.tester === true;
+  const automatic = preview || claims.premium === true || claims.admin === true;
+  return { preview, canTest, canAddPhotos: canTest && mode === 'free' ? false
+    : canTest && mode === 'premium' ? true : automatic };
+}

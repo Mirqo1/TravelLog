@@ -18,7 +18,7 @@
 2. Central translation dictionaries, English fallback/default, Slovak first additional language; switch in Profile and persist preference. More languages are added as reviewed translations. Arbitrary languages do not appear automatically; place names and personal notes should not be silently translated.
 3. Premium visit fields: photo gallery, longer journal, tags; cloud permissions and quotas checked on the server, not just by hiding a button. Existing photos schema already exists but attachments and storage are unfinished.
 4. Sharing: an initial Premium/preview card is available in visit detail: choose a local photo (or no photo), optionally show place/date, inspect the image, and share a JPEG using the system sheet. Private notes, rating, coordinates and Google map/review content are excluded. The user chooses the receiving app and completes posting. A destination app must support receiving JPEG files; Strava and other networks might not. Phone visual acceptance and production entitlement enforcement remain pending.
-5. Admin/test access: server-assigned admin claim, test-account Free/Premium preview, separate production billing entitlement. No public password or unrestricted premium switch in the app.
+5. Admin/test access implemented: shared Free/Premium/Automatic simulation for private preview and trusted admin/tester claims. See ADMIN_TEST_ACCESS.md. Live role provisioning and phone acceptance pending; production billing remains separate.
 6. Google reviews: optional lower-priority enhancement via official Places API; must resolve a Google Place ID (Photon/OSM IDs are not interchangeable), show Google and author attribution and source links, follow ordering/caching/EEA conditions, and budget API usage. Not scraping. Check paid-app terms before putting this specifically behind a paywall.
 7. New name: shortlist first, then check domains/store names and relevant trademarks. The current name remains a working title until a replacement is chosen. The compass remains reusable.
 
@@ -227,3 +227,7 @@ for entering a date remains the previously approved feature.
 Share crop now uses one positioned original image for both preview and capture,
 so releasing the finger keeps the chosen offset. Miroslav reports sharing has
 been verified. Second-device account/photo restore is still deferred.
+
+## Admin/test access (2026-09-29)
+
+Profile has a collapsed Version testing section with per-notebook saved simulation. All Premium consumers share the same access state. Existing data is preserved. Trusted Firebase role tooling is separate from the app; no live role was granted without a target UID and credential. Production billing is not implemented.

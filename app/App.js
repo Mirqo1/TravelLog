@@ -5,6 +5,7 @@ import { theme } from './theme';
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { AccessProvider } from './context/AccessContext';
 import { AuthProvider } from './context/AuthContext';
 import { TripsProvider } from './context/TripsContext';
 import { DriveBackupProvider } from './context/DriveBackupContext';
@@ -20,6 +21,7 @@ export default function App() {
       <SafeAreaProvider>
       <LanguageProvider>
       <AuthProvider>
+      <AccessProvider>
         <TripsProvider>
           <CloudSyncProvider>
           <DriveBackupProvider>
@@ -35,6 +37,7 @@ export default function App() {
           </DriveBackupProvider>
           </CloudSyncProvider>
         </TripsProvider>
+      </AccessProvider>
       </AuthProvider>
       </LanguageProvider>
       </SafeAreaProvider>

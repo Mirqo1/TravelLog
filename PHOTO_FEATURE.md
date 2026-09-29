@@ -25,9 +25,10 @@
 
 ## Premium and testing
 
-`com.miroslavu19.travellog.preview` unlocks adding photos for this private preview,
-with a visible test-version label. Other application IDs require Firebase custom
-claims `premium: true` or `admin: true`; no client-editable profile field grants it.
+The private `com.miroslavu19.travellog.preview` build defaults to Premium and
+now supports Free/Premium simulation in Profile. Production uses Firebase
+custom claims; only admin/tester claims enable simulation, and a client-editable
+profile field cannot grant access. See ADMIN_TEST_ACCESS.md for trusted provisioning.
 No payment flow or production entitlement issuing service is implemented yet.
 Without access, photo addition and photo card previews are unavailable, but users
 can still view/export all existing photos in detail and remove/reorder them.

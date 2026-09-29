@@ -27,7 +27,7 @@ export default function VisitPhotoEditor({ photos, onChange, onImport, disabled,
   };
   return <View style={styles.section}>
     <View style={styles.row}><Text style={styles.title}>{t("Fotografie")}</Text><Text style={styles.count}>{items.length} / {MAX_VISIT_PHOTOS}</Text></View>
-    <Text style={styles.note}>{preview ? t("Fotografie sú v testovacej verzii odomknuté.") : canAddPhotos ? t("Fotografie k návštevám · Premium") : t("Pridávanie fotografií je súčasťou Premium. Už uložené fotky zostávajú dostupné v detaile.")}</Text>
+    <Text style={styles.note}>{preview && canAddPhotos ? t("Fotografie sú v testovacej verzii odomknuté.") : canAddPhotos ? t("Fotografie k návštevám · Premium") : t("Pridávanie fotografií je súčasťou Premium. Už uložené fotky zostávajú dostupné v detaile.")}</Text>
     {items.length ? <ScrollView horizontal contentContainerStyle={{ gap: 12 }} showsHorizontalScrollIndicator={false}>
       {items.map((photo, i) => <View key={photoKey(photo)} style={styles.tile}>
         <VisitPhotoImage photo={photo} thumbnail style={styles.image} />

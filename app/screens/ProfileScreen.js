@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useCloudSync } from '../context/CloudSyncContext';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { usePhotoAccess } from '../hooks/usePhotoAccess';
 import { useAuth } from '../context/AuthContext';
 import { useTrips } from '../context/TripsContext';
 import DriveBackupPanel from '../components/DriveBackupPanel';
@@ -28,6 +29,7 @@ export default function ProfileScreen({ navigation }) {
   const { profile, stats, loading } = useTrips();
   const { status: syncStatus, message: syncMessage } = useCloudSync();
   const drive = useDriveBackup();
+  const access = usePhotoAccess();
   const [openSection, setOpenSection] = useState(account ? null : 'account');
   const toggleSection = key => setOpenSection(current => current === key ? null : key);
   const accountSummary = !account ? t("Prihlásenie alebo vytvorenie účtu")
@@ -135,6 +137,28 @@ export default function ProfileScreen({ navigation }) {
         {savingLanguage ? <ActivityIndicator color={theme.primary} /> : null}
       </View>
     </SettingsSection>
+    {access.canTest ? <SettingsSection title={t('Testovanie verzie')}
+      summary={t(access.canAddPhotos ? 'Premium · testovanie' : 'Základná · testovanie')} icon="science"
+      expanded={openSection === 'testing'} onPress={() => toggleSection('testing')}>
+      <View style={styles.languageOptions}>
+        <Text style={styles.description}>{t('Prepnutie mení iba dostupné funkcie. Tvoje návštevy a fotografie zostanú zachované. Nejde o predplatné.')}</Text>
+        {[['auto', 'Automaticky'], ['free', 'Základná'], ['premium', 'Premium']].map(([value, label]) =>
+          <Pressable key={value} accessibilityRole="radio" accessibilityState={{ checked: access.mode === value }}
+            disabled={!access.ready || access.busy} onPress={async () => {
+              try { await access.setTestMode(value); }
+              catch (error) { Alert.alert(t('Testovanie verzie'), t(error.message)); }
+            }} style={styles.languageOption}>
+            <Text style={{ color: theme.text }}>{t(label)}</Text>
+            <MaterialIcons name={access.mode === value ? 'radio-button-checked' : 'radio-button-unchecked'} color={theme.primary} size={22} />
+          </Pressable>)}
+        {access.busy ? <ActivityIndicator color={theme.primary} /> : null}
+        {access.error ? <Text style={styles.description}>{t(access.error)}</Text> : null}
+        <Pressable accessibilityRole="button" onPress={access.refreshAccess} style={styles.languageOption}>
+          <Text style={{ color: theme.primary }}>{t('Obnoviť oprávnenia')}</Text>
+          <MaterialIcons name="refresh" color={theme.primary} size={22} />
+        </Pressable>
+      </View>
+    </SettingsSection> : null}
     <SettingsSection title={t("Účet a záloha návštev")} summary={accountSummary} icon="cloud-done"
       expanded={openSection === 'account'} onPress={() => toggleSection('account')}>
       <CloudBackupPanel />

@@ -470,5 +470,17 @@
   "Príliš veľa pokusov. Skús to neskôr.": "Too many attempts. Try again later.",
   "Skontroluj pripojenie na internet.": "Check your internet connection.",
   "Prihlásenie týmto spôsobom nie je povolené.": "This sign-in method is not enabled.",
-  "Pre túto zmenu sa prihlás znova.": "Sign in again to make this change."
+  "Pre túto zmenu sa prihlás znova.": "Sign in again to make this change.",
+  "Testovanie verzie": "Version testing",
+  "Premium · testovanie": "Premium · testing",
+  "Základná · testovanie": "Free · testing",
+  "Prepnutie mení iba dostupné funkcie. Tvoje návštevy a fotografie zostanú zachované. Nejde o predplatné.": "Switching only changes available features. Your visits and photos are kept. This is not a subscription.",
+  "Automaticky": "Automatic",
+  "Základná": "Free",
+  "Premium": "Premium",
+  "Obnoviť oprávnenia": "Refresh access",
+  "Oprávnenia sa nepodarilo obnoviť. Skontroluj internet.": "Access could not be refreshed. Check your internet connection.",
+  "Testovací režim sa nepodarilo načítať.": "The test mode could not be loaded.",
+  "Testovací režim sa nepodarilo uložiť.": "The test mode could not be saved.",
+  "Neplatný testovací režim.": "Invalid test mode."
 }
