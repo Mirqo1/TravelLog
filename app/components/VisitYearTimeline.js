@@ -1,9 +1,12 @@
+import { t } from '../i18n';
+import { useLanguage } from '../context/LanguageContext';
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { theme } from '../theme';
 import { yearAtPosition } from '../utils/visitYears';
 
 export default function VisitYearTimeline({ min, max, value, onSelect, onDragging }) {
+  useLanguage();
   const [width, setWidth] = useState(0);
   const [year, setYear] = useState(value || max);
   const dragging = useRef(false), origin = useRef(0), latest = useRef(year);
@@ -14,9 +17,9 @@ export default function VisitYearTimeline({ min, max, value, onSelect, onDraggin
   const finish = commit => { dragging.current = false; onDragging(false); if (commit) onSelect(latest.current); };
   const position = 12 + (max === min ? 0 : (clamp(year) - min) / (max - min)) * Math.max(0, width - 24);
   return <View style={styles.container}>
-    <View accessible accessibilityRole="adjustable" accessibilityLabel="Rok návštev"
+    <View accessible accessibilityRole="adjustable" accessibilityLabel={t("Rok návštev")}
       accessibilityValue={{ min, max, now: clamp(year), text: String(clamp(year)) }}
-      accessibilityActions={[{ name: 'increment', label: 'Ďalší rok' }, { name: 'decrement', label: 'Predošlý rok' }]}
+      accessibilityActions={[{ name: 'increment', label: t("Ďalší rok") }, { name: 'decrement', label: t("Predošlý rok") }]}
       onAccessibilityAction={event => {
         const next = clamp(year + (event.nativeEvent.actionName === 'increment' ? 1 : -1));
         setYear(next); latest.current = next; onSelect(next);

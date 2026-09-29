@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+import { useLanguage } from '../context/LanguageContext';
 import { normalizeTags } from '../utils/backup';
 import { displayVisitDate } from '../utils/visitDate';
 import { theme } from '../theme';
@@ -12,9 +14,10 @@ import TripShareModal from './TripShareModal';
 
 const ratingText = (value) => {
   const rating = Math.max(0, Math.min(5, Math.round(Number(value) || 0)));
-  return rating ? '★'.repeat(rating) + '☆'.repeat(5 - rating) : 'Bez hodnotenia';
+  return rating ? '★'.repeat(rating) + '☆'.repeat(5 - rating) : t("Bez hodnotenia");
 };
 export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDelete }) {
+  useLanguage();
   const [shareOpen, setShareOpen] = useState(false);
   const { canAddPhotos: canShare } = usePhotoAccess();
   useEffect(() => { if (!visible) setShareOpen(false); }, [visible]);
@@ -23,20 +26,20 @@ export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDel
   return <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
     <SafeAreaProvider><SafeAreaView style={styles.screen}>
       <View style={styles.toolbar}>
-        <Text style={styles.eyebrow}>MOJA NÁVŠTEVA</Text>
+        <Text style={styles.eyebrow}>{t("MOJA NÁVŠTEVA")}</Text>
         <Pressable accessibilityRole="button" onPress={onClose} style={styles.close}>
-          <Text style={styles.link}>Zavrieť</Text>
+          <Text style={styles.link}>{t("Zavrieť")}</Text>
         </Pressable>
       </View>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
         <View style={styles.titleRow}>
           <Text accessibilityRole="header" style={styles.title}>{trip.name}</Text>
         </View>
-        <Text style={styles.subtitle}>{trip.locationName || 'Lokalita neuvedená'}</Text>
+        <Text style={styles.subtitle}>{trip.locationName || t("Lokalita neuvedená")}</Text>
         <View style={styles.summary}>
-          <View style={styles.summaryItem}><Text style={styles.label}>Dátum návštevy</Text>
+          <View style={styles.summaryItem}><Text style={styles.label}>{t("Dátum návštevy")}</Text>
             <Text style={styles.value}>{displayVisitDate(trip)}</Text></View>
-          <View style={styles.summaryItem}><Text style={styles.label}>Moje hodnotenie</Text>
+          <View style={styles.summaryItem}><Text style={styles.label}>{t("Moje hodnotenie")}</Text>
             <Text style={styles.rating}>{ratingText(trip.rating)}</Text></View>
         </View>
         {normalizeTags(trip.tags).length ? <View style={styles.tags}>
@@ -44,7 +47,7 @@ export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDel
         </View> : null}
         <VisitPhotoGallery photos={trip.photos} title={trip.name} />
         {hasLocation ? <View style={styles.card}>
-          <Text style={styles.heading}>Navštívené miesto</Text>
+          <Text style={styles.heading}>{t("Navštívené miesto")}</Text>
           {visible ? <View style={styles.mapFrame}>
             <MapView key={trip.id} style={styles.map}
               initialRegion={{ ...trip.location, latitudeDelta: 0.025, longitudeDelta: 0.025 }}
@@ -55,19 +58,19 @@ export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDel
           </View> : null}
           <Text selectable style={styles.coordinates}>{trip.location.latitude.toFixed(5)}, {trip.location.longitude.toFixed(5)}</Text>
         </View> : null}
-        {trip.description ? <View style={styles.card}><Text style={styles.heading}>Popis návštevy</Text>
+        {trip.description ? <View style={styles.card}><Text style={styles.heading}>{t("Popis návštevy")}</Text>
           <Text style={styles.body}>{trip.description}</Text></View> : null}
-        {trip.notes ? <View style={styles.card}><Text style={styles.heading}>Poznámky</Text>
+        {trip.notes ? <View style={styles.card}><Text style={styles.heading}>{t("Poznámky")}</Text>
           <Text style={styles.body}>{trip.notes}</Text></View> : null}
-        {!trip.description && !trip.notes ? <Text style={styles.empty}>Pridaj pár slov, aby ti táto návšteva ožila aj po rokoch.</Text> : null}
+        {!trip.description && !trip.notes ? <Text style={styles.empty}>{t("Pridaj pár slov, aby ti táto návšteva ožila aj po rokoch.")}</Text> : null}
         {canShare ? <Pressable accessibilityRole="button" onPress={() => setShareOpen(true)} style={styles.share}>
-          <Text style={styles.shareText}>Zdieľať kartu návštevy</Text>
+          <Text style={styles.shareText}>{t("Zdieľať kartu návštevy")}</Text>
         </Pressable> : null}
         <Pressable accessibilityRole="button" onPress={onEdit} style={styles.edit}>
-          <Text style={styles.editText}>Upraviť návštevu</Text>
+          <Text style={styles.editText}>{t("Upraviť návštevu")}</Text>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={onDelete} style={styles.delete}>
-          <Text style={styles.deleteText}>Vymazať návštevu</Text>
+          <Text style={styles.deleteText}>{t("Vymazať návštevu")}</Text>
         </Pressable>
       </ScrollView>
       <TripShareModal visible={shareOpen && visible} trip={trip} onClose={() => setShareOpen(false)} />

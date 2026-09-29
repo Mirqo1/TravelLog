@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+import { useLanguage } from '../context/LanguageContext';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import PlaceListItem from '../components/PlaceListItem';
@@ -35,6 +37,7 @@ const MOCK_PLACES = [
 ];
 
 export default function ListScreen() {
+  useLanguage();
   const { user } = useAuth();
   const [places, setPlaces] = useState([]);
   const [sortBy, setSortBy] = useState('date');
@@ -79,7 +82,7 @@ export default function ListScreen() {
       }
       setPlaces((prev) => prev.filter((item) => item.id !== placeId));
     } catch (error) {
-      Alert.alert('Zmazanie zlyhalo', error.message);
+      Alert.alert(t("Zmazanie zlyhalo"), t(error.message));
     }
   };
 
@@ -104,7 +107,7 @@ export default function ListScreen() {
         ),
       );
     } catch (error) {
-      Alert.alert('Editácia zlyhala', error.message);
+      Alert.alert(t("Editácia zlyhala"), t(error.message));
     }
   };
 
@@ -112,7 +115,7 @@ export default function ListScreen() {
     Alert.alert(
       place.name,
       `Typ: ${place.type}\nKrajina: ${place.country}\nDátum: ${place.visitDate}\nPoznámky: ${
-        place.notes || 'Bez poznámky'
+        place.notes || t("Bez poznámky")
       }`,
     );
   };
@@ -133,27 +136,27 @@ export default function ListScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Zoznam Miest</Text>
+      <Text style={styles.header}>{t("Zoznam Miest")}</Text>
       <View style={styles.controls}>
         <Pressable style={styles.controlBtn} onPress={() => setSortBy('date')}>
-          <Text>Dátum</Text>
+          <Text>{t("Dátum")}</Text>
         </Pressable>
         <Pressable style={styles.controlBtn} onPress={() => setSortBy('name')}>
-          <Text>Názov</Text>
+          <Text>{t("Názov")}</Text>
         </Pressable>
         <Pressable style={styles.controlBtn} onPress={() => setSortBy('country')}>
-          <Text>Krajina</Text>
+          <Text>{t("Krajina")}</Text>
         </Pressable>
       </View>
       <View style={styles.controls}>
         <Pressable style={styles.controlBtn} onPress={() => setTypeFilter('all')}>
-          <Text>Všetko</Text>
+          <Text>{t("Všetko")}</Text>
         </Pressable>
         <Pressable style={styles.controlBtn} onPress={() => setTypeFilter('Mesto')}>
-          <Text>Mesto</Text>
+          <Text>{t("Mesto")}</Text>
         </Pressable>
         <Pressable style={styles.controlBtn} onPress={() => setTypeFilter('Hrad')}>
-          <Text>Hrad</Text>
+          <Text>{t("Hrad")}</Text>
         </Pressable>
       </View>
 

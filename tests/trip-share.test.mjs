@@ -1,3 +1,4 @@
+import { t, useLanguage } from './helpers/languageMock.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { transformSync } from '@babel/core';
@@ -15,7 +16,7 @@ const React = { createElement(type, props, ...children) {
   if (props?.ref) props.ref.current = { card: true };
   return { type, props: props || {}, children: children.flat(Infinity).filter(child => child != null && child !== false) };
 } };
-const mocks = { React, ...hooks,
+const mocks = { t, useLanguage, React, ...hooks,
   ActivityIndicator: 'ActivityIndicator', Alert: { alert: message => { throw Error(message); } }, Image: 'Image',
   Modal: 'Modal', Pressable: 'Pressable', ScrollView: 'ScrollView', Text: 'Text', TextInput: 'TextInput', View: 'View',
   PanResponder: { create: handlers => ({ panHandlers: handlers }) }, Platform: { OS: 'android' },

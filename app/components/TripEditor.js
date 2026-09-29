@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+import { useLanguage } from '../context/LanguageContext';
 import { theme } from '../theme';
 import React, { useEffect, useRef, useState } from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -6,10 +8,11 @@ import TripForm from './TripForm';
 import MapTypeToggle from './MapTypeToggle';
 import { findLocationDetails } from '../services/geonamesService';
 
-export default function TripEditor({ initialValues, coordinates, title = 'Nový výlet', submitLabel = 'Uložiť výlet', onSubmit, onCancel }) {
+export default function TripEditor({ initialValues, coordinates, title = t("Nový výlet"), submitLabel = t("Uložiť výlet"), onSubmit, onCancel }) {
+  useLanguage();
   const [selection, setSelection] = useState(coordinates || null);
   const [mapType, setMapType] = useState('standard');
-  const [hint, setHint] = useState('Ťukni na mapu alebo na názov múzea či iného miesta.');
+  const [hint, setHint] = useState(t("Ťukni na mapu alebo na názov múzea či iného miesta."));
   const request = useRef(0);
   const [mapWidth, setMapWidth] = useState(0);
   const { height } = useWindowDimensions();
@@ -30,28 +33,28 @@ export default function TripEditor({ initialValues, coordinates, title = 'Nový 
     const id = ++request.current;
     const next = { ...coordinate, name: name || '', locationName: '', countryCode: '', selectionId: id };
     setSelection(next);
-    setHint('Dohľadávam obec a krajinu…');
+    setHint(t("Dohľadávam obec a krajinu…"));
     try {
       const details = await findLocationDetails(coordinate);
       if (id !== request.current) return;
       setSelection({ ...next, ...details });
-      setHint('Poloha vybraná. Skontroluj názov a lokalitu pred uložením.');
+      setHint(t("Poloha vybraná. Skontroluj názov a lokalitu pred uložením."));
     } catch (error) {
-      if (id === request.current) setHint(`Poloha je vybraná. ${error.message} Lokalitu môžeš doplniť ručne.`);
+      if (id === request.current) setHint(t("Poloha je vybraná. {0} Lokalitu môžeš doplniť ručne.", {0: error.message}));
     }
   };
   useEffect(() => {
     if (coordinates?.locationName) {
       request.current += 1;
       setSelection({ ...coordinates, selectionId: request.current });
-      setHint('Poloha vybraná. Skontroluj názov a lokalitu pred uložením.');
+      setHint(t("Poloha vybraná. Skontroluj názov a lokalitu pred uložením."));
     } else if (coordinates) selectLocation(coordinates, coordinates.name);
   }, [coordinates]);
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView ref={scrollRef} keyboardDismissMode="on-drag" removeClippedSubviews={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
         <Text style={styles.title}>{title}</Text>
-        <Text style={styles.hint}>{hint}</Text>
+        <Text style={styles.hint}>{t(hint)}</Text>
         <MapTypeToggle value={mapType} onChange={setMapType} />
         <View collapsable={false} onLayout={(event) => setMapWidth(event.nativeEvent.layout.width)}
           style={[styles.mapCard, { height: mapHeight }]}>
@@ -69,7 +72,7 @@ export default function TripEditor({ initialValues, coordinates, title = 'Nový 
           </MapView> : null}
         </View>
         <TripForm onInputFocus={inputFocused} initialValues={initialValues} externalLocation={selection}
-          title="Údaje o návšteve" submitLabel={submitLabel} onSubmit={onSubmit} onCancel={onCancel} />
+          title={t("Údaje o návšteve")} submitLabel={submitLabel} onSubmit={onSubmit} onCancel={onCancel} />
       </ScrollView>
     </KeyboardAvoidingView>
   );

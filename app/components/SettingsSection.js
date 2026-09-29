@@ -1,16 +1,19 @@
 import React from 'react';
+import { t } from '../i18n';
+import { useLanguage } from '../context/LanguageContext';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { theme } from '../theme';
 
 // Keep forms mounted when folded so drafts and in-flight operations survive.
 export default function SettingsSection({ title, summary, icon, expanded, onPress, children }) {
+  useLanguage();
   return <View style={styles.section}>
     <Pressable accessibilityRole="button" accessibilityState={{ expanded }}
-      accessibilityLabel={`${title}. ${summary || ''}`} onPress={onPress} style={styles.heading}>
+      accessibilityLabel={`${t(title)}. ${t(summary || '')}`} onPress={onPress} style={styles.heading}>
       <MaterialIcons name={icon} size={24} color={theme.primary} />
-      <View style={styles.body}><Text style={styles.title}>{title}</Text>
-        {summary ? <Text numberOfLines={2} style={styles.summary}>{summary}</Text> : null}</View>
+      <View style={styles.body}><Text style={styles.title}>{t(title)}</Text>
+        {summary ? <Text numberOfLines={2} style={styles.summary}>{t(summary)}</Text> : null}</View>
       <MaterialIcons name={expanded ? 'expand-less' : 'expand-more'} size={24} color={theme.muted} />
     </Pressable>
     <View style={!expanded && { display: 'none' }} accessibilityElementsHidden={!expanded}

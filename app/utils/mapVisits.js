@@ -1,5 +1,6 @@
 import encodedCountries from '../data/countries.json';
 import countryLabelPoints from '../data/countryLabelPoints.json';
+import { getLanguage } from '../i18n';
 
 // Delta-encoded [longitude, latitude], precision 1e-4 degrees.
 export const decodeRing = (encoded) => {
@@ -112,11 +113,13 @@ export const groupMarkers = (trips, region, zoom, detailed = false) => {
   }));
 };
 
-let regionNames;
-try { regionNames = new Intl.DisplayNames(['sk'], { type: 'region' }); } catch (_) { /* Native engine may not support DisplayNames. */ }
+const regionNames = new Map();
 const localNames = { SK: 'Slovensko', HU: 'Maďarsko', CZ: 'Česko', AT: 'Rakúsko', PL: 'Poľsko', UA: 'Ukrajina', DE: 'Nemecko', HR: 'Chorvátsko' };
 export const countryDisplayName = (country) => {
   if (!country) return '';
-  try { return regionNames?.of(country.code) || localNames[country.code] || country.name; }
-  catch (_) { return localNames[country.code] || country.name; }
+  const language = getLanguage();
+  try {
+    if (!regionNames.has(language)) regionNames.set(language, new Intl.DisplayNames([language], { type: 'region' }));
+    return regionNames.get(language)?.of(country.code) || (language === 'sk' ? localNames[country.code] : null) || country.name;
+  } catch (_) { return (language === 'sk' ? localNames[country.code] : null) || country.name; }
 };

@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+import { useLanguage } from '../context/LanguageContext';
 import { useWishlist } from '../context/WishlistContext';
 import { countryDisplayName } from '../utils/mapVisits';
 import { displayVisitDate } from '../utils/visitDate';
@@ -14,12 +16,13 @@ import TripDetailsModal from '../components/TripDetailsModal';
 import { useTrips } from '../context/TripsContext';
 
 export default function HomeScreen({ navigation }) {
+  useLanguage();
   const { loading, error, stats, trips, updateTrip, deleteTrip, refreshTrips } = useTrips();
   const { items: wishes } = useWishlist();
   const [countriesOpen, setCountriesOpen] = useState(false);
   const { account, status, message } = useCloudSync();
-  const backupTitle = !account ? 'Uložené v tomto telefóne' : status === 'synced' ? 'Návštevy zálohované' : status === 'syncing' || status === 'connecting' ? 'Ukladám do cloudu…' : 'Záloha čaká na uloženie';
-  const backupMessage = !account ? 'Pre automatické zálohovanie sa prihlás do cloudového účtu v Profile.' : status === 'synced' ? 'Automatická záloha funguje počas používania aplikácie vo všetkých záložkách. Zálohu fotografií na vlastný Google Disk si zapneš v Profile.' : message || 'Údaje sú v telefóne. Po dokončení prenosu sa tu zobrazí potvrdenie zálohy.';
+  const backupTitle = !account ? t("Uložené v tomto telefóne") : status === 'synced' ? t("Návštevy zálohované") : status === 'syncing' || status === 'connecting' ? t("Ukladám do cloudu…") : t("Záloha čaká na uloženie");
+  const backupMessage = !account ? t("Pre automatické zálohovanie sa prihlás do cloudového účtu v Profile.") : status === 'synced' ? t("Automatická záloha funguje počas používania aplikácie vo všetkých záložkách. Zálohu fotografií na vlastný Google Disk si zapneš v Profile.") : message || t("Údaje sú v telefóne. Po dokončení prenosu sa tu zobrazí potvrdenie zálohy.");
   const [selectedId, setSelectedId] = useState(null);
   const [editingTrip, setEditingTrip] = useState(null);
   const selectedTrip = trips.find((trip) => trip.id === selectedId);
@@ -27,33 +30,33 @@ export default function HomeScreen({ navigation }) {
   const removeSelected = () => {
     if (!selectedTrip) return;
     const trip = selectedTrip;
-    Alert.alert('Zmazať návštevu?', trip.name, [
-      { text: 'Zrušiť', style: 'cancel' },
-      { text: 'Zmazať', style: 'destructive', onPress: async () => {
+    Alert.alert(t("Zmazať návštevu?"), trip.name, [
+      { text: t("Zrušiť"), style: 'cancel' },
+      { text: t("Zmazať"), style: 'destructive', onPress: async () => {
         try { await deleteTrip(trip.id); setSelectedId(null); }
-        catch (failure) { Alert.alert('Vymazanie zlyhalo', failure.message); }
+        catch (failure) { Alert.alert(t("Vymazanie zlyhalo"), t(failure.message)); }
       } },
     ]);
   };
   return <>
     <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
       <View style={styles.brand}>
-        <Image source={require('../../assets/home-brand.png')} style={{ width: 138, height: 142 }} resizeMode="contain" accessibilityLabel="TravelLog – kompas" />
-        <Text style={styles.muted}>Tvoje miesta. Tvoje príbehy.</Text>
+        <Image source={require('../../assets/home-brand.png')} style={{ width: 138, height: 142 }} resizeMode="contain" accessibilityLabel={t("TravelLog – kompas")} />
+        <Text style={styles.muted}>{t("Tvoje miesta. Tvoje príbehy.")}</Text>
       </View>
       {error ? <View style={styles.card}>
-        <Text accessibilityRole="alert" style={styles.muted}>{error}</Text>
-        <Pressable onPress={refreshTrips} style={styles.linkButton}><Text style={styles.link}>Skúsiť načítať znova</Text></Pressable>
+        <Text accessibilityRole="alert" style={styles.muted}>{t(error)}</Text>
+        <Pressable onPress={refreshTrips} style={styles.linkButton}><Text style={styles.link}>{t("Skúsiť načítať znova")}</Text></Pressable>
       </View> : null}
       <AddVisitButton />
       <Pressable accessibilityRole="button" style={styles.card} onPress={() => navigation.navigate('Trips', { section: 'dreams', sectionRequest: Date.now() })}>
-        <Text style={styles.sectionTitle}>Moje sny · {wishes.length}</Text>
-        <Text style={styles.muted}>Premium · miesta na budúce cesty</Text>
+        <Text style={styles.sectionTitle}>{t("Moje sny ·")}{' '}{wishes.length}</Text>
+        <Text style={styles.muted}>{t("Premium · miesta na budúce cesty")}</Text>
       </Pressable>
       <View style={styles.statsRow}>
-        {[{ label: 'Návštevy', value: stats.totalTrips, icon: 'place', route: 'Trips' },
-          { label: 'Krajiny', value: stats.countriesVisited, icon: 'public', route: 'Map' }].map((item) => (
-          <Pressable key={item.route} accessibilityRole="button" accessibilityLabel={`${item.label}: ${item.value}. Otvoriť ${item.route}`}
+        {[{ label: t("Návštevy"), value: stats.totalTrips, icon: 'place', route: 'Trips' },
+          { label: t("Krajiny"), value: stats.countriesVisited, icon: 'public', route: 'Map' }].map((item) => (
+          <Pressable key={item.route} accessibilityRole="button" accessibilityLabel={t("{0}: {1}. Otvoriť {2}", {0: item.label, 1: item.value, 2: item.route})}
             onPress={() => item.route === 'Map' ? setCountriesOpen(true) : navigation.navigate('Trips', { section: 'visits', countryCode: null })} style={({ pressed }) => [styles.card, styles.stat, pressed && styles.pressed]}>
             <View style={{ alignItems: 'center' }}><MaterialIcons name={item.icon} color={theme.primary} size={22} /></View>
             <Text style={styles.statValue}>{item.value}</Text><Text style={styles.muted}>{item.label}</Text>
@@ -61,9 +64,9 @@ export default function HomeScreen({ navigation }) {
         ))}
       </View>
       <View style={styles.sectionRow}>
-        <Text style={styles.sectionTitle}>Posledné návštevy</Text>
+        <Text style={styles.sectionTitle}>{t("Posledné návštevy")}</Text>
         <Pressable accessibilityRole="button" onPress={() => navigation.navigate('Trips', { section: 'visits', countryCode: null })} style={styles.linkButton}>
-          <Text style={styles.link}>Zobraziť všetky</Text>
+          <Text style={styles.link}>{t("Zobraziť všetky")}</Text>
         </Pressable>
       </View>
       {stats.recentTrips.length ? stats.recentTrips.map((trip) => (
@@ -71,20 +74,20 @@ export default function HomeScreen({ navigation }) {
           style={({ pressed }) => [styles.card, styles.visitCard, pressed && styles.pressed]}>
           <View style={styles.body}>
             <Text style={styles.visitName}>{trip.name}</Text>
-            <Text style={styles.muted}>{trip.locationName || 'Lokalita neuvedená'}</Text>
+            <Text style={styles.muted}>{trip.locationName || t("Lokalita neuvedená")}</Text>
             <Text style={styles.visitDate}>{displayVisitDate(trip)}{trip.rating ? `  ·  ★ ${trip.rating}/5` : ''}</Text>
             <VisitPhotoCover photos={trip.photos} />
           </View>
         </Pressable>
       )) : <View style={[styles.card, styles.empty]}>
         <MaterialIcons name="explore" color={theme.primary} size={40} />
-        <Text style={styles.visitName}>Kam ťa zaviedli tvoje cesty?</Text>
-        <Text style={styles.muted}>Pridaj prvé miesto a začni si skladať mapu spomienok.</Text>
+        <Text style={styles.visitName}>{t("Kam ťa zaviedli tvoje cesty?")}</Text>
+        <Text style={styles.muted}>{t("Pridaj prvé miesto a začni si skladať mapu spomienok.")}</Text>
       </View>}
       <View style={styles.storage}>
         <MaterialIcons name="phone-android" size={20} color={theme.muted} />
-        <View style={styles.body}><Text style={styles.storageTitle}>{backupTitle}</Text>
-          <Text style={styles.muted}>{backupMessage}</Text></View>
+        <View style={styles.body}><Text style={styles.storageTitle}>{t(backupTitle)}</Text>
+          <Text style={styles.muted}>{t(backupMessage)}</Text></View>
       </View>
     </ScrollView>
     <CountriesModal visible={countriesOpen} trips={trips} onClose={() => setCountriesOpen(false)}
@@ -92,8 +95,8 @@ export default function HomeScreen({ navigation }) {
       onMap={() => { setCountriesOpen(false); navigation.navigate('Map', { overviewRequest: Date.now() }); }} />
     <TripDetailsModal visible={Boolean(selectedTrip)} trip={selectedTrip} onClose={() => setSelectedId(null)}
       onEdit={() => { setEditingTrip(selectedTrip); setSelectedId(null); }} onDelete={removeSelected} />
-    <AddPlaceModal visible={Boolean(editingTrip)} initialTrip={editingTrip} title="Upraviť návštevu"
-      submitLabel="Uložiť zmeny" onClose={() => setEditingTrip(null)} onSave={async (trip) => {
+    <AddPlaceModal visible={Boolean(editingTrip)} initialTrip={editingTrip} title={t("Upraviť návštevu")}
+      submitLabel={t("Uložiť zmeny")} onClose={() => setEditingTrip(null)} onSave={async (trip) => {
         await updateTrip(editingTrip.id, trip); setEditingTrip(null);
       }} />
   </>;

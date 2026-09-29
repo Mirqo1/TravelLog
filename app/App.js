@@ -12,11 +12,13 @@ import { CloudSyncProvider } from './context/CloudSyncContext';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Navigation from './components/Navigation';
 import { WishlistProvider } from './context/WishlistContext';
+import { LanguageProvider } from './context/LanguageContext';
 
 export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+      <LanguageProvider>
       <AuthProvider>
         <TripsProvider>
           <CloudSyncProvider>
@@ -34,6 +36,7 @@ export default function App() {
           </CloudSyncProvider>
         </TripsProvider>
       </AuthProvider>
+      </LanguageProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

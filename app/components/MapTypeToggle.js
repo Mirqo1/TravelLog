@@ -1,10 +1,13 @@
+import { t } from '../i18n';
+import { useLanguage } from '../context/LanguageContext';
 import { theme } from '../theme';
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 export default function MapTypeToggle({ value, onChange }) {
+  useLanguage();
   return <View style={{ flexDirection: 'row', gap: 8 }}>
-    {[['standard', 'Mapa'], ['hybrid', 'Satelit']].map(([type, label]) => (
+    {[['standard', t("Mapa")], ['hybrid', t("Satelit")]].map(([type, label]) => (
       <Pressable key={type} accessibilityRole="button" accessibilityState={{ selected: value === type }}
         onPress={() => onChange(type)} style={{ paddingHorizontal: 16, paddingVertical: 10,
           borderRadius: 20, backgroundColor: value === type ? theme.primary : theme.border }}>

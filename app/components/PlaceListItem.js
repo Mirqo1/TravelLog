@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+import { useLanguage } from '../context/LanguageContext';
 import { displayVisitDate } from '../utils/visitDate';
 import { theme } from '../theme';
 import React from 'react';
@@ -7,26 +9,27 @@ import { Swipeable } from 'react-native-gesture-handler';
 
 const renderRating = (rating) => {
   if (!rating) {
-    return 'Bez hodnotenia';
+    return t("Bez hodnotenia");
   }
 
   return `${'★'.repeat(rating)}${'☆'.repeat(Math.max(0, 5 - rating))}`;
 };
 
 export default function PlaceListItem({ trip, onDetail, onEdit, onDelete }) {
+  useLanguage();
   const renderLeftActions = () => (
     <Pressable style={[styles.swipeAction, styles.detailAction]} onPress={onDetail}>
-      <Text style={styles.swipeText}>Detail</Text>
+      <Text style={styles.swipeText}>{t("Detail")}</Text>
     </Pressable>
   );
 
   const renderRightActions = () => (
     <View style={styles.rightActions}>
       <Pressable style={[styles.swipeAction, styles.editAction]} onPress={onEdit}>
-        <Text style={styles.swipeText}>Upraviť</Text>
+        <Text style={styles.swipeText}>{t("Upraviť")}</Text>
       </Pressable>
       <Pressable style={[styles.swipeAction, styles.deleteAction]} onPress={onDelete}>
-        <Text style={styles.swipeText}>Vymazať</Text>
+        <Text style={styles.swipeText}>{t("Vymazať")}</Text>
       </Pressable>
     </View>
   );
@@ -35,13 +38,13 @@ export default function PlaceListItem({ trip, onDetail, onEdit, onDelete }) {
     <Swipeable renderLeftActions={renderLeftActions} renderRightActions={renderRightActions}>
       <Pressable style={styles.card} onPress={onDetail}>
         <Text style={styles.name}>{trip.name}</Text>
-        <Text style={styles.meta}>{trip.locationName || 'Bez lokality'}</Text>
+        <Text style={styles.meta}>{trip.locationName || t("Bez lokality")}</Text>
         <Text style={styles.meta}>
-          {displayVisitDate(trip)} • {renderRating(trip.rating)}
+          {displayVisitDate(trip)} • {t(renderRating(trip.rating))}
         </Text>
         <VisitPhotoCover photos={trip.photos} />
-        <Text numberOfLines={3} style={styles.notes}>{trip.description || trip.notes || 'Bez poznámky'}</Text>
-        {trip.syncStatus && trip.syncStatus !== 'synced' ? <Text style={styles.pending}>Čaká na synchronizáciu</Text> : null}
+        <Text numberOfLines={3} style={styles.notes}>{trip.description || trip.notes || t("Bez poznámky")}</Text>
+        {trip.syncStatus && trip.syncStatus !== 'synced' ? <Text style={styles.pending}>{t("Čaká na synchronizáciu")}</Text> : null}
       </Pressable>
     </Swipeable>
   );

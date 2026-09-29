@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 const root = new URL('../', import.meta.url);
 const read = (path) => readFile(new URL(path, root), 'utf8');
 const importSource = (source) => import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
-const source = (await read('app/utils/mapVisits.js')).replace(
+const source = (await read('app/utils/mapVisits.js')).replace("import { getLanguage } from '../i18n';", "const getLanguage = () => 'sk';").replace(
   "import countryLabelPoints from '../data/countryLabelPoints.json';",
   'const countryLabelPoints = ' + await read('app/data/countryLabelPoints.json') + ';',
 ).replace(

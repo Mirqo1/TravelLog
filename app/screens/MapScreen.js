@@ -1,3 +1,6 @@
+import { t } from '../i18n';
+import { useLanguage } from '../context/LanguageContext';
+import { SwipeScreen } from '../components/SwipeTabs';
 import { WishlistEditor } from '../components/WishlistModal';
 import { useWishlist } from '../context/WishlistContext';
 import { displayVisitDate } from '../utils/visitDate';
@@ -17,6 +20,7 @@ import { countryDisplayName, countryMarkers, groupMarkers, stableModeForZoom, va
 const INITIAL_REGION = { latitude: 49, longitude: 17, latitudeDelta: 35, longitudeDelta: 55 };
 
 export default function MapScreen({ route, navigation }) {
+  useLanguage();
   const isFocused = useIsFocused();
   const { premium, items: wishes } = useWishlist();
   const [pickingWish, setPickingWish] = useState(false);
@@ -89,7 +93,7 @@ export default function MapScreen({ route, navigation }) {
     const spread = Math.max(...group.trips.map(item => Math.max(Math.abs(item.location.latitude - group.coordinate.latitude),
       Math.abs(item.location.longitude - group.coordinate.longitude))));
     if (mode === 'places' || spread < 0.0001) {
-      setVisitGroup({ title: 'Chcem navštíviť', visits: group.trips, wishlist: true });
+      setVisitGroup({ title: t("Chcem navštíviť"), visits: group.trips, wishlist: true });
     } else mapRef.current?.animateToRegion({ ...group.coordinate,
       latitudeDelta: Math.max(0.005, region.latitudeDelta / 3), longitudeDelta: Math.max(0.005, region.longitudeDelta / 3) });
   };
@@ -104,7 +108,7 @@ export default function MapScreen({ route, navigation }) {
       Math.abs(trip.location.latitude - group.coordinate.latitude),
       Math.abs(trip.location.longitude - group.coordinate.longitude))));
     if (mode === 'places' || spread < 0.0001) {
-      showGroup('Návštevy na tomto mieste', group.trips);
+      showGroup(t("Návštevy na tomto mieste"), group.trips);
       return;
     }
     mapRef.current?.animateToRegion({ ...group.coordinate,
@@ -147,35 +151,35 @@ export default function MapScreen({ route, navigation }) {
   const handleDelete = () => {
     if (!selectedTrip) return;
     const trip = selectedTrip;
-    Alert.alert('Zmazať návštevu?', trip.name, [
-      { text: 'Zrušiť', style: 'cancel' },
-      { text: 'Zmazať', style: 'destructive', onPress: async () => {
+    Alert.alert(t("Zmazať návštevu?"), trip.name, [
+      { text: t("Zrušiť"), style: 'cancel' },
+      { text: t("Zmazať"), style: 'destructive', onPress: async () => {
         try { await deleteTrip(trip.id); setSelectedTrip(null); }
-        catch (error) { Alert.alert('Vymazanie zlyhalo', error.message); }
+        catch (error) { Alert.alert(t("Vymazanie zlyhalo"), t(error.message)); }
       } },
     ]);
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.mapHeader}>
-        <Text style={[styles.header, { flex: 1 }]}>Mapa návštev</Text>
+      <SwipeScreen navigation={navigation} route={{ name: 'Map' }} style={styles.mapHeader}>
+        <Text style={[styles.header, { flex: 1 }]}>{t("Mapa návštev")}</Text>
 
-      </View>
+      </SwipeScreen>
       <MapTypeToggle value={mapType} onChange={setMapType} />
       <View style={styles.searchRow}>
-        <TextInput value={query} onChangeText={changeQuery} placeholder="Napr. Big Ben London"
+        <TextInput value={query} onChangeText={changeQuery} placeholder={t("Napr. Big Ben London")}
           style={styles.input} returnKeyType="search" onSubmitEditing={handleSearch} />
         <Pressable style={styles.button} disabled={searching} onPress={handleSearch}>
-          <Text style={styles.buttonText}>{searching ? 'Hľadám…' : 'Hľadať'}</Text>
+          <Text style={styles.buttonText}>{searching ? t("Hľadám…") : t("Hľadať")}</Text>
         </Pressable>
       </View>
-      {searchError ? <Text accessibilityRole="alert" style={styles.hint}>{searchError}</Text> : null}
+      {searchError ? <Text accessibilityRole="alert" style={styles.hint}>{t(searchError)}</Text> : null}
       {searchResults !== null ? <View style={styles.results}>
         <View style={styles.resultsHeader}>
-          <Text style={styles.hint}>{searchResults.length ? 'Vyber miesto' : 'Nenašli sa žiadne miesta.'}</Text>
-          <Pressable onPress={() => setSearchResults(null)} accessibilityLabel="Zavrieť výsledky" hitSlop={8}>
-            <Text style={styles.resultLink}>Zavrieť</Text>
+          <Text style={styles.hint}>{searchResults.length ? t("Vyber miesto") : t("Nenašli sa žiadne miesta.")}</Text>
+          <Pressable onPress={() => setSearchResults(null)} accessibilityLabel={t("Zavrieť výsledky")} hitSlop={8}>
+            <Text style={styles.resultLink}>{t("Zavrieť")}</Text>
           </Pressable>
         </View>
         <ScrollView style={styles.resultList} keyboardShouldPersistTaps="handled">
@@ -185,16 +189,16 @@ export default function MapScreen({ route, navigation }) {
             <Text style={styles.hint}>{result.locationName || `${result.latitude.toFixed(4)}, ${result.longitude.toFixed(4)}`}</Text>
           </Pressable>)}
         </ScrollView>
-        <Text style={styles.hint}>Chýba tvoje miesto? Doplň mesto alebo presnejší názov.</Text>
+        <Text style={styles.hint}>{t("Chýba tvoje miesto? Doplň mesto alebo presnejší názov.")}</Text>
         <Pressable accessibilityRole="link" onPress={() => Linking.openURL('https://www.openstreetmap.org/copyright')
           .catch(() => Alert.alert('Odkaz', 'https://www.openstreetmap.org/copyright'))}>
-          <Text style={styles.resultLink}>Vyhľadávanie Photon · © OpenStreetMap contributors</Text>
+          <Text style={styles.resultLink}>{t("Vyhľadávanie Photon · © OpenStreetMap contributors")}</Text>
         </Pressable>
       </View> : null}
-      <Text accessibilityLiveRegion="polite" style={styles.hint}>{pickingWish ? 'Vyhľadaj miesto alebo ťukni na mapu. Opätovným stlačením tlačidla výber zrušíš.' : mode === 'countries'
-        ? 'Počet návštev v krajine · ťukni na číslo pre zoznam.'
-        : mode === 'clusters' ? 'Skupiny návštev · ☆ plánované miesta. Ťuknutím priblížiš.'
-        : 'Heat mapa a návštevy · ☆ plánované miesta.'}</Text>
+      <Text accessibilityLiveRegion="polite" style={styles.hint}>{pickingWish ? t("Vyhľadaj miesto alebo ťukni na mapu. Opätovným stlačením tlačidla výber zrušíš.") : mode === 'countries'
+        ? t("Počet návštev v krajine · ťukni na číslo pre zoznam.")
+        : mode === 'clusters' ? t("Skupiny návštev · ☆ plánované miesta. Ťuknutím priblížiš.")
+        : t("Heat mapa a návštevy · ☆ plánované miesta.")}</Text>
       <View style={styles.mapContainer} onLayout={(event) => setMapWidth(event.nativeEvent.layout.width)}>
         {isFocused ? <MapView ref={mapRef} style={styles.map} initialRegion={region}
           mapType={mapType} onMapReady={() => { mapReady.current = true; showOverview(); showWish(); }}
@@ -217,18 +221,18 @@ export default function MapScreen({ route, navigation }) {
           ))}
           {wishMarkers.map(group => <Marker key={'wishes:' + group.trips.map(item => item.id).sort().join('|')}
             coordinate={group.coordinate} anchor={{ x: 0.5, y: 0.5 }} zIndex={2}
-            accessibilityLabel={group.trips.length === 1 ? `Chcem navštíviť: ${group.trips[0].name}` : `Moje sny: ${group.trips.length} miest`}
+            accessibilityLabel={group.trips.length === 1 ? t("Chcem navštíviť: {0}", {0: group.trips[0].name}) : t("Moje sny: {0} miest", {0: group.trips.length})}
             onPress={event => { event.stopPropagation(); handleWishCluster(group); }}>
             <View style={styles.wishMarker}><Text style={styles.wishMarkerText}>☆{group.trips.length > 1 ? ` ${group.trips.length}` : ''}</Text></View>
           </Marker>)}
           {selectedCoordinate ? <Marker zIndex={3} coordinate={selectedCoordinate} pinColor="#16a34a" /> : null}
         </MapView> : null}
       </View>
-      {selectedCoordinate ? <Text numberOfLines={2} style={styles.hint}>Vybrané: {selectedCoordinate.name ||
+      {selectedCoordinate ? <Text numberOfLines={2} style={styles.hint}>{t("Vybrané:")}{' '}{selectedCoordinate.name ||
         selectedCoordinate.latitude.toFixed(4) + ', ' + selectedCoordinate.longitude.toFixed(4)}</Text> : null}
       <View style={styles.mapActions}>
       <Pressable accessibilityRole="button" style={[styles.button, styles.mapAction]} onPress={() => { setPickingWish(false); setModalVisible(true); }}>
-        <Text style={styles.buttonText}>+ Pridať návštevu</Text>
+        <Text style={styles.buttonText}>{t("+ Pridať návštevu")}</Text>
       </Pressable>
       {premium ? <Pressable accessibilityRole="button" accessibilityState={{ selected: pickingWish }}
         style={[styles.button, styles.mapAction, styles.wishAction, pickingWish && { backgroundColor: theme.primarySoft }]}
@@ -236,30 +240,30 @@ export default function MapScreen({ route, navigation }) {
           Keyboard.dismiss();
           if (selectedCoordinate) { setPickingWish(false); openWishEditor(selectedCoordinate); }
           else setPickingWish(current => !current);
-        }}><Text style={[styles.buttonText, { color: theme.primary }]}>☆ Chcem navštíviť</Text></Pressable> : null}
+        }}><Text style={[styles.buttonText, { color: theme.primary }]}>{t("☆ Chcem navštíviť")}</Text></Pressable> : null}
       </View>
       {wishDraft ? <WishlistEditor place={wishDraft} onClose={() => setWishDraft(null)} /> : null}
-      <AddPlaceModal visible={modalVisible} title="Pridať návštevu" coordinates={selectedCoordinate}
+      <AddPlaceModal visible={modalVisible} title={t("Pridať návštevu")} coordinates={selectedCoordinate}
         onClose={() => setModalVisible(false)} onSave={async (trip) => {
           await addTrip(trip); setModalVisible(false); setSelectedCoordinate(null);
-          Alert.alert('Hotovo', 'Návšteva bola uložená.');
+          Alert.alert('Hotovo', t("Návšteva bola uložená."));
         }} />
-      <AddPlaceModal visible={Boolean(editingTrip)} initialTrip={editingTrip} title="Upraviť návštevu"
-        submitLabel="Uložiť zmeny" onClose={() => setEditingTrip(null)}
+      <AddPlaceModal visible={Boolean(editingTrip)} initialTrip={editingTrip} title={t("Upraviť návštevu")}
+        submitLabel={t("Uložiť zmeny")} onClose={() => setEditingTrip(null)}
         onSave={async (trip) => { await updateTrip(editingTrip.id, trip); setEditingTrip(null); }} />
       <TripDetailsModal visible={Boolean(selectedTrip)} trip={selectedTrip} onClose={() => setSelectedTrip(null)}
         onEdit={() => { setEditingTrip(selectedTrip); setSelectedTrip(null); }} onDelete={handleDelete} />
       <Modal visible={Boolean(visitGroup)} animationType="slide" onRequestClose={() => setVisitGroup(null)}>
         <SafeAreaProvider><SafeAreaView style={styles.container}>
           <Text style={styles.header}>{visitGroup?.title}</Text>
-          <Text style={styles.hint}>{visitGroup?.wishlist ? 'Plánované miesta' : 'Počet návštev'}: {visitGroup?.visits.length || 0}</Text>
+          <Text style={styles.hint}>{visitGroup?.wishlist ? t("Plánované miesta") : t("Počet návštev")}: {visitGroup?.visits.length || 0}</Text>
           <ScrollView style={{ flex: 1 }}>
             {visitGroup?.visits.map((trip) => <Pressable key={trip.id} style={styles.visitRow}
               onPress={() => { setVisitGroup(null); if (visitGroup.wishlist) selectWish(trip); else setSelectedTrip(trip); }}>
               <Text style={styles.visitName}>{trip.name}</Text><Text>{visitGroup.wishlist ? trip.locationName : `${displayVisitDate(trip)} · ${trip.locationName}`}</Text>
             </Pressable>)}
           </ScrollView>
-          <Pressable style={styles.button} onPress={() => setVisitGroup(null)}><Text style={styles.buttonText}>Zavrieť</Text></Pressable>
+          <Pressable style={styles.button} onPress={() => setVisitGroup(null)}><Text style={styles.buttonText}>{t("Zavrieť")}</Text></Pressable>
         </SafeAreaView></SafeAreaProvider>
       </Modal>
     </View>

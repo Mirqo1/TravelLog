@@ -1,9 +1,12 @@
+import { t } from '../i18n';
+import { useLanguage } from '../context/LanguageContext';
 import React from 'react';
 import { Modal } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import TripEditor from './TripEditor';
 
-export default function AddPlaceModal({ visible, coordinates, initialTrip, title = 'Pridať výlet', submitLabel = 'Uložiť výlet', onClose, onSave }) {
+export default function AddPlaceModal({ visible, coordinates, initialTrip, title = t("Pridať výlet"), submitLabel = t("Uložiť výlet"), onClose, onSave }) {
+  useLanguage();
   if (!visible) return null;
   return (
     <Modal visible animationType="slide" onRequestClose={onClose}>

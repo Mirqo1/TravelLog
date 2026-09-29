@@ -1,9 +1,12 @@
+import { t } from '../i18n';
+import { useLanguage } from '../context/LanguageContext';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { calendarDays, localDate, parseVisitDate } from '../utils/visitDate';
 import { theme } from '../theme';
 const months = ['Január', 'Február', 'Marec', 'Apríl', 'Máj', 'Jún', 'Júl', 'August', 'September', 'Október', 'November', 'December'];
 export default function VisitCalendar({ value, onSelect }) {
+  useLanguage();
   const [month, setMonth] = useState(() => {
     const date = parseVisitDate(value) || localDate();
     return new Date(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, 1, 12);
@@ -11,12 +14,12 @@ export default function VisitCalendar({ value, onSelect }) {
   const move = (step) => setMonth((current) => new Date(current.getFullYear(), current.getMonth() + step, 1, 12));
   return <View style={styles.box}>
     <View style={styles.header}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Predchádzajúci mesiac" onPress={() => move(-1)} style={styles.arrow}><Text>‹</Text></Pressable>
-      <Text style={styles.title}>{months[month.getMonth()]} {month.getFullYear()}</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel="Nasledujúci mesiac" onPress={() => move(1)} style={styles.arrow}><Text>›</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={t("Predchádzajúci mesiac")} onPress={() => move(-1)} style={styles.arrow}><Text>‹</Text></Pressable>
+      <Text style={styles.title}>{t(months[month.getMonth()])} {month.getFullYear()}</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel={t("Nasledujúci mesiac")} onPress={() => move(1)} style={styles.arrow}><Text>›</Text></Pressable>
     </View>
     <View style={styles.grid}>
-      {['Po', 'Ut', 'St', 'Št', 'Pi', 'So', 'Ne'].map((day) => <Text key={day} style={styles.weekday}>{day}</Text>)}
+      {[t("Po"), t("Ut"), t("St"), t("Št"), t("Pi"), t("So"), t("Ne")].map((day) => <Text key={day} style={styles.weekday}>{day}</Text>)}
       {calendarDays(month.getFullYear(), month.getMonth()).map((day, index) => {
         const date = day ? localDate(new Date(month.getFullYear(), month.getMonth(), day, 12)) : '';
         const selected = date && date === parseVisitDate(value);

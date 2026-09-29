@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+import { useLanguage } from '../context/LanguageContext';
 import SettingsSection from '../components/SettingsSection';
 import { useDriveBackup } from '../context/DriveBackupContext';
 import { theme } from '../theme';
@@ -13,17 +15,26 @@ import DriveBackupPanel from '../components/DriveBackupPanel';
 import CloudBackupPanel from '../components/CloudBackupPanel';
 
 export default function ProfileScreen({ navigation }) {
+  const { language, setLanguage } = useLanguage();
+  const [savingLanguage, setSavingLanguage] = useState(false);
+  const changeLanguage = async value => {
+    if (savingLanguage) return;
+    setSavingLanguage(true);
+    try { await setLanguage(value); }
+    catch (_) { Alert.alert(t('Jazyk aplikácie'), t('Jazyk sa nepodarilo uložiť. Skús to znova.')); }
+    finally { setSavingLanguage(false); }
+  };
   const { user, account, logout, updateDisplayName } = useAuth();
   const { profile, stats, loading } = useTrips();
   const { status: syncStatus, message: syncMessage } = useCloudSync();
   const drive = useDriveBackup();
   const [openSection, setOpenSection] = useState(account ? null : 'account');
   const toggleSection = key => setOpenSection(current => current === key ? null : key);
-  const accountSummary = !account ? 'Prihlásenie alebo vytvorenie účtu'
-    : syncStatus === 'synced' ? 'Návštevy sú automaticky uložené'
-    : syncMessage || 'Návštevy čakajú na synchronizáciu';
-  const photoSummary = !drive.signedIn ? 'Najprv sa prihlás do účtu'
-    : drive.message || (drive.config ? 'Google Disk je pripojený' : 'Google Disk nie je pripojený');
+  const accountSummary = !account ? t("Prihlásenie alebo vytvorenie účtu")
+    : syncStatus === 'synced' ? t("Návštevy sú automaticky uložené")
+    : syncMessage || t("Návštevy čakajú na synchronizáciu");
+  const photoSummary = !drive.signedIn ? t("Najprv sa prihlás do účtu")
+    : drive.message || (drive.config ? t("Google Disk je pripojený") : t("Google Disk nie je pripojený"));
   const [loggingOut, setLoggingOut] = useState(false);
   const [avatar, setAvatar] = useState(null);
   const [avatarDraft, setAvatarDraft] = useState(null);
@@ -46,19 +57,19 @@ export default function ProfileScreen({ navigation }) {
         aspect: [1, 1], quality: 0.35, base64: true });
       if (result.canceled) return;
       const asset = result.assets[0];
-      if (!asset.base64 || asset.base64.length > 700000) throw new Error('Vyber menšiu fotografiu pre profil.');
+      if (!asset.base64 || asset.base64.length > 700000) throw new Error(t("Vyber menšiu fotografiu pre profil."));
       const uri = `data:image/jpeg;base64,${asset.base64}`;
       setAvatarDraft(uri);
-    } catch (error) { Alert.alert('Profilová fotografia', error.message); }
+    } catch (error) { Alert.alert(t("Profilová fotografia"), t(error.message)); }
     finally { setChoosingPhoto(false); }
   };
-  const name = user?.displayName || profile?.name || 'Cestovateľ';
+  const name = user?.displayName || profile?.name || t("Cestovateľ");
   const initials = name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
   const signOut = async () => {
     if (loggingOut) return;
     setLoggingOut(true);
     try { await logout(); }
-    catch (error) { Alert.alert('Odhlásenie zlyhalo', error.message); setLoggingOut(false); }
+    catch (error) { Alert.alert(t("Odhlásenie zlyhalo"), t(error.message)); setLoggingOut(false); }
   };
   const saveName = async () => {
     if (savingName) return;
@@ -71,37 +82,37 @@ export default function ProfileScreen({ navigation }) {
         setAvatar(avatarDraft);
       }
       setEditingName(false);
-    } catch (error) { Alert.alert('Meno sa nepodarilo uložiť', error.message); }
+    } catch (error) { Alert.alert(t("Meno sa nepodarilo uložiť"), t(error.message)); }
     finally { setSavingName(false); }
   };
   return <ScrollView keyboardShouldPersistTaps="handled" style={styles.screen} contentContainerStyle={styles.container}>
-    <Text style={styles.title}>Môj profil</Text>
+    <Text style={styles.title}>{t("Môj profil")}</Text>
     <View style={styles.identity}>
-      {!editingName ? <Pressable accessibilityRole="button" accessibilityLabel="Upraviť profil"
+      {!editingName ? <Pressable accessibilityRole="button" accessibilityLabel={t("Upraviť profil")}
         onPress={() => { setNameDraft(name); setAvatarDraft(avatar); setEditingName(true); }} style={styles.editProfile}>
         <MaterialIcons name="edit" size={22} color={theme.primary} />
       </Pressable> : null}
       {(editingName ? avatarDraft : avatar) ? <Image source={{ uri: editingName ? avatarDraft : avatar }} style={styles.avatar} />
         : <View style={styles.avatar}><Text style={styles.initials}>{initials || 'T'}</Text></View>}
       {editingName ? <Pressable accessibilityRole="button" onPress={chooseAvatar} disabled={choosingPhoto || savingName}
-        style={{ padding: 8 }}><Text style={{ color: theme.primary }}>{choosingPhoto ? 'Načítavam…' : 'Zmeniť fotografiu'}</Text></Pressable> : null}
+        style={{ padding: 8 }}><Text style={{ color: theme.primary }}>{choosingPhoto ? t("Načítavam…") : t("Zmeniť fotografiu")}</Text></Pressable> : null}
       {editingName ? <View style={styles.nameEditor}>
-        <TextInput autoFocus accessibilityLabel="Zobrazované meno" value={nameDraft} onChangeText={setNameDraft}
-          editable={!savingName} maxLength={50} style={styles.nameInput} placeholder="Tvoje meno alebo prezývka" />
+        <TextInput autoFocus accessibilityLabel={t("Zobrazované meno")} value={nameDraft} onChangeText={setNameDraft}
+          editable={!savingName} maxLength={50} style={styles.nameInput} placeholder={t("Tvoje meno alebo prezývka")} />
         <View style={styles.nameActions}>
-          <Pressable onPress={() => setEditingName(false)} disabled={savingName || choosingPhoto} style={styles.nameAction}><Text style={styles.cancelName}>Zrušiť</Text></Pressable>
+          <Pressable onPress={() => setEditingName(false)} disabled={savingName || choosingPhoto} style={styles.nameAction}><Text style={styles.cancelName}>{t("Zrušiť")}</Text></Pressable>
           <Pressable onPress={saveName} disabled={savingName || choosingPhoto} style={[styles.nameAction, styles.saveName]}>
-            <Text style={styles.saveNameText}>{savingName ? 'Ukladám…' : 'Uložiť profil'}</Text>
+            <Text style={styles.saveNameText}>{savingName ? t("Ukladám…") : t("Uložiť profil")}</Text>
           </Pressable>
         </View>
       </View> : <Text style={styles.name}>{name}</Text>}
-      <Text selectable style={styles.email}>{user?.email || 'Email neuvedený'}</Text>
-      <View style={styles.badge}><Text style={styles.badgeText}>{account ? 'Osobný účet' : 'Bez účtu · iba v telefóne'}</Text></View>
+      <Text selectable style={styles.email}>{user?.email || t("Email neuvedený")}</Text>
+      <View style={styles.badge}><Text style={styles.badgeText}>{account ? t("Osobný účet") : t("Bez účtu · iba v telefóne")}</Text></View>
     </View>
-    <Text style={styles.sectionTitle}>Moje cestovanie</Text>
+    <Text style={styles.sectionTitle}>{t("Moje cestovanie")}</Text>
     <View style={styles.card}>
-      {[{ label: 'Uložené návštevy', value: stats.totalTrips, icon: 'place', route: 'Trips' },
-        { label: 'Navštívené krajiny', value: stats.countriesVisited, icon: 'public', route: 'Map' }].map((item) => (
+      {[{ label: t("Uložené návštevy"), value: stats.totalTrips, icon: 'place', route: 'Trips' },
+        { label: t("Navštívené krajiny"), value: stats.countriesVisited, icon: 'public', route: 'Map' }].map((item) => (
         <Pressable key={item.route} accessibilityRole="button" onPress={() => item.route === 'Map' ? navigation.navigate('Map', { overviewRequest: Date.now() }) : navigation.navigate('Trips', { section: 'visits', countryCode: null, countryName: null })}
           style={({ pressed }) => [styles.row, pressed && { opacity: 0.6 }]}>
           <View style={styles.rowIcon}><MaterialIcons name={item.icon} color={theme.primary} size={22} /></View>
@@ -111,38 +122,52 @@ export default function ProfileScreen({ navigation }) {
         </Pressable>
       ))}
     </View>
-    <Text style={styles.sectionTitle}>Účet a nastavenia</Text>
-    <SettingsSection title="Účet a záloha návštev" summary={accountSummary} icon="cloud-done"
+    <Text style={styles.sectionTitle}>{t("Účet a nastavenia")}</Text>
+    <SettingsSection title={t('Jazyk aplikácie')} summary={language === 'sk' ? 'Slovenčina' : 'English'} icon="language"
+      expanded={openSection === 'language'} onPress={() => toggleSection('language')}>
+      <View style={styles.languageOptions}>
+        {[['en', 'English'], ['sk', 'Slovenčina']].map(([value, label]) =>
+          <Pressable key={value} accessibilityRole="radio" accessibilityState={{ checked: language === value }}
+            disabled={savingLanguage} onPress={() => changeLanguage(value)} style={styles.languageOption}>
+            <Text style={{ color: theme.text }}>{label}</Text>
+            <MaterialIcons name={language === value ? 'radio-button-checked' : 'radio-button-unchecked'} color={theme.primary} size={22} />
+          </Pressable>)}
+        {savingLanguage ? <ActivityIndicator color={theme.primary} /> : null}
+      </View>
+    </SettingsSection>
+    <SettingsSection title={t("Účet a záloha návštev")} summary={accountSummary} icon="cloud-done"
       expanded={openSection === 'account'} onPress={() => toggleSection('account')}>
       <CloudBackupPanel />
     </SettingsSection>
-    <SettingsSection title="Fotografie a Google Disk" summary={photoSummary} icon="photo-library"
+    <SettingsSection title={t("Fotografie a Google Disk")} summary={photoSummary} icon="photo-library"
       expanded={openSection === 'photos'} onPress={() => toggleSection('photos')}>
       <DriveBackupPanel />
     </SettingsSection>
-    <SettingsSection title="Ukladanie a offline režim" summary="Ako sú chránené tvoje údaje" icon="phone-android"
+    <SettingsSection title={t("Ukladanie a offline režim")} summary={t("Ako sú chránené tvoje údaje")} icon="phone-android"
       expanded={openSection === 'storage'} onPress={() => toggleSection('storage')}>
     <View style={styles.storage}>
       <View style={styles.storageHeader}><MaterialIcons name="phone-android" color={theme.primary} size={24} />
-        <Text style={styles.storageTitle}>Uložené v telefóne</Text></View>
-      <Text style={styles.description}>Návštevy si môžeš prezerať aj bez internetu. Na načítanie mapy a vyhľadávanie miest potrebuješ pripojenie.</Text>
-      <Text style={styles.description}>Po pripojení cloudového účtu sa návštevy ukladajú automaticky. Stav vidíš v sekcii Účet a záloha návštev.</Text>
+        <Text style={styles.storageTitle}>{t("Uložené v telefóne")}</Text></View>
+      <Text style={styles.description}>{t("Návštevy si môžeš prezerať aj bez internetu. Na načítanie mapy a vyhľadávanie miest potrebuješ pripojenie.")}</Text>
+      <Text style={styles.description}>{t("Po pripojení cloudového účtu sa návštevy ukladajú automaticky. Stav vidíš v sekcii Účet a záloha návštev.")}</Text>
     </View>
     </SettingsSection>
     <Pressable accessibilityRole="button" disabled={loggingOut} onPress={() => {
-        if (account && syncStatus !== 'synced') Alert.alert('Niektoré zmeny ešte nemusia byť v cloude',
-          'Zostanú v tomto telefóne a odošlú sa po ďalšom prihlásení do rovnakého účtu. Na inom telefóne zatiaľ nemusia byť dostupné.',
-          [{ text: 'Zostať prihlásený', style: 'cancel' }, { text: 'Odhlásiť sa', onPress: signOut }]);
+        if (account && syncStatus !== 'synced') Alert.alert(t("Niektoré zmeny ešte nemusia byť v cloude"),
+          t("Zostanú v tomto telefóne a odošlú sa po ďalšom prihlásení do rovnakého účtu. Na inom telefóne zatiaľ nemusia byť dostupné."),
+          [{ text: t("Zostať prihlásený"), style: 'cancel' }, { text: t("Odhlásiť sa"), onPress: signOut }]);
         else signOut();
       }}
       style={({ pressed }) => [styles.logout, (pressed || loggingOut) && { opacity: 0.6 }]}>
       <MaterialIcons name="logout" color="#b91c1c" size={20} />
-      <Text style={styles.logoutText}>{loggingOut ? 'Odhlasujem…' : 'Odhlásiť sa'}</Text>
+      <Text style={styles.logoutText}>{loggingOut ? 'Odhlasujem…' : t("Odhlásiť sa")}</Text>
     </Pressable>
   </ScrollView>;
 }
 
 const styles = StyleSheet.create({
+  languageOptions: { paddingHorizontal: 16, paddingBottom: 12 },
+  languageOption: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   screen: { flex: 1, backgroundColor: 'transparent' },
   container: { padding: 20, paddingBottom: 28, gap: 16 },
   title: { fontSize: 24, fontWeight: '700', color: theme.text },

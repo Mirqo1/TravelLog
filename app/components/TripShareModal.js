@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+import { useLanguage } from '../context/LanguageContext';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Modal, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -15,6 +17,7 @@ const nativeShare = Platform.OS === 'android' ? requireOptionalNativeModule('Tra
 const localPhotos = photos => photoList(photos).filter(photo => /^(file:|content:)/.test(photoUri(photo) || ''));
 
 export default function TripShareModal({ visible, trip, onClose }) {
+  useLanguage();
   const [selected, setSelected] = useState(null);
   const [includePlace, setIncludePlace] = useState(true);
   const [includeDate, setIncludeDate] = useState(true);
@@ -76,24 +79,24 @@ export default function TripShareModal({ visible, trip, onClose }) {
     try {
       const image = await captureRef(card.current, { format: 'jpg', quality: 0.9, result: 'tmpfile', width: 1080, height: 1350 });
       if (message.trim()) {
-        if (!nativeShare?.shareImageWithText) throw new Error('Zdieľanie obrázka s textom vyžaduje novú Android verziu aplikácie.');
+        if (!nativeShare?.shareImageWithText) throw new Error(t("Zdieľanie obrázka s textom vyžaduje novú Android verziu aplikácie."));
         await nativeShare.shareImageWithText(image, message.trim());
       } else {
-        if (!await Sharing.isAvailableAsync()) throw new Error('Zdieľanie obrázkov nie je na tomto zariadení dostupné.');
-        await Sharing.shareAsync(image, { mimeType: 'image/jpeg', dialogTitle: 'Zdieľať návštevu', UTI: 'public.jpeg' });
+        if (!await Sharing.isAvailableAsync()) throw new Error(t("Zdieľanie obrázkov nie je na tomto zariadení dostupné."));
+        await Sharing.shareAsync(image, { mimeType: 'image/jpeg', dialogTitle: t("Zdieľať návštevu"), UTI: 'public.jpeg' });
       }
-    } catch (error) { Alert.alert('Zdieľanie návštevy', error.message || 'Obrázok sa nepodarilo vytvoriť.'); }
+    } catch (error) { Alert.alert(t("Zdieľanie návštevy"), t(error.message || t("Obrázok sa nepodarilo vytvoriť."))); }
     finally { setBusy(false); }
   };
   if (!trip) return null;
   return <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
     <SafeAreaProvider><SafeAreaView style={styles.screen}>
       <View style={styles.toolbar}>
-        <Text style={styles.heading}>Zdieľať návštevu</Text>
-        <Pressable accessibilityRole="button" onPress={onClose} disabled={busy} style={styles.close}><Text style={styles.link}>Zavrieť</Text></Pressable>
+        <Text style={styles.heading}>{t("Zdieľať návštevu")}</Text>
+        <Pressable accessibilityRole="button" onPress={onClose} disabled={busy} style={styles.close}><Text style={styles.link}>{t("Zavrieť")}</Text></Pressable>
       </View>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.intro}>Takto bude vyzerať obrázok. Poznámky, hodnotenie ani súradnice doň nepridávame.</Text>
+        <Text style={styles.intro}>{t("Takto bude vyzerať obrázok. Poznámky, hodnotenie ani súradnice doň nepridávame.")}</Text>
         <View ref={card} collapsable={false} style={styles.card} {...pan.panHandlers}
           onLayout={event => setFrameWidth(event.nativeEvent.layout.width)}>
           {photo ? <>
@@ -108,7 +111,7 @@ export default function TripShareModal({ visible, trip, onClose }) {
                 setOriginalReady(selected);
                 const source = event?.nativeEvent?.source;
                 if (!size && source?.width > 0 && source?.height > 0) setSourceSize({ width: source.width, height: source.height });
-              }} onError={() => { setOriginalReady(null); setPhotoError('Fotografia sa nepodarila načítať.'); }} />
+              }} onError={() => { setOriginalReady(null); setPhotoError(t("Fotografia sa nepodarila načítať.")); }} />
           </>
             : <View style={styles.photoPlaceholder} />}
           <View style={styles.caption}>
@@ -124,16 +127,16 @@ export default function TripShareModal({ visible, trip, onClose }) {
           </View>
         </View>
         {photo && <Text style={styles.intro}>{geometry?.limitX || geometry?.limitY
-          ? 'Potiahni fotografiu v náhľade. Jej poloha zostane zachovaná aj v zdieľanom obrázku.'
-          : size ? 'Fotografia už presne vypĺňa formát karty, takže ju bez priblíženia nemožno posunúť.' : 'Načítavam rozmery fotografie…'}</Text>}
-        {!!photoError && <Text style={styles.error}>{photoError}</Text>}
+          ? t("Potiahni fotografiu v náhľade. Jej poloha zostane zachovaná aj v zdieľanom obrázku.")
+          : size ? t("Fotografia už presne vypĺňa formát karty, takže ju bez priblíženia nemožno posunúť.") : t("Načítavam rozmery fotografie…")}</Text>}
+        {!!photoError && <Text style={styles.error}>{t(photoError)}</Text>}
         {photos.length ? <>
-          <Text style={styles.label}>Fotografia</Text>
+          <Text style={styles.label}>{t("Fotografia")}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.picker}>
             <Pressable accessibilityRole="button" accessibilityState={{ selected: !photo }}
-              onPress={() => selectPhoto(null)} style={[styles.emptyPhoto, !photo && styles.selected]}><Text style={styles.muted}>Bez fotky</Text></Pressable>
+              onPress={() => selectPhoto(null)} style={[styles.emptyPhoto, !photo && styles.selected]}><Text style={styles.muted}>{t("Bez fotky")}</Text></Pressable>
             {photos.map(item => <Pressable key={photoKey(item)} accessibilityRole="button"
-              accessibilityLabel="Vybrať fotografiu na zdieľanie" accessibilityState={{ selected: selected === photoKey(item) }}
+              accessibilityLabel={t("Vybrať fotografiu na zdieľanie")} accessibilityState={{ selected: selected === photoKey(item) }}
               onPress={() => selectPhoto(photoKey(item))}
               style={[styles.thumbnailFrame, selected === photoKey(item) && styles.selected]}>
               <Image source={{ uri: photoUri(item, true) }} style={styles.thumbnail} />
@@ -141,16 +144,16 @@ export default function TripShareModal({ visible, trip, onClose }) {
           </ScrollView>
         </> : null}
         {!!trip.locationName && <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: includePlace }}
-          onPress={() => setIncludePlace(value => !value)} style={styles.choice}><Text style={styles.check}>{includePlace ? '☑' : '□'}</Text><Text style={styles.choiceText}>Zobraziť lokalitu</Text></Pressable>}
+          onPress={() => setIncludePlace(value => !value)} style={styles.choice}><Text style={styles.check}>{includePlace ? '☑' : '□'}</Text><Text style={styles.choiceText}>{t("Zobraziť lokalitu")}</Text></Pressable>}
         {!!trip.date && <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: includeDate }}
-          onPress={() => setIncludeDate(value => !value)} style={styles.choice}><Text style={styles.check}>{includeDate ? '☑' : '□'}</Text><Text style={styles.choiceText}>Zobraziť dátum návštevy</Text></Pressable>}
-        <Text style={styles.label}>Sprievodný text (voliteľný)</Text>
-        <TextInput value={message} onChangeText={setMessage} multiline maxLength={1000}
-          placeholder="Napíš niečo ku zdieľanej fotke…" placeholderTextColor={theme.muted}
-          accessibilityLabel="Sprievodný text k zdieľanej fotografii" style={styles.message} />
+          onPress={() => setIncludeDate(value => !value)} style={styles.choice}><Text style={styles.check}>{includeDate ? '☑' : '□'}</Text><Text style={styles.choiceText}>{t("Zobraziť dátum návštevy")}</Text></Pressable>}
+        <Text style={styles.label}>{t("Sprievodný text (voliteľný)")}</Text>
+        <TextInput value={t(message)} onChangeText={setMessage} multiline maxLength={1000}
+          placeholder={t("Napíš niečo ku zdieľanej fotke…")} placeholderTextColor={theme.muted}
+          accessibilityLabel={t("Sprievodný text k zdieľanej fotografii")} style={styles.message} />
         <Pressable accessibilityRole="button" disabled={busy || !available} style={[styles.share, (busy || !available) && styles.disabled]}
-          onPress={share}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.shareText}>{!available ? 'Pripravujem fotografiu…' : 'Zdieľať obrázok'}</Text>}</Pressable>
-        <Text style={styles.intro}>Pri zdieľaní sa sprievodný text skopíruje do schránky. Ak ho Messenger nepripojí automaticky, vlož ho do správy ručne. Nič sa neodosiela bez tvojho potvrdenia.</Text>
+          onPress={share}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.shareText}>{!available ? t("Pripravujem fotografiu…") : t("Zdieľať obrázok")}</Text>}</Pressable>
+        <Text style={styles.intro}>{t("Pri zdieľaní sa sprievodný text skopíruje do schránky. Ak ho Messenger nepripojí automaticky, vlož ho do správy ručne. Nič sa neodosiela bez tvojho potvrdenia.")}</Text>
       </ScrollView>
     </SafeAreaView></SafeAreaProvider>
   </Modal>;

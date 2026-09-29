@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+import { useLanguage } from '../context/LanguageContext';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -10,10 +12,11 @@ const getShade = (value) => {
 };
 
 export default function HeatMapVisualization({ countryData, selectedCountry, onSelectCountry }) {
+  useLanguage();
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Heat Mapa (placeholder)</Text>
-      <Text style={styles.subtitle}>Klikni na krajinu pre detail.</Text>
+      <Text style={styles.title}>{t("Heat Mapa (placeholder)")}</Text>
+      <Text style={styles.subtitle}>{t("Klikni na krajinu pre detail.")}</Text>
       <View style={styles.mapLikeGrid}>
         {countryData.map((country) => (
           <Pressable
@@ -29,7 +32,7 @@ export default function HeatMapVisualization({ countryData, selectedCountry, onS
           </Pressable>
         ))}
       </View>
-      <Text style={styles.legend}>Legenda: svetlá = menej návštev, tmavá = viac návštev.</Text>
+      <Text style={styles.legend}>{t("Legenda: svetlá = menej návštev, tmavá = viac návštev.")}</Text>
     </View>
   );
 }

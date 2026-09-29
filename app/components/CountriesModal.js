@@ -1,25 +1,28 @@
+import { t } from '../i18n';
+import { useLanguage } from '../context/LanguageContext';
 import React, { useMemo } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { summarizeCountries, countryDisplayName } from '../utils/mapVisits';
 import { theme } from '../theme';
 export default function CountriesModal({ visible, trips, onClose, onCountry, onMap }) {
+  useLanguage();
   const summary = useMemo(() => summarizeCountries(trips), [trips]);
   const groups = [...summary.groups].sort((a, b) => b.trips.length - a.trips.length || countryDisplayName(a.country).localeCompare(countryDisplayName(b.country), 'sk'));
   return <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
     <SafeAreaProvider><SafeAreaView style={styles.screen}>
-      <View style={styles.row}><Text style={styles.title}>Navštívené krajiny</Text>
-        <Pressable style={styles.touch} onPress={onClose}><Text style={styles.link}>Zavrieť</Text></Pressable></View>
-      <Text style={styles.hint}>Vyber krajinu a zobraz jej návštevy.</Text>
+      <View style={styles.row}><Text style={styles.title}>{t("Navštívené krajiny")}</Text>
+        <Pressable style={styles.touch} onPress={onClose}><Text style={styles.link}>{t("Zavrieť")}</Text></Pressable></View>
+      <Text style={styles.hint}>{t("Vyber krajinu a zobraz jej návštevy.")}</Text>
       <ScrollView style={{ flex: 1 }}>
         {groups.map(({ country, trips: visits }) => <Pressable key={country.code} accessibilityRole="button"
           style={styles.country} onPress={() => onCountry(country)}>
           <Text style={styles.name}>{countryDisplayName(country)}</Text><Text style={styles.count}>{visits.length}×  ›</Text>
         </Pressable>)}
-        {!groups.length ? <Text style={styles.hint}>Zatiaľ nemáš žiadnu navštívenú krajinu.</Text> : null}
-        {summary.unmatched ? <Text style={styles.hint}>Návštevy bez určenej krajiny: {summary.unmatched}. Krajinu môžeš doplniť pri úprave návštevy.</Text> : null}
+        {!groups.length ? <Text style={styles.hint}>{t("Zatiaľ nemáš žiadnu navštívenú krajinu.")}</Text> : null}
+        {summary.unmatched ? <Text style={styles.hint}>{t("Návštevy bez určenej krajiny:")}{' '}{summary.unmatched}{t(". Krajinu môžeš doplniť pri úprave návštevy.")}</Text> : null}
       </ScrollView>
-      <Pressable accessibilityRole="button" style={styles.button} onPress={onMap}><Text style={styles.buttonText}>Zobraziť na mape</Text></Pressable>
+      <Pressable accessibilityRole="button" style={styles.button} onPress={onMap}><Text style={styles.buttonText}>{t("Zobraziť na mape")}</Text></Pressable>
     </SafeAreaView></SafeAreaProvider>
   </Modal>;
 }

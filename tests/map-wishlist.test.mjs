@@ -1,9 +1,11 @@
+import { t, useLanguage } from './helpers/languageMock.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { transformSync } from '@babel/core';
 const load = src => import('data:text/javascript;base64,' + Buffer.from(src).toString('base64'));
 const read = p => readFile(p, 'utf8');
 const map = await load((await read('app/utils/mapVisits.js'))
+  .replace("import { getLanguage } from '../i18n';", "const getLanguage = () => 'sk';")
   .replace("import encodedCountries from '../data/countries.json';", 'const encodedCountries = ' + await read('app/data/countries.json') + ';')
   .replace("import countryLabelPoints from '../data/countryLabelPoints.json';", 'const countryLabelPoints = ' + await read('app/data/countryLabelPoints.json') + ';'));
 let slots = [], index = 0, effects = [], premium = true;
@@ -16,9 +18,9 @@ const hooks = {
    const old = slots[i]; slots[i] = { deps }; effects.push(() => { old?.cleanup?.(); slots[i].cleanup = fn(); });
  } },
 };
-const hostNames = ['MaterialIcons','WishlistModal','WishlistEditor','Modal','Pressable','ScrollView','Text','TextInput','View',
+const hostNames = ['SwipeScreen','MaterialIcons','WishlistModal','WishlistEditor','Modal','Pressable','ScrollView','Text','TextInput','View',
   'SafeAreaProvider','SafeAreaView','MapView','Heatmap','Marker','AddPlaceModal','TripDetailsModal','MapTypeToggle'];
-const mocks = { ...hooks, ...map, ...Object.fromEntries(hostNames.map(n => [n,n])),
+const mocks = { t, useLanguage, ...hooks, ...map, ...Object.fromEntries(hostNames.map(n => [n,n])),
  React: { createElement: (type, props, ...children) => ({ type, props: props || {}, children: children.flat(Infinity).filter(x => x !== null && x !== false && x !== undefined) }) },
  theme: {}, StyleSheet: { create: x => x }, useIsFocused: () => true,
  useWishlist: () => ({ premium, items: [wish] }), useTrips: () => ({ trips: [], addTrip: async () => {}, updateTrip: async () => {}, deleteTrip: async () => {} }),

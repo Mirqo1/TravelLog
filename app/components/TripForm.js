@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+import { useLanguage } from '../context/LanguageContext';
 import { normalizeTags } from '../utils/backup';
 import { usePhotoAccess } from '../hooks/usePhotoAccess';
 import { theme } from '../theme';
@@ -50,6 +52,7 @@ export default function TripForm({
   isSubmitting = false,
   onInputFocus,
 }) {
+  useLanguage();
   const { notebookId } = useTrips();
   const { canAddPhotos: canEditTags } = usePhotoAccess();
   const draftOwner = useRef(notebookId);
@@ -100,7 +103,7 @@ export default function TripForm({
 
   const coordinatesPreview = useMemo(() => {
     if (!form.latitude || !form.longitude) {
-      return 'Vyber miesto na mape alebo zadaj súradnice ručne.';
+      return t("Vyber miesto na mape alebo zadaj súradnice ručne.");
     }
 
     return `Lat: ${form.latitude}, Lng: ${form.longitude}`;
@@ -119,17 +122,17 @@ export default function TripForm({
       const longitude = Number(form.longitude);
 
       if (!form.name.trim()) {
-        throw new Error('Názov výletu je povinný.');
+        throw new Error(t("Názov výletu je povinný."));
       }
 
       if (!form.latitude.trim() || !form.longitude.trim() || !Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
-        throw new Error('Vyber platnú polohu.');
+        throw new Error(t("Vyber platnú polohu."));
       }
 
       const date = parseVisitDate(form.date);
-      if (!date) throw new Error('Zadaj existujúci dátum, napr. 22.9.2026, alebo ho vyber v kalendári.');
-      if (form.visitTime && !validVisitTime(form.visitTime)) throw new Error('Čas musí byť vo formáte HH:MM, napr. 14:30.');
-      if (form.countryCode && !countries.some((country) => country.code === form.countryCode.toUpperCase())) throw new Error('Zadaj platný dvojpísmenový kód krajiny, napr. SK alebo HU.');
+      if (!date) throw new Error(t("Zadaj existujúci dátum, napr. 22.9.2026, alebo ho vyber v kalendári."));
+      if (form.visitTime && !validVisitTime(form.visitTime)) throw new Error(t("Čas musí byť vo formáte HH:MM, napr. 14:30."));
+      if (form.countryCode && !countries.some((country) => country.code === form.countryCode.toUpperCase())) throw new Error(t("Zadaj platný dvojpísmenový kód krajiny, napr. SK alebo HU."));
 
       await onSubmit({
         name: form.name.trim(),
@@ -145,7 +148,7 @@ export default function TripForm({
         photos,
       });
     } catch (error) {
-      Alert.alert('Formulár', error.message);
+      Alert.alert(t("Formulár"), t(error.message));
     } finally {
       submitLock.current = false;
       setSaving(false);
@@ -158,7 +161,7 @@ export default function TripForm({
       <TextInput
         onFocus={onInputFocus}
         style={styles.input}
-        placeholder="Názov výletu"
+        placeholder={t("Názov výletu")}
         value={form.name}
         onChangeText={(value) => updateField('name', value)}
       />
@@ -166,7 +169,7 @@ export default function TripForm({
         onFocus={onInputFocus}
         style={[styles.input, styles.multiline]}
         multiline
-        placeholder="Popis návštevy"
+        placeholder={t("Popis návštevy")}
         value={form.description}
         onChangeText={(value) => updateField('description', value)}
       />
@@ -196,23 +199,23 @@ export default function TripForm({
         />
       </View>
       <Text style={styles.helper}>{coordinatesPreview}</Text>
-      <Text style={styles.sectionLabel}>Krajina</Text>
+      <Text style={styles.sectionLabel}>{t("Krajina")}</Text>
       <CountryPicker value={form.countryCode} onChange={(value) => updateField('countryCode', value)} />
-      <Text style={styles.helper}>Ak automaticky určená krajina nesedí, vyber správnu.</Text>
-      <Text style={styles.sectionLabel}>Dátum návštevy</Text>
+      <Text style={styles.helper}>{t("Ak automaticky určená krajina nesedí, vyber správnu.")}</Text>
+      <Text style={styles.sectionLabel}>{t("Dátum návštevy")}</Text>
       <View style={styles.row}>
         <TextInput onFocus={onInputFocus} style={[styles.input, styles.halfInput]} placeholder="DD.MM.RRRR" value={form.date}
-          accessibilityLabel="Dátum návštevy" onChangeText={(value) => updateField('date', value)} />
+          accessibilityLabel={t("Dátum návštevy")} onChangeText={(value) => updateField('date', value)} />
         <Pressable accessibilityRole="button" accessibilityState={{ expanded: calendarOpen }} style={[styles.button, styles.secondary]}
-          onPress={() => { Keyboard.dismiss(); setCalendarOpen((open) => !open); }}><Text style={styles.secondaryText}>Kalendár</Text></Pressable>
+          onPress={() => { Keyboard.dismiss(); setCalendarOpen((open) => !open); }}><Text style={styles.secondaryText}>{t("Kalendár")}</Text></Pressable>
       </View>
       {calendarOpen ? <VisitCalendar value={form.date} onSelect={(date) => { updateField('date', displayDate(date)); setCalendarOpen(false); }} /> : null}
-      <Text style={styles.sectionLabel}>Čas návštevy</Text>
-      <TextInput onFocus={onInputFocus} style={styles.input} placeholder="HH:MM (nepovinné)" value={form.visitTime}
-        accessibilityLabel="Čas návštevy" maxLength={5} onChangeText={(value) => updateField('visitTime', value)} />
-      <Pressable accessibilityRole="button" onPress={() => updateField('visitTime', '')} style={{ paddingVertical: 8 }}><Text style={{ color: theme.primary }}>Čas nepoznám</Text></Pressable>
+      <Text style={styles.sectionLabel}>{t("Čas návštevy")}</Text>
+      <TextInput onFocus={onInputFocus} style={styles.input} placeholder={t("HH:MM (nepovinné)")} value={form.visitTime}
+        accessibilityLabel={t("Čas návštevy")} maxLength={5} onChangeText={(value) => updateField('visitTime', value)} />
+      <Pressable accessibilityRole="button" onPress={() => updateField('visitTime', '')} style={{ paddingVertical: 8 }}><Text style={{ color: theme.primary }}>{t("Čas nepoznám")}</Text></Pressable>
       <View style={styles.ratingRow}>
-        <Text style={styles.sectionLabel}>Hodnotenie</Text>
+        <Text style={styles.sectionLabel}>{t("Hodnotenie")}</Text>
         <View style={styles.ratingButtons}>
           {[1, 2, 3, 4, 5].map((value) => (
             <Pressable
@@ -229,27 +232,27 @@ export default function TripForm({
         onFocus={onInputFocus}
         style={[styles.input, styles.multiline]}
         multiline
-        placeholder="Poznámky"
+        placeholder={t("Poznámky")}
         value={form.notes}
         onChangeText={(value) => updateField('notes', value)}
       />
       {canEditTags ? <View style={{ gap: 6 }}>
-        <Text style={styles.sectionLabel}>Štítky · Premium</Text>
+        <Text style={styles.sectionLabel}>{t("Štítky · Premium")}</Text>
         <TextInput onFocus={onInputFocus} style={styles.input} value={form.tags}
-          accessibilityLabel="Štítky návštevy" placeholder="rodina, turistika, múzeum"
+          accessibilityLabel={t("Štítky návštevy")} placeholder={t("rodina, turistika, múzeum")}
           maxLength={320} onChangeText={(value) => updateField('tags', value)} />
-        <Text style={styles.helper}>Oddeľ čiarkou. Najviac 8 štítkov po 30 znakov; nájdeš ich aj cez vyhľadávanie.</Text>
-      </View> : form.tags ? <Text style={styles.helper}>Štítky: {form.tags}</Text> : null}
+        <Text style={styles.helper}>{t("Oddeľ čiarkou. Najviac 8 štítkov po 30 znakov; nájdeš ich aj cez vyhľadávanie.")}</Text>
+      </View> : form.tags ? <Text style={styles.helper}>{t("Štítky:")}{' '}{form.tags}</Text> : null}
       <VisitPhotoEditor photos={photos} onChange={setPhotos} onImport={importPhotos}
         disabled={saving || isSubmitting} onBusy={setPhotosBusy} />
       <View style={styles.actions}>
         {onCancel ? (
           <Pressable style={[styles.button, styles.secondary]} disabled={saving} onPress={onCancel}>
-            <Text style={styles.secondaryText}>Zrušiť</Text>
+            <Text style={styles.secondaryText}>{t("Zrušiť")}</Text>
           </Pressable>
         ) : null}
         <Pressable style={[styles.button, styles.primary]} disabled={isSubmitting || saving || photosBusy} onPress={handleSubmit}>
-          <Text style={styles.primaryText}>{isSubmitting || saving ? 'Ukladám...' : submitLabel}</Text>
+          <Text style={styles.primaryText}>{isSubmitting || saving ? t("Ukladám...") : submitLabel}</Text>
         </Pressable>
       </View>
     </View>

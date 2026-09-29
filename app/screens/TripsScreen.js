@@ -1,3 +1,6 @@
+import { t } from '../i18n';
+import { useLanguage } from '../context/LanguageContext';
+import { SwipeScreen } from '../components/SwipeTabs';
 import { useWishlist } from '../context/WishlistContext';
 import WishlistModal from '../components/WishlistModal';
 import VisitYearTimeline from '../components/VisitYearTimeline';
@@ -22,13 +25,14 @@ import PlaceListItem from '../components/PlaceListItem';
 import TripDetailsModal from '../components/TripDetailsModal';
 import { useTrips } from '../context/TripsContext';
 
-import { countryForTrip } from '../utils/mapVisits';
+import { countries, countryDisplayName, countryForTrip } from '../utils/mapVisits';
 import { displayVisitDate } from '../utils/visitDate';
 import { compareTripsNewest } from '../utils/tripOrder';
 
 const normalizeSearch = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 export default function TripsScreen({ route, navigation }) {
+  useLanguage();
   const { trips, loading, refreshing, refreshTrips, updateTrip, deleteTrip } = useTrips();
   const { items: dreams, ready: dreamsReady } = useWishlist();
   const countryCode = route.params?.countryCode;
@@ -96,7 +100,7 @@ export default function TripsScreen({ route, navigation }) {
     const pending = jump.current;
     if (!pending) return;
     if (++pending.attempts > 12) {
-      cancelJump(); setJumpMessage('Presný skok sa nepodaril. Môžeš pokračovať posúvaním zoznamu.'); return;
+      cancelJump(); setJumpMessage(t("Presný skok sa nepodaril. Môžeš pokračovať posúvaním zoznamu.")); return;
     }
     listRef.current?.scrollToOffset({ offset: Math.max(0, info.averageItemLength * info.index), animated: false });
     clearTimeout(retryTimer.current);
@@ -106,10 +110,10 @@ export default function TripsScreen({ route, navigation }) {
     cancelJump();
     if (!jumpRequest || section !== 'visits') return;
     const index = yearJumpIndex(filteredTrips, jumpRequest.year, sortBy === 'oldest');
-    if (index < 0) { setJumpMessage('Pre aktuálne filtre nie sú dostupné žiadne návštevy.'); return; }
+    if (index < 0) { setJumpMessage(t("Pre aktuálne filtre nie sú dostupné žiadne návštevy.")); return; }
     const actualYear = visitYear(filteredTrips[index]);
-    const message = actualYear === jumpRequest.year ? `Návštevy v roku ${actualYear}`
-      : `Rok ${jumpRequest.year} nemá zodpovedajúce návštevy. Presúvam na rok ${actualYear}.`;
+    const message = actualYear === jumpRequest.year ? t("Návštevy v roku {0}", {0: actualYear})
+      : t("Rok {0} nemá zodpovedajúce návštevy. Presúvam na rok {1}.", {0: jumpRequest.year, 1: actualYear});
     setJumpMessage(actualYear === jumpRequest.year ? '' : message); AccessibilityInfo.announceForAccessibility(message);
     jump.current = { id: filteredTrips[index].id, attempts: 0 };
     retryTimer.current = setTimeout(attemptJump, 80);
@@ -120,24 +124,24 @@ export default function TripsScreen({ route, navigation }) {
     if (sortBy !== 'newest' && sortBy !== 'oldest') setSortBy('newest');
     setJumpRequest({ year, request: Date.now() });
   };
-  const sectionTabs = <View style={styles.sectionTabs} accessibilityRole="tablist">
-    {[['visits', 'Návštevy'], ['dreams', 'Moje sny']].map(([key, label]) =>
+  const sectionTabs = <SwipeScreen navigation={navigation} route={{ name: 'Trips' }} style={null}><View style={styles.sectionTabs} accessibilityRole="tablist">
+    {[['visits', t("Návštevy")], ['dreams', t("Moje sny")]].map(([key, label]) =>
       <Pressable key={key} accessibilityRole="tab" accessibilityState={{ selected: section === key }}
         onPress={() => { cancelJump(); setSection(key); navigation.setParams({ section: key }); }}
         style={[styles.sectionTab, section === key && styles.sectionTabActive]}>
         <Text style={[styles.sectionLabel, section === key && { color: '#fff' }]}>{label} · {key === 'visits' ? trips.length : dreamsReady ? dreams.length : '…'}</Text>
       </Pressable>)}
-  </View>;
+  </View></SwipeScreen>;
 
   const requestDelete = (trip) => {
-    Alert.alert('Zmazať výlet?', `Naozaj chceš vymazať ${trip.name}?`, [
-      { text: 'Zrušiť', style: 'cancel' },
+    Alert.alert(t("Zmazať výlet?"), t("Naozaj chceš vymazať {0}?", {0: trip.name}), [
+      { text: t("Zrušiť"), style: 'cancel' },
       {
-        text: 'Zmazať',
+        text: t("Zmazať"),
         style: 'destructive',
         onPress: async () => {
           try { await deleteTrip(trip.id); }
-          catch (error) { Alert.alert('Vymazanie zlyhalo', error.message); return; }
+          catch (error) { Alert.alert(t("Vymazanie zlyhalo"), t(error.message)); return; }
           if (selectedTrip?.id === trip.id) {
             setSelectedTrip(null);
           }
@@ -175,24 +179,24 @@ export default function TripsScreen({ route, navigation }) {
         keyboardDismissMode="on-drag"
         ListHeaderComponent={<View style={styles.listHeader}>
       {sectionTabs}
-      {countryCode ? <Pressable onPress={() => navigation.setParams({ countryCode: null, countryName: null })} accessibilityRole="button" accessibilityLabel="Zrušiť filter krajiny" style={[styles.chip, styles.countryFilter]}>
-        <Text>{route.params.countryName || countryCode} · Zrušiť filter ×</Text>
+      {countryCode ? <Pressable onPress={() => navigation.setParams({ countryCode: null, countryName: null })} accessibilityRole="button" accessibilityLabel={t("Zrušiť filter krajiny")} style={[styles.chip, styles.countryFilter]}>
+        <Text>{countryDisplayName(countries.find(country => country.code === countryCode)) || route.params.countryName || countryCode}{' '}{t("· Zrušiť filter ×")}</Text>
       </Pressable> : null}
       <AddVisitButton />
       <TextInput
         style={styles.searchInput}
-        placeholder="Hľadať názov, lokalitu alebo dátum"
+        placeholder={t("Hľadať názov, lokalitu alebo dátum")}
         value={search}
         onChangeText={setSearch}
       />
 
-      <Text style={{ marginBottom: 6, color: theme.muted }}>Zoradiť podľa</Text>
+      <Text style={{ marginBottom: 6, color: theme.muted }}>{t("Zoradiť podľa")}</Text>
       <View style={styles.chipRow}>
         {[
-          ['newest', 'Najnovšie'],
-          ['oldest', 'Najstaršie'],
-          ['added', 'Posledné pridané'],
-          ['name', 'Názov A–Z'],
+          ['newest', t("Najnovšie")],
+          ['oldest', t("Najstaršie")],
+          ['added', t("Posledné pridané")],
+          ['name', t("Názov A–Z")],
         ].map(([value, label]) => (
           <Text
             key={value}
@@ -206,14 +210,14 @@ export default function TripsScreen({ route, navigation }) {
 
       {trips.length > 0 ? <VisitYearTimeline min={range.min} max={range.max} value={visibleYear}
         onSelect={selectYear} onDragging={setDraggingYear} /> : null}
-      {jumpMessage ? <Text accessibilityLiveRegion="polite" style={styles.jumpMessage}>{jumpMessage}</Text> : null}
+      {jumpMessage ? <Text accessibilityLiveRegion="polite" style={styles.jumpMessage}>{t(jumpMessage)}</Text> : null}
         </View>}
         data={filteredTrips}
         keyExtractor={(item) => item.id}
         renderItem={({ item, index }) => (
           <View>
           {visitYear(item) !== visitYear(filteredTrips[index - 1]) && (sortBy === 'newest' || sortBy === 'oldest') ?
-            <Text style={styles.yearHeading}>{visitYear(item) || 'Bez dátumu'}</Text> : null}
+            <Text style={styles.yearHeading}>{visitYear(item) || t("Bez dátumu")}</Text> : null}
           <PlaceListItem
             trip={item}
             onDetail={() => setSelectedTrip(item)}
@@ -222,7 +226,7 @@ export default function TripsScreen({ route, navigation }) {
           />
           </View>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>{search.trim() ? 'Žiadna návšteva nezodpovedá hľadaniu.' : 'Zatiaľ nemáš žiadne výlety.'}</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>{search.trim() ? t("Žiadna návšteva nezodpovedá hľadaniu.") : t("Zatiaľ nemáš žiadne výlety.")}</Text>}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshTrips} />}
         contentContainerStyle={styles.listContent}
       />}
@@ -243,8 +247,8 @@ export default function TripsScreen({ route, navigation }) {
         initialTrip={editingTrip}
         onClose={() => setEditingTrip(null)}
         onSave={handleEditSave}
-        title="Upraviť výlet"
-        submitLabel="Uložiť zmeny"
+        title={t("Upraviť výlet")}
+        submitLabel={t("Uložiť zmeny")}
       />
     </View>
   );

@@ -208,3 +208,24 @@ person to a visit require membership/invitation records, access revocation,
 Firestore rules, and a photo-sharing design: Drive's hidden app data is private
 to each account and cannot grant group members access. Specify ownership,
 editing rights, removal, and notification behavior before implementing them.
+
+## Accepted language and navigation update (2026-09-29)
+
+English default and saved English/Slovak selection are implemented in Profile
+and on the initial account screen. UI dictionaries are centralized; personal
+visit text is preserved. Country labels follow the selected language where
+Intl.DisplayNames is available. Additional languages require reviewed translations.
+
+Main tabs now support deliberate horizontal swipes on the bottom menu. Home and
+Profile also support content swipes. Trips supports its section header and Map
+its title header; map pan/pinch, visit-card actions, year slider and photo gestures
+are preserved. Vertical scroll, short drags, multi-touch and keyboard input do
+not change tabs. See LANGUAGE_AND_NAVIGATION.md for checks and device acceptance.
+
+The unrequested visit-calendar browsing feature was removed at Miroslav's
+request. Keep work within recorded requirements; the calendar in the visit form
+for entering a date remains the previously approved feature.
+
+Share crop now uses one positioned original image for both preview and capture,
+so releasing the finger keeps the chosen offset. Miroslav reports sharing has
+been verified. Second-device account/photo restore is still deferred.

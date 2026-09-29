@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+import { useLanguage } from '../context/LanguageContext';
 import React, { useEffect, useRef, useState } from 'react';
 import { FlatList, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -7,16 +9,18 @@ import { photoKey, photoList } from '../utils/visitPhotos';
 import { photoUri } from '../services/visitPhotoService';
 
 export function VisitPhotoImage({ photo, thumbnail = false, style, resizeMode = 'cover' }) {
+  useLanguage();
   const uri = photoUri(photo, thumbnail);
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [uri]);
   if (!uri || failed) return <View style={[styles.missing, style]}>
     <MaterialIcons name="broken-image" color={theme.muted} size={28} />
-    <Text style={styles.missingText}>Fotografia nie je dostupná</Text>
+    <Text style={styles.missingText}>{t("Fotografia nie je dostupná")}</Text>
   </View>;
-  return <Image source={{ uri }} style={style} resizeMode={resizeMode} onError={() => setFailed(true)} accessibilityLabel="Fotografia návštevy" />;
+  return <Image source={{ uri }} style={style} resizeMode={resizeMode} onError={() => setFailed(true)} accessibilityLabel={t("Fotografia návštevy")} />;
 }
 export function VisitPhotoCover({ photos }) {
+  useLanguage();
   const items = photoList(photos);
   if (!items.length) return null;
   return <View style={styles.coverFrame}>
@@ -25,6 +29,7 @@ export function VisitPhotoCover({ photos }) {
   </View>;
 }
 export function VisitPhotoGallery({ photos, title }) {
+  useLanguage();
   const items = photoList(photos);
   const [selected, setSelected] = useState(null);
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
@@ -38,16 +43,16 @@ export function VisitPhotoGallery({ photos, title }) {
     pager.current?.scrollToIndex({ index: nextIndex, animated: true });
   };
   return <View style={styles.gallery}>
-    <Text style={styles.heading}>Fotografie <Text style={styles.subtle}>· {items.length}</Text></Text>
+    <Text style={styles.heading}>{t("Fotografie")}{' '}<Text style={styles.subtle}>· {items.length}</Text></Text>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-      {items.map((item, i) => <Pressable key={photoKey(item)} accessibilityRole="button" accessibilityLabel={`Otvoriť fotografiu ${i + 1}`}
+      {items.map((item, i) => <Pressable key={photoKey(item)} accessibilityRole="button" accessibilityLabel={t("Otvoriť fotografiu {0}", {0: i + 1})}
         onPress={() => setSelected(photoKey(item))}><VisitPhotoImage photo={item} thumbnail style={styles.thumb} /></Pressable>)}
     </ScrollView>
-    <Text style={styles.note}>Fotografie v telefóne môžeš zálohovať na svoj Google Disk cez Profil.</Text>
+    <Text style={styles.note}>{t("Fotografie v telefóne môžeš zálohovať na svoj Google Disk cez Profil.")}</Text>
     <Modal visible={!!photo} animationType="fade" onRequestClose={() => setSelected(null)}>
       <SafeAreaProvider><SafeAreaView style={styles.viewer}>
         <View style={styles.viewerBar}><Text style={styles.viewerTitle} numberOfLines={2}>{title}</Text>
-          <Pressable accessibilityRole="button" onPress={() => setSelected(null)} style={styles.control}><Text style={styles.white}>Zavrieť</Text></Pressable></View>
+          <Pressable accessibilityRole="button" onPress={() => setSelected(null)} style={styles.control}><Text style={styles.white}>{t("Zavrieť")}</Text></Pressable></View>
         <View style={{ flex: 1 }} onLayout={({ nativeEvent: { layout } }) => {
           setViewport(previous => previous.width === layout.width && previous.height === layout.height
             ? previous : { width: layout.width, height: layout.height });
@@ -68,9 +73,9 @@ export function VisitPhotoGallery({ photos, title }) {
           /> : null}
         </View>
         <View style={styles.viewerBar}>
-          <Pressable accessibilityRole="button" disabled={index <= 0} onPress={() => showPhoto(index - 1)} style={[styles.control, index <= 0 && styles.disabled]}><Text style={styles.white}>‹ Predošlá</Text></Pressable>
+          <Pressable accessibilityRole="button" disabled={index <= 0} onPress={() => showPhoto(index - 1)} style={[styles.control, index <= 0 && styles.disabled]}><Text style={styles.white}>{t("‹ Predošlá")}</Text></Pressable>
           <Text style={styles.white}>{index + 1} / {items.length}</Text>
-          <Pressable accessibilityRole="button" disabled={index >= items.length - 1} onPress={() => showPhoto(index + 1)} style={[styles.control, index >= items.length - 1 && styles.disabled]}><Text style={styles.white}>Ďalšia ›</Text></Pressable>
+          <Pressable accessibilityRole="button" disabled={index >= items.length - 1} onPress={() => showPhoto(index + 1)} style={[styles.control, index >= items.length - 1 && styles.disabled]}><Text style={styles.white}>{t("Ďalšia ›")}</Text></Pressable>
         </View>
       </SafeAreaView></SafeAreaProvider>
     </Modal>

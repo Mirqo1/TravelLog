@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+import { useLanguage } from '../context/LanguageContext';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -15,6 +17,7 @@ const Shell = ({ children, onClose }) => <Modal visible animationType="slide" on
 </Modal>;
 
 export function WishlistEditor({ place, onClose }) {
+  useLanguage();
   const { save } = useWishlist();
   const [draft, setDraft] = useState({ ...place, location: place.location || { latitude: place.latitude, longitude: place.longitude } });
   const [busy, setBusy] = useState(false);
@@ -33,10 +36,10 @@ export function WishlistEditor({ place, onClose }) {
   useEffect(() => {
     let alive = true;
     if (!place.locationName) {
-      setHint('Dohľadávam lokalitu…');
+      setHint(t("Dohľadávam lokalitu…"));
       findLocationDetails(draft.location).then(details => {
         if (alive) { if (!locationEdited.current) setDraft(old => ({ ...old, ...details })); setHint(''); }
-      }).catch(() => { if (alive) setHint('Lokalitu môžeš doplniť ručne. Súradnice zostávajú uložené.'); });
+      }).catch(() => { if (alive) setHint(t("Lokalitu môžeš doplniť ručne. Súradnice zostávajú uložené.")); });
     }
     return () => { alive = false; };
   }, []);
@@ -44,33 +47,34 @@ export function WishlistEditor({ place, onClose }) {
     if (locked.current) return;
     locked.current = true; setBusy(true);
     try { await save(draft); onClose(); }
-    catch (error) { Alert.alert('Moje sny', error.message); }
+    catch (error) { Alert.alert(t("Moje sny"), t(error.message)); }
     finally { locked.current = false; setBusy(false); }
   };
   return <Shell onClose={() => { if (!locked.current) onClose(); }}>
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView ref={scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
-        <Text style={styles.title}>{place.id ? 'Upraviť želané miesto' : 'Chcem navštíviť'}</Text>
-        <Text style={styles.muted}>Odlož si miesto na neskôr. Do návštev sa zatiaľ nezapočíta.</Text>
-        <Text style={styles.label}>Názov miesta</Text>
-        <TextInput onFocus={onFocus} accessibilityLabel="Názov miesta" style={styles.input} maxLength={160} value={draft.name || ''} editable={!busy}
-          onChangeText={name => setDraft(old => ({ ...old, name }))} placeholder="Napr. ZOO Košice" />
-        <Text style={styles.label}>Lokalita</Text>
-        <TextInput onFocus={onFocus} accessibilityLabel="Lokalita" style={styles.input} maxLength={300} value={draft.locationName || ''} editable={!busy}
+        <Text style={styles.title}>{place.id ? t("Upraviť želané miesto") : t("Chcem navštíviť")}</Text>
+        <Text style={styles.muted}>{t("Odlož si miesto na neskôr. Do návštev sa zatiaľ nezapočíta.")}</Text>
+        <Text style={styles.label}>{t("Názov miesta")}</Text>
+        <TextInput onFocus={onFocus} accessibilityLabel={t("Názov miesta")} style={styles.input} maxLength={160} value={draft.name || ''} editable={!busy}
+          onChangeText={name => setDraft(old => ({ ...old, name }))} placeholder={t("Napr. ZOO Košice")} />
+        <Text style={styles.label}>{t("Lokalita")}</Text>
+        <TextInput onFocus={onFocus} accessibilityLabel={t("Lokalita")} style={styles.input} maxLength={300} value={draft.locationName || ''} editable={!busy}
           onChangeText={locationName => { locationEdited.current = true; setDraft(old => ({ ...old, locationName })); }} />
-        {hint ? <Text style={styles.muted}>{hint}</Text> : null}
+        {hint ? <Text style={styles.muted}>{t(hint)}</Text> : null}
         <Text style={styles.muted}>{draft.location.latitude.toFixed(5)}, {draft.location.longitude.toFixed(5)}</Text>
-        <Text style={styles.label}>Moje poznámky</Text>
-        <TextInput onFocus={onFocus} accessibilityLabel="Moje poznámky" style={[styles.input, { minHeight: 100, textAlignVertical: 'top' }]} multiline maxLength={2000}
-          value={draft.notes || ''} editable={!busy} onChangeText={notes => setDraft(old => ({ ...old, notes }))} placeholder="Čo tu chcem vidieť…" />
-        <Button disabled={busy || !draft.name?.trim()} onPress={submit}>{busy ? 'Ukladám…' : 'Uložiť medzi moje sny'}</Button>
-        <Pressable accessibilityRole="button" disabled={busy} onPress={onClose} style={styles.link}><Text style={[styles.muted, { textAlign: 'center' }]}>Zrušiť</Text></Pressable>
+        <Text style={styles.label}>{t("Moje poznámky")}</Text>
+        <TextInput onFocus={onFocus} accessibilityLabel={t("Moje poznámky")} style={[styles.input, { minHeight: 100, textAlignVertical: 'top' }]} multiline maxLength={2000}
+          value={draft.notes || ''} editable={!busy} onChangeText={notes => setDraft(old => ({ ...old, notes }))} placeholder={t("Čo tu chcem vidieť…")} />
+        <Button disabled={busy || !draft.name?.trim()} onPress={submit}>{busy ? t("Ukladám…") : t("Uložiť medzi moje sny")}</Button>
+        <Pressable accessibilityRole="button" disabled={busy} onPress={onClose} style={styles.link}><Text style={[styles.muted, { textAlign: 'center' }]}>{t("Zrušiť")}</Text></Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   </Shell>;
 }
 
 export default function WishlistModal({ visible, onClose, onMap, embedded = false, header }) {
+  useLanguage();
   const { items, premium, preview, ready, message, remove, sync } = useWishlist();
   const { addTrip } = useTrips();
   const [editing, setEditing] = useState(null);
@@ -86,58 +90,58 @@ export default function WishlistModal({ visible, onClose, onMap, embedded = fals
   if (editing) return <WishlistEditor place={editing} onClose={() => setEditing(null)} />;
   if (visiting) {
     const { id } = visiting;
-    return <AddPlaceModal visible title="Navštívil som toto miesto" submitLabel="Uložiť návštevu" initialTrip={visitInitial}
+    return <AddPlaceModal visible title={t("Navštívil som toto miesto")} submitLabel={t("Uložiť návštevu")} initialTrip={visitInitial}
       onClose={() => setVisiting(null)} onSave={async data => {
         // Stable visit ID makes retries safe if saving the removal fails after the visit was saved.
         await addTrip(data, id);
         await remove(visiting);
         setVisiting(null);
-        Alert.alert('Hotovo', 'Miesto je teraz medzi návštevami.');
+        Alert.alert('Hotovo', t("Miesto je teraz medzi návštevami."));
       }} />;
   }
   const normalized = text => String(text).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const filtered = items.filter(item => normalized(`${item.name} ${item.locationName}`).includes(normalized(query)));
-  const removeItem = item => Alert.alert('Odstrániť z mojich snov?', item.name, [
-    { text: 'Zrušiť', style: 'cancel' }, { text: 'Odstrániť', style: 'destructive', onPress: () => remove(item).catch(error => Alert.alert('Moje sny', error.message)) },
+  const removeItem = item => Alert.alert(t("Odstrániť z mojich snov?"), item.name, [
+    { text: t("Zrušiť"), style: 'cancel' }, { text: t("Odstrániť"), style: 'destructive', onPress: () => remove(item).catch(error => Alert.alert(t("Moje sny"), t(error.message))) },
   ]);
   const Container = embedded ? View : Shell;
   return <Container onClose={onClose} style={{ flex: 1 }}>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, embedded && { padding: 0, paddingBottom: 24 }]}>
       {header}
       {!embedded ? <View style={styles.headingRow}>
-        <Text style={[styles.title, { flex: 1 }]}>Moje sny</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="Zavrieť moje sny" onPress={onClose} style={styles.iconButton}>
+        <Text style={[styles.title, { flex: 1 }]}>{t("Moje sny")}</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel={t("Zavrieť moje sny")} onPress={onClose} style={styles.iconButton}>
           <MaterialIcons name="close" size={24} color={theme.text} />
         </Pressable>
       </View> : null}
-      <Text style={styles.muted}>Moje sny · Premium{preview ? ' · testovací prístup' : ''}</Text>
+      <Text style={styles.muted}>{t("Moje sny · Premium")}{preview ? t(' · testovací prístup') : ''}</Text>
       <View style={styles.headingRow}>
-        <Text accessibilityLiveRegion="polite" style={[styles.muted, { flex: 1 }]}>{message}</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="Synchronizovať moje sny" onPress={sync} style={styles.iconButton}>
+        <Text accessibilityLiveRegion="polite" style={[styles.muted, { flex: 1 }]}>{t(message)}</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel={t("Synchronizovať moje sny")} onPress={sync} style={styles.iconButton}>
           <MaterialIcons name="sync" size={22} color={theme.primary} />
         </Pressable>
       </View>
-      {!premium ? <Text style={styles.muted}>Nové miesta môžeš ukladať s Premium. Svoje uložené miesta môžeš naďalej prezerať, odstrániť alebo zaznamenať ako návštevu.</Text> : null}
-      <Button disabled={!premium || !ready} onPress={() => { onClose(); onMap(); }}>+ Vybrať miesto na mape</Button>
-      <TextInput accessibilityLabel="Hľadať v mojich snoch" style={styles.input} value={query} onChangeText={setQuery} placeholder="Hľadať v uložených miestach" />
-      {!filtered.length ? <Text style={styles.muted}>{!ready ? 'Načítavam…' : query ? 'Žiadne zodpovedajúce miesta.' : 'Tvoje budúce dobrodružstvá začínajú tu. Vyber miesto na mape a ulož si ho.'}</Text> : null}
+      {!premium ? <Text style={styles.muted}>{t("Nové miesta môžeš ukladať s Premium. Svoje uložené miesta môžeš naďalej prezerať, odstrániť alebo zaznamenať ako návštevu.")}</Text> : null}
+      <Button disabled={!premium || !ready} onPress={() => { onClose(); onMap(); }}>{t("+ Vybrať miesto na mape")}</Button>
+      <TextInput accessibilityLabel={t("Hľadať v mojich snoch")} style={styles.input} value={query} onChangeText={setQuery} placeholder={t("Hľadať v uložených miestach")} />
+      {!filtered.length ? <Text style={styles.muted}>{!ready ? t("Načítavam…") : query ? t("Žiadne zodpovedajúce miesta.") : t("Tvoje budúce dobrodružstvá začínajú tu. Vyber miesto na mape a ulož si ho.")}</Text> : null}
       {filtered.map(item => <View key={item.id} style={styles.card}>
         <View style={styles.headingRow}>
           <Text style={[styles.name, { flex: 1 }]}>{item.name}</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel={`Možnosti miesta ${item.name}`} style={styles.iconButton}
-            onPress={() => Alert.alert(item.name, 'Možnosti miesta', [
-              ...(premium ? [{ text: 'Upraviť', onPress: () => setEditing(item) }] : []),
-              { text: 'Odstrániť', style: 'destructive', onPress: () => removeItem(item) },
-              { text: 'Zrušiť', style: 'cancel' },
+          <Pressable accessibilityRole="button" accessibilityLabel={t("Možnosti miesta {0}", {0: item.name})} style={styles.iconButton}
+            onPress={() => Alert.alert(item.name, t("Možnosti miesta"), [
+              ...(premium ? [{ text: t("Upraviť"), onPress: () => setEditing(item) }] : []),
+              { text: t("Odstrániť"), style: 'destructive', onPress: () => removeItem(item) },
+              { text: t("Zrušiť"), style: 'cancel' },
             ])}><MaterialIcons name="more-vert" size={24} color={theme.muted} /></Pressable>
         </View>
         <Text style={styles.muted}>{item.locationName || `${item.location.latitude.toFixed(4)}, ${item.location.longitude.toFixed(4)}`}</Text>
         {item.notes ? <Text style={styles.muted}>{item.notes}</Text> : null}
         <View style={styles.cardActions}>
           <Pressable accessibilityRole="button" style={styles.mapLink} onPress={() => { onClose(); onMap(item); }}>
-            <MaterialIcons name="place" size={20} color={theme.primary} /><Text style={styles.label}>Na mape</Text>
+            <MaterialIcons name="place" size={20} color={theme.primary} /><Text style={styles.label}>{t("Na mape")}</Text>
           </Pressable>
-          <Button secondary onPress={() => setVisiting(item)}>Navštívil som</Button>
+          <Button secondary onPress={() => setVisiting(item)}>{t("Navštívil som")}</Button>
         </View>
       </View>)}
 
