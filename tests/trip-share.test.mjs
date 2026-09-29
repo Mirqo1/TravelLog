@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { transformSync } from '@babel/core';
 
-let index = 0, slots = [], effects = [], shared = [], captured = 0, nativeShared = [], crops = [];
+let index = 0, slots = [], effects = [], shared = [], captured = 0, nativeShared = [];
 const hooks = {
   useState(initial) { const i = index++; if (!(i in slots)) slots[i] = initial;
     return [slots[i], next => { slots[i] = typeof next === 'function' ? next(slots[i]) : next; }]; },
@@ -25,8 +25,6 @@ const mocks = { React, ...hooks,
   Sharing: { isAvailableAsync: async () => true, shareAsync: async (uri, options) => { shared.push([uri, options]); } },
   displayVisitDate: trip => trip.date, photoList: photos => photos || [], photoKey: photo => photo.id,
   photoUri: (photo, thumbnail) => thumbnail ? photo.thumbUri || photo.uri : photo.uri,
-  prepareSharePhoto: async (uri, rect) => { crops.push([uri, rect]); return `file:///cropped-${crops.length}.jpg`; },
-  removeSharePhoto: async () => {},
   coverGeometry: (sourceWidth, sourceHeight, frameWidth, frameHeight) => {
     const scale = Math.max(frameWidth / sourceWidth, frameHeight / sourceHeight);
     const width = sourceWidth * scale, height = sourceHeight * scale;
@@ -34,7 +32,6 @@ const mocks = { React, ...hooks,
   },
   clampCrop: (offset, bounds) => ({ x: Math.max(-bounds.limitX, Math.min(bounds.limitX, offset.x)),
     y: Math.max(-bounds.limitY, Math.min(bounds.limitY, offset.y)) }),
-  cropRect: (sw, sh, fw, fh, offset) => ({ originX: Math.max(0, Math.round(240 - offset.x)), originY: 0, width: 320, height: 400 }),
 };
 globalThis.shareMocks = mocks;
 const raw = (await readFile('app/components/TripShareModal.js', 'utf8'))
@@ -77,26 +74,23 @@ assert.ok(nodes(caption).some(n => n.type === 'Image' && n.props.source === 'COM
 let share = nodes(tree).find(n => n.type === 'Pressable' && n.children.some(c => JSON.stringify(c).includes('Pripravujem fotografiu')));
 assert.equal(share.props.disabled, true);
 cover.props.onLoad({ nativeEvent: { source: { width: 800, height: 400 } } }); tree = render();
-await Promise.resolve(); tree = render();
-assert.ok(nodes(card()).some(n => n.type === 'Image' && n.props.source?.uri === 'file:///p1.jpg' && n.props.style[0]?.width === '100%'),
-  'Original photo remains visible while a crop is prepared');
-cover = nodes(card()).find(n => n.type === 'Image' && n.props.source?.uri === 'file:///cropped-1.jpg');
-assert.ok(cover, 'The prepared crop appears above the original photo');
-assert.equal(cover.props.style[1].opacity, 0, 'Incomplete crop cannot flash beige in preview');
-cover.props.onLoad(); tree = render();
+cover = nodes(card()).find(n => n.type === 'Image' && n.props.source?.uri === 'file:///p1.jpg');
+assert.equal(cover.props.style.left, -240, 'Original photo uses cover geometry when ready');
+assert.equal(cover.props.style.opacity, 1);
 const photoArea = nodes(card()).find(n => n.type === 'View' && n.props.onMoveShouldSetPanResponder);
 assert.equal(photoArea, card(), 'Gesture lives on the non-collapsible card, not on an empty overlay');
 assert.equal(photoArea.props.onMoveShouldSetPanResponder(null, { dx: 10, dy: 0 }), true);
 assert.equal(photoArea.props.onStartShouldSetPanResponder(), true, 'Photo drag wins over parent scrolling');
 photoArea.props.onPanResponderGrant();
 photoArea.props.onPanResponderMove(null, { dx: 500, dy: 0 }); tree = render();
-assert.equal(nodes(card()).find(n => n.type === 'Image' && n.props.resizeMode === 'stretch').props.style.left, 0,
-  'Dragging visibly shifts the original photo to the crop edge');
-photoArea.props.onPanResponderRelease(); await Promise.resolve(); tree = render();
-cover = nodes(card()).find(n => n.type === 'Image' && n.props.source?.uri === 'file:///cropped-2.jpg');
-assert.ok(cover);
-assert.equal(crops[1][1].originX, 0);
-cover.props.onLoad(); tree = render();
+const shifted = () => nodes(card()).find(n => n.type === 'Image' && n.props.source?.uri === 'file:///p1.jpg').props.style.left;
+assert.equal(shifted(), 0, 'Dragging shifts the image to the crop edge');
+photoArea.props.onPanResponderRelease(); tree = render();
+assert.equal(shifted(), 0, 'Releasing the finger keeps the chosen photo position');
+photoArea.props.onPanResponderGrant();
+photoArea.props.onPanResponderMove(null, { dx: -80, dy: 0 }); tree = render();
+photoArea.props.onPanResponderTerminate(); tree = render();
+assert.equal(shifted(), -80, 'An interrupted gesture also keeps its last position');
 share = nodes(tree).find(n => n.type === 'Pressable' && n.children.some(c => JSON.stringify(c).includes('Zdieľať obrázok')));
 await share.props.onPress(); assert.equal(captured, 1); assert.equal(shared[0][0], 'file:///share.jpg');
 const input = nodes(tree).find(n => n.type === 'TextInput');
@@ -106,4 +100,4 @@ await share.props.onPress(); assert.deepEqual(nativeShared[0], ['file:///share.j
 assert.equal(shared.length, 1);
 const dateChoice = nodes(tree).find(n => n.props.accessibilityRole === 'checkbox' && JSON.stringify(n).includes('dátum'));
 dateChoice.props.onPress(); tree = render(); assert.ok(!labels().includes('2026-09-28'));
-console.log('PASS: share preview excludes private diary/coordinates/rating, renders prepared crop, optional caption stays separate, empty caption uses plain file share.');
+console.log('PASS: share preview keeps the selected photo position after release and interruption, excludes private diary data, and captures the same card for sharing.');
