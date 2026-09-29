@@ -25,6 +25,7 @@ import { useTrips } from '../context/TripsContext';
 import { countryForTrip } from '../utils/mapVisits';
 import { displayVisitDate } from '../utils/visitDate';
 import { compareTripsNewest } from '../utils/tripOrder';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 const normalizeSearch = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
@@ -125,7 +126,7 @@ export default function TripsScreen({ route, navigation }) {
       <Pressable key={key} accessibilityRole="tab" accessibilityState={{ selected: section === key }}
         onPress={() => { cancelJump(); setSection(key); navigation.setParams({ section: key }); }}
         style={[styles.sectionTab, section === key && styles.sectionTabActive]}>
-        <Text style={[styles.sectionLabel, section === key && { color: '#fff' }]}>{label} · {key === 'visits' ? trips.length : dreamsReady ? dreams.length : '…'}</Text>
+        <Text style={[styles.sectionLabel, section === key && styles.sectionLabelActive]}>{label} · {key === 'visits' ? trips.length : dreamsReady ? dreams.length : '…'}</Text>
       </Pressable>)}
   </View>;
 
@@ -162,7 +163,7 @@ export default function TripsScreen({ route, navigation }) {
   return (
     <View style={styles.container}>
 
-      {section === 'dreams' ? <WishlistModal visible embedded header={sectionTabs} onClose={() => {}}
+      {section === 'dreams' ? <WishlistModal visible embedded appearance="modern" header={sectionTabs} onClose={() => {}}
         onMap={item => navigation.navigate('Map', { wishRequest: Date.now(), wishPlace: item || null })} /> : <FlatList
         scrollEnabled={!draggingYear}
         onScrollBeginDrag={cancelJump}
@@ -176,17 +177,22 @@ export default function TripsScreen({ route, navigation }) {
         ListHeaderComponent={<View style={styles.listHeader}>
       {sectionTabs}
       {countryCode ? <Pressable onPress={() => navigation.setParams({ countryCode: null, countryName: null })} accessibilityRole="button" accessibilityLabel="Zrušiť filter krajiny" style={[styles.chip, styles.countryFilter]}>
-        <Text>{route.params.countryName || countryCode} · Zrušiť filter ×</Text>
+        <Text style={styles.countryText}>{route.params.countryName || countryCode} · Zrušiť filter ×</Text>
       </Pressable> : null}
-      <AddVisitButton />
+      <AddVisitButton appearance="modern" />
+      <View style={styles.searchBox}>
+      <MaterialIcons name="search" size={21} color={theme.muted} />
       <TextInput
         style={styles.searchInput}
         placeholder="Hľadať názov, lokalitu alebo dátum"
+        placeholderTextColor={theme.muted}
+        accessibilityLabel="Hľadať návštevy"
         value={search}
         onChangeText={setSearch}
       />
+      </View>
 
-      <Text style={{ marginBottom: 6, color: theme.muted }}>Zoradiť podľa</Text>
+      <Text style={styles.sortLabel}>ZORADIŤ PODĽA</Text>
       <View style={styles.chipRow}>
         {[
           ['newest', 'Najnovšie'],
@@ -194,13 +200,14 @@ export default function TripsScreen({ route, navigation }) {
           ['added', 'Posledné pridané'],
           ['name', 'Názov A–Z'],
         ].map(([value, label]) => (
-          <Text
+          <Pressable
             key={value}
+            accessibilityRole="button" accessibilityState={{ selected: sortBy === value }}
             onPress={() => { cancelJump(); setJumpRequest(null); setJumpMessage(''); setSortBy(value); }}
             style={[styles.chip, sortBy === value && styles.chipActive]}
           >
-            {label}
-          </Text>
+            <Text style={[styles.chipText, sortBy === value && styles.chipTextActive]}>{label}</Text>
+          </Pressable>
         ))}
       </View>
 
@@ -215,6 +222,7 @@ export default function TripsScreen({ route, navigation }) {
           {visitYear(item) !== visitYear(filteredTrips[index - 1]) && (sortBy === 'newest' || sortBy === 'oldest') ?
             <Text style={styles.yearHeading}>{visitYear(item) || 'Bez dátumu'}</Text> : null}
           <PlaceListItem
+            appearance="modern"
             trip={item}
             onDetail={() => setSelectedTrip(item)}
             onEdit={() => setEditingTrip(item)}
@@ -251,13 +259,19 @@ export default function TripsScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  sectionTabs: { flexDirection: 'row', gap: 10, alignItems: 'stretch', marginBottom: 16 },
-  sectionTab: { flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', paddingVertical: 13, paddingHorizontal: 8, borderRadius: 10, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.primary },
-  sectionTabActive: { backgroundColor: theme.primary }, sectionLabel: { color: theme.primary, fontWeight: '700', textAlign: 'center' },
-  yearHeading: { fontSize: 20, fontWeight: '800', color: theme.primary, paddingTop: 8, paddingBottom: 12 },
+  sectionTabs: { flexDirection: 'row', gap: 4, alignItems: 'stretch', marginBottom: 20,
+    borderBottomWidth: 1, borderBottomColor: '#DED7CA' },
+  sectionTab: { flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', paddingVertical: 10,
+    paddingHorizontal: 8, borderBottomWidth: 3, borderBottomColor: 'transparent' },
+  sectionTabActive: { borderBottomColor: '#744916' },
+  sectionLabel: { color: '#736C62', fontWeight: '600', textAlign: 'center', fontSize: 15 },
+  sectionLabelActive: { color: '#3B2D1F', fontWeight: '800' },
+  yearHeading: { fontSize: 14, letterSpacing: 1.2, fontWeight: '800', color: '#744916', paddingTop: 12, paddingBottom: 12 },
   jumpMessage: { color: theme.muted, paddingBottom: 12 },
-  listHeader: { paddingBottom: 12 },
-  countryFilter: { alignSelf: 'flex-start', marginBottom: 16, minHeight: 44, justifyContent: 'center' },
+  listHeader: { paddingBottom: 14 },
+  countryFilter: { alignSelf: 'flex-start', marginBottom: 16, minHeight: 40, justifyContent: 'center',
+    backgroundColor: '#FFFEFB', borderWidth: 1, borderColor: '#D9CDBA' },
+  countryText: { color: '#744916', fontWeight: '600' },
   loader: {
     flex: 1,
     justifyContent: 'center',
@@ -266,7 +280,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: 'transparent',
+    backgroundColor: '#F7F5EF',
   },
   header: {
     fontSize: 22,
@@ -274,33 +288,29 @@ const styles = StyleSheet.create({
     color: theme.text,
     marginBottom: 12,
   },
-  searchInput: {
-    borderWidth: 1,
-    borderColor: theme.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#fff',
-    marginBottom: 10,
-  },
+  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 48, paddingHorizontal: 14,
+    backgroundColor: '#FFFEFB', borderWidth: 1, borderColor: '#E5E0D6', borderRadius: 10, marginBottom: 22 },
+  searchInput: { flex: 1, color: '#2F2B25', fontSize: 15, paddingVertical: 10 },
+  sortLabel: { marginBottom: 9, color: '#736C62', fontSize: 11, fontWeight: '700', letterSpacing: 1.1 },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 10,
+    marginBottom: 14,
   },
   chip: {
-    backgroundColor: theme.border,
-    borderRadius: 999,
+    backgroundColor: 'transparent',
+    borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    color: theme.text,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: '#DED7CA',
   },
   chipActive: {
-    backgroundColor: theme.primarySoft,
-    color: theme.primary,
-    fontWeight: '700',
+    backgroundColor: '#F2E6D1', borderColor: '#B89050',
   },
+  chipText: { color: '#655F56', fontSize: 13 },
+  chipTextActive: { color: '#744916', fontWeight: '700' },
   listContent: {
     paddingBottom: 20,
     flexGrow: 1,
