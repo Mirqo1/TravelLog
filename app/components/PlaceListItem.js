@@ -13,8 +13,7 @@ const renderRating = (rating) => {
   return `${'★'.repeat(rating)}${'☆'.repeat(Math.max(0, 5 - rating))}`;
 };
 
-export default function PlaceListItem({ trip, onDetail, onEdit, onDelete, appearance }) {
-  const modern = appearance === 'modern';
+export default function PlaceListItem({ trip, onDetail, onEdit, onDelete }) {
   const renderLeftActions = () => (
     <Pressable style={[styles.swipeAction, styles.detailAction]} onPress={onDetail}>
       <Text style={styles.swipeText}>Detail</Text>
@@ -34,17 +33,14 @@ export default function PlaceListItem({ trip, onDetail, onEdit, onDelete, appear
 
   return (
     <Swipeable renderLeftActions={renderLeftActions} renderRightActions={renderRightActions}>
-      <Pressable style={[styles.card, modern && styles.modernCard]} onPress={onDetail}>
-        <Text style={[styles.name, modern && styles.modernName]}>{trip.name}</Text>
-        <Text style={[styles.meta, modern && styles.modernLocation]}>{trip.locationName || 'Bez lokality'}</Text>
-        {modern ? <View style={styles.modernFacts}>
-          <Text style={styles.modernDate}>{displayVisitDate(trip)}</Text>
-          <Text style={styles.modernRating}>{renderRating(trip.rating)}</Text>
-        </View> : <Text style={styles.meta}>
+      <Pressable style={styles.card} onPress={onDetail}>
+        <Text style={styles.name}>{trip.name}</Text>
+        <Text style={styles.meta}>{trip.locationName || 'Bez lokality'}</Text>
+        <Text style={styles.meta}>
           {displayVisitDate(trip)} • {renderRating(trip.rating)}
-        </Text>}
+        </Text>
         <VisitPhotoCover photos={trip.photos} />
-        <Text numberOfLines={3} style={[styles.notes, modern && styles.modernNotes]}>{trip.description || trip.notes || 'Bez poznámky'}</Text>
+        <Text numberOfLines={3} style={styles.notes}>{trip.description || trip.notes || 'Bez poznámky'}</Text>
         {trip.syncStatus && trip.syncStatus !== 'synced' ? <Text style={styles.pending}>Čaká na synchronizáciu</Text> : null}
       </Pressable>
     </Swipeable>
@@ -60,14 +56,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.border,
   },
-  modernCard: { backgroundColor: '#FFFEFB', borderWidth: 0, borderRadius: 12, padding: 18, marginBottom: 12,
-    elevation: 1, shadowColor: '#4D3C24', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
-  modernName: { color: '#2F2B25', fontSize: 19, lineHeight: 26, fontWeight: '700' },
-  modernLocation: { color: '#686257', fontSize: 14, lineHeight: 20, marginTop: 5 },
-  modernFacts: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginTop: 10 },
-  modernDate: { color: '#744916', fontSize: 13, fontWeight: '700' },
-  modernRating: { color: '#686257', fontSize: 13 },
-  modernNotes: { marginTop: 12, lineHeight: 20, fontSize: 14 },
   name: {
     fontSize: 16,
     fontWeight: '700',

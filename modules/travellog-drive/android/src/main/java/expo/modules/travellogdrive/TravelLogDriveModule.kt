@@ -4,6 +4,7 @@ import android.accounts.Account
 import android.app.Activity
 import android.content.Context
 import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -122,6 +123,10 @@ class TravelLogDriveModule : Module() {
           clipData = ClipData.newRawUri("TravelLog", content)
           addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
+        // Some receivers (including some Messenger flows) ignore EXTRA_TEXT
+        // when an image is attached. Keep the user's text available to paste.
+        val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("Sprievodný text návštevy", text))
         activity.startActivity(Intent.createChooser(intent, "Zdieľať návštevu"))
         promise.resolve(null)
       } catch (error: Exception) {

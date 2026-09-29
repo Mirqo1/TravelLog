@@ -172,6 +172,16 @@ expo-sharing's image-only path. The receiving app decides whether it accepts
 and displays the text. This native change requires a rebuilt Android APK;
 physical crop, share-sheet and recipient-app acceptance remain pending.
 
+Follow-up after phone feedback (2026-09-29): the original drag implementation
+showed a beige area instead of the photo. The crop is now rendered as a temporary
+JPEG before the preview can be shared; a failed render or load blocks sharing.
+Release the drag to update the image. Messenger ignored the attached text even
+though the Android intent included EXTRA_TEXT; the native share path now also
+copies that text to the clipboard so the user can paste it into Messenger.
+Receiver behavior remains outside the app's control. These changes require a
+new native APK and phone acceptance. The trial visual redesign of Trips was
+reverted after user feedback; the prior screen style is restored.
+
 Further sharing ideas from Miroslav: sharing a complete visit would require a
 receiver flow and a clear distinction between a read-only copy and a link to
 live data, with private notes and photos opt-in. Groups and inviting another

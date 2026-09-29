@@ -8,7 +8,8 @@ import { theme } from '../theme';
 import { displayVisitDate } from '../utils/visitDate';
 import { photoKey, photoList } from '../utils/visitPhotos';
 import { photoUri } from '../services/visitPhotoService';
-import { clampCrop, coverGeometry } from '../utils/shareCrop';
+import { prepareSharePhoto, removeSharePhoto } from '../services/sharePhotoCrop';
+import { clampCrop, coverGeometry, cropRect } from '../utils/shareCrop';
 
 const nativeShare = Platform.OS === 'android' ? requireOptionalNativeModule('TravelLogDrive') : null;
 
@@ -24,21 +25,60 @@ export default function TripShareModal({ visible, trip, onClose }) {
   const [frameWidth, setFrameWidth] = useState(320);
   const [sourceSize, setSourceSize] = useState(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [croppedUri, setCroppedUri] = useState(null);
+  const [cropError, setCropError] = useState('');
   const card = useRef(null);
   const drag = useRef({ x: 0, y: 0 });
   const offsetRef = useRef(offset);
   const boundsRef = useRef(null);
+  const cropRequest = useRef(null);
+  const cropGeneration = useRef(0);
+  const cropFiles = useRef(new Set());
   const photos = localPhotos(trip?.photos);
+  useEffect(() => () => {
+    cropGeneration.current++;
+    for (const file of cropFiles.current) removeSharePhoto(file);
+    cropFiles.current.clear();
+  }, []);
+  useEffect(() => {
+    if (visible) return;
+    cropGeneration.current++;
+    for (const file of cropFiles.current) removeSharePhoto(file);
+    cropFiles.current.clear();
+    setCroppedUri(null);
+  }, [visible]);
   useEffect(() => {
     if (!visible) return;
+    cropGeneration.current++;
     setSelected(photos.length ? photoKey(photos[0]) : null);
     setIncludePlace(true); setIncludeDate(true); setReadyPhoto(null); setMessage('');
-    setSourceSize(null); setOffset({ x: 0, y: 0 }); offsetRef.current = { x: 0, y: 0 };
+    setSourceSize(null); setCroppedUri(null); setCropError('');
+    setOffset({ x: 0, y: 0 }); offsetRef.current = { x: 0, y: 0 };
   }, [visible, trip?.id]);
   const photo = photos.find(item => photoKey(item) === selected);
   const uri = photo ? photoUri(photo) : null;
-  const geometry = photo && sourceSize ? coverGeometry(sourceSize.width, sourceSize.height, frameWidth, 400) : null;
+  const size = sourceSize || (photo?.width > 0 && photo?.height > 0 ? { width: photo.width, height: photo.height } : null);
+  const geometry = photo && size ? coverGeometry(size.width, size.height, frameWidth, 400) : null;
   boundsRef.current = geometry;
+  const prepareCrop = async nextOffset => {
+    if (!uri || !size) return;
+    const rect = cropRect(size.width, size.height, frameWidth, 400, nextOffset);
+    if (!rect) return;
+    const generation = ++cropGeneration.current;
+    setReadyPhoto(null); setCropError('');
+    try {
+      const result = await prepareSharePhoto(uri, rect);
+      if (generation !== cropGeneration.current) { await removeSharePhoto(result); return; }
+      cropFiles.current.add(result);
+      setCroppedUri(result);
+    } catch (error) {
+      if (generation === cropGeneration.current) setCropError('Výrez sa nepodarilo pripraviť. Skús vybrať fotku znova.');
+    }
+  };
+  cropRequest.current = prepareCrop;
+  useEffect(() => {
+    if (visible && photo && size) prepareCrop(offsetRef.current);
+  }, [visible, selected, uri, size?.width, size?.height, frameWidth]);
   const pan = useRef(PanResponder.create({
     onMoveShouldSetPanResponder: (_, gesture) => !!boundsRef.current &&
       (boundsRef.current.limitX > 0 || boundsRef.current.limitY > 0) &&
@@ -48,13 +88,15 @@ export default function TripShareModal({ visible, trip, onClose }) {
       const next = clampCrop({ x: drag.current.x + gesture.dx, y: drag.current.y + gesture.dy }, boundsRef.current);
       offsetRef.current = next; setOffset(next);
     },
+    onPanResponderRelease: () => { cropRequest.current?.(offsetRef.current); },
     onPanResponderTerminationRequest: () => false,
   })).current;
   const selectPhoto = value => {
-    setSelected(value); setReadyPhoto(null); setSourceSize(null);
+    cropGeneration.current++;
+    setSelected(value); setReadyPhoto(null); setSourceSize(null); setCroppedUri(null); setCropError('');
     const zero = { x: 0, y: 0 }; offsetRef.current = zero; setOffset(zero);
   };
-  const available = !photo || readyPhoto === selected;
+  const available = !photo || (!!croppedUri && readyPhoto === selected && !cropError);
   const share = async () => {
     if (busy || !card.current || !available) return;
     setBusy(true);
@@ -81,16 +123,17 @@ export default function TripShareModal({ visible, trip, onClose }) {
         <Text style={styles.intro}>Takto bude vyzerať obrázok. Poznámky, hodnotenie ani súradnice doň nepridávame.</Text>
         <View ref={card} collapsable={false} style={styles.card}
           onLayout={event => setFrameWidth(event.nativeEvent.layout.width)}>
-          {photo ? <View style={styles.photoArea} {...pan.panHandlers}>
-            <Image key={selected} source={{ uri }} resizeMode={geometry ? 'stretch' : 'cover'}
-              style={geometry ? { position: 'absolute', width: geometry.width, height: geometry.height,
-                left: (frameWidth - geometry.width) / 2 + offset.x, top: (400 - geometry.height) / 2 + offset.y } : styles.photo}
+          {photo ? <>
+            <Image key={croppedUri || selected} source={{ uri: croppedUri || uri }} resizeMode="cover" style={styles.photo}
               onLoad={event => {
-                const source = event?.nativeEvent?.source;
-                setSourceSize({ width: source?.width || photo.width || 320, height: source?.height || photo.height || 400 });
-                setReadyPhoto(selected);
-              }} onError={() => setReadyPhoto(null)} />
-          </View>
+                if (croppedUri) setReadyPhoto(selected);
+                else {
+                  const source = event?.nativeEvent?.source;
+                  if (!size && source?.width > 0 && source?.height > 0) setSourceSize({ width: source.width, height: source.height });
+                }
+              }} onError={() => { setReadyPhoto(null); setCropError('Fotografia sa nepodarila načítať.'); }} />
+            <View style={styles.dragLayer} {...pan.panHandlers} />
+          </>
             : <View style={styles.photoPlaceholder} />}
           <View style={styles.caption}>
             <View style={styles.brand}>
@@ -104,7 +147,8 @@ export default function TripShareModal({ visible, trip, onClose }) {
             {includeDate && !!trip.date && <Text style={styles.info}>{displayVisitDate(trip)}</Text>}
           </View>
         </View>
-        {photo && <Text style={styles.intro}>Potiahni fotografiu v náhľade a uprav jej výrez.</Text>}
+        {photo && <Text style={styles.intro}>Potiahni fotografiu v náhľade a pusti prst. Výrez sa potom aktualizuje.</Text>}
+        {!!cropError && <Text style={styles.error}>{cropError}</Text>}
         {photos.length ? <>
           <Text style={styles.label}>Fotografia</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.picker}>
@@ -127,8 +171,8 @@ export default function TripShareModal({ visible, trip, onClose }) {
           placeholder="Napíš niečo ku zdieľanej fotke…" placeholderTextColor={theme.muted}
           accessibilityLabel="Sprievodný text k zdieľanej fotografii" style={styles.message} />
         <Pressable accessibilityRole="button" disabled={busy || !available} style={[styles.share, (busy || !available) && styles.disabled]}
-          onPress={share}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.shareText}>{!available ? 'Načítavam fotografiu…' : 'Zdieľať obrázok'}</Text>}</Pressable>
-        <Text style={styles.intro}>Vyberieš aplikáciu v systémovej ponuke. Sprievodný text je mimo obrázka; cieľová aplikácia môže rozhodnúť, či ho použije. Nič sa neodosiela automaticky.</Text>
+          onPress={share}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.shareText}>{!available ? 'Pripravujem fotografiu…' : 'Zdieľať obrázok'}</Text>}</Pressable>
+        <Text style={styles.intro}>Pri zdieľaní sa sprievodný text skopíruje do schránky. Ak ho Messenger nepripojí automaticky, vlož ho do správy ručne. Nič sa neodosiela bez tvojho potvrdenia.</Text>
       </ScrollView>
     </SafeAreaView></SafeAreaProvider>
   </Modal>;
@@ -143,7 +187,8 @@ const styles = StyleSheet.create({
   intro: { color: theme.muted, lineHeight: 20, alignSelf: 'stretch' },
   card: { width: '100%', maxWidth: 320, height: 400, backgroundColor: theme.primarySoft, overflow: 'hidden' },
   photo: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
-  photoArea: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
+  dragLayer: { ...StyleSheet.absoluteFillObject },
+  error: { color: '#b91c1c', alignSelf: 'stretch' },
   photoPlaceholder: { ...StyleSheet.absoluteFillObject, backgroundColor: theme.primarySoft },
   caption: { position: 'absolute', left: 0, right: 0, bottom: 0,
     backgroundColor: 'rgba(37, 28, 20, 0.78)', paddingHorizontal: 20, paddingVertical: 16, gap: 5 },

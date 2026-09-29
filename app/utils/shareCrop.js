@@ -13,3 +13,17 @@ export function clampCrop(offset, geometry) {
     y: Math.max(-geometry.limitY, Math.min(geometry.limitY, offset.y)),
   };
 }
+
+export function cropRect(sourceWidth, sourceHeight, frameWidth, frameHeight, offset) {
+  const geometry = coverGeometry(sourceWidth, sourceHeight, frameWidth, frameHeight);
+  if (!geometry) return null;
+  const scale = geometry.width / sourceWidth;
+  const width = Math.min(sourceWidth, Math.max(1, Math.round(frameWidth / scale)));
+  const height = Math.min(sourceHeight, Math.max(1, Math.round(frameHeight / scale)));
+  const safe = clampCrop(offset, geometry);
+  return {
+    originX: Math.max(0, Math.min(sourceWidth - width, Math.round((sourceWidth - width) / 2 - safe.x / scale))),
+    originY: Math.max(0, Math.min(sourceHeight - height, Math.round((sourceHeight - height) / 2 - safe.y / scale))),
+    width, height,
+  };
+}

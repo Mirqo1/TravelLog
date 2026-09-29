@@ -8,8 +8,8 @@ import { useTrips } from '../context/TripsContext';
 import { findLocationDetails } from '../services/geonamesService';
 import AddPlaceModal from './AddPlaceModal';
 
-const Button = ({ children, onPress, disabled, secondary = false, appearance }) => <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress}
-  style={[styles.button, appearance === 'modern' && styles.modernButton, secondary && styles.secondaryButton, disabled && { opacity: 0.45 }]}><Text style={[styles.buttonText, secondary && styles.secondaryText]}>{children}</Text></Pressable>;
+const Button = ({ children, onPress, disabled, secondary = false }) => <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress}
+  style={[styles.button, secondary && styles.secondaryButton, disabled && { opacity: 0.45 }]}><Text style={[styles.buttonText, secondary && styles.secondaryText]}>{children}</Text></Pressable>;
 const Shell = ({ children, onClose }) => <Modal visible animationType="slide" onRequestClose={onClose}>
   <SafeAreaProvider><SafeAreaView style={styles.screen}>{children}</SafeAreaView></SafeAreaProvider>
 </Modal>;
@@ -70,7 +70,7 @@ export function WishlistEditor({ place, onClose }) {
   </Shell>;
 }
 
-export default function WishlistModal({ visible, onClose, onMap, embedded = false, header, appearance }) {
+export default function WishlistModal({ visible, onClose, onMap, embedded = false, header }) {
   const { items, premium, preview, ready, message, remove, sync } = useWishlist();
   const { addTrip } = useTrips();
   const [editing, setEditing] = useState(null);
@@ -118,10 +118,10 @@ export default function WishlistModal({ visible, onClose, onMap, embedded = fals
         </Pressable>
       </View>
       {!premium ? <Text style={styles.muted}>Nové miesta môžeš ukladať s Premium. Svoje uložené miesta môžeš naďalej prezerať, odstrániť alebo zaznamenať ako návštevu.</Text> : null}
-      <Button appearance={appearance} disabled={!premium || !ready} onPress={() => { onClose(); onMap(); }}>+ Vybrať miesto na mape</Button>
-      <TextInput accessibilityLabel="Hľadať v mojich snoch" style={[styles.input, appearance === 'modern' && styles.modernInput]} value={query} onChangeText={setQuery} placeholder="Hľadať v uložených miestach" />
+      <Button disabled={!premium || !ready} onPress={() => { onClose(); onMap(); }}>+ Vybrať miesto na mape</Button>
+      <TextInput accessibilityLabel="Hľadať v mojich snoch" style={styles.input} value={query} onChangeText={setQuery} placeholder="Hľadať v uložených miestach" />
       {!filtered.length ? <Text style={styles.muted}>{!ready ? 'Načítavam…' : query ? 'Žiadne zodpovedajúce miesta.' : 'Tvoje budúce dobrodružstvá začínajú tu. Vyber miesto na mape a ulož si ho.'}</Text> : null}
-      {filtered.map(item => <View key={item.id} style={[styles.card, appearance === 'modern' && styles.modernCard]}>
+      {filtered.map(item => <View key={item.id} style={styles.card}>
         <View style={styles.headingRow}>
           <Text style={[styles.name, { flex: 1 }]}>{item.name}</Text>
           <Pressable accessibilityRole="button" accessibilityLabel={`Možnosti miesta ${item.name}`} style={styles.iconButton}
@@ -137,7 +137,7 @@ export default function WishlistModal({ visible, onClose, onMap, embedded = fals
           <Pressable accessibilityRole="button" style={styles.mapLink} onPress={() => { onClose(); onMap(item); }}>
             <MaterialIcons name="place" size={20} color={theme.primary} /><Text style={styles.label}>Na mape</Text>
           </Pressable>
-          <Button secondary appearance={appearance} onPress={() => setVisiting(item)}>Navštívil som</Button>
+          <Button secondary onPress={() => setVisiting(item)}>Navštívil som</Button>
         </View>
       </View>)}
 
@@ -156,10 +156,6 @@ const styles = StyleSheet.create({
   muted: { color: theme.muted, lineHeight: 21 }, label: { color: theme.primary, fontWeight: '700' },
   input: { backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 12, padding: 12, fontSize: 16, color: theme.text },
   button: { padding: 14, backgroundColor: theme.primary, borderRadius: 12, alignItems: 'center' }, buttonText: { color: '#fff', fontWeight: '700' },
-  modernButton: { borderRadius: 10, backgroundColor: '#744916' },
-  modernInput: { borderRadius: 10, backgroundColor: '#FFFEFB', borderColor: '#E5E0D6' },
-  modernCard: { backgroundColor: '#FFFEFB', borderWidth: 0, borderRadius: 12, padding: 18,
-    elevation: 1, shadowColor: '#4D3C24', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
   card: { padding: 16, gap: 10, borderWidth: 1, borderColor: theme.border, borderRadius: 18, backgroundColor: theme.surface },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }, link: { paddingVertical: 12, paddingHorizontal: 5 },
 });
