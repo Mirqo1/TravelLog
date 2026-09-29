@@ -182,6 +182,15 @@ Receiver behavior remains outside the app's control. These changes require a
 new native APK and phone acceptance. The trial visual redesign of Trips was
 reverted after user feedback; the prior screen style is restored.
 
+Second phone feedback: processing every crop before displaying any photo caused
+a beige-to-photo flash, while the drag gesture did not visibly move the image.
+Keep the original `resizeMode="cover"` image directly in the card, as in the
+last working preview, while a prepared crop loads invisibly on top. The crop
+appears only after its image load event. A direct enlarged image above the base
+shows live drag movement; touch capture prevents the parent scroll view from
+stealing the gesture. Share remains disabled until the processed crop loads.
+Physical Android acceptance is still needed for the preview and drag gesture.
+
 Further sharing ideas from Miroslav: sharing a complete visit would require a
 receiver flow and a clear distinction between a read-only copy and a link to
 live data, with private notes and photos opt-in. Groups and inviting another

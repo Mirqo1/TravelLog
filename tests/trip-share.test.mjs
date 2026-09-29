@@ -74,13 +74,19 @@ let share = nodes(tree).find(n => n.type === 'Pressable' && n.children.some(c =>
 assert.equal(share.props.disabled, true);
 cover.props.onLoad({ nativeEvent: { source: { width: 800, height: 400 } } }); tree = render();
 await Promise.resolve(); tree = render();
+assert.ok(nodes(card()).some(n => n.type === 'Image' && n.props.source?.uri === 'file:///p1.jpg' && n.props.style.width === '100%'),
+  'Original photo remains visible while a crop is prepared');
 cover = nodes(card()).find(n => n.type === 'Image' && n.props.source?.uri === 'file:///cropped-1.jpg');
-assert.ok(cover, 'The card must show the prepared crop, not an enlarged image layer');
+assert.ok(cover, 'The prepared crop appears above the original photo');
+assert.equal(cover.props.style[1].opacity, 0, 'Incomplete crop cannot flash beige in preview');
 cover.props.onLoad(); tree = render();
 const photoArea = nodes(card()).find(n => n.type === 'View' && n.props.onMoveShouldSetPanResponder);
 assert.equal(photoArea.props.onMoveShouldSetPanResponder(null, { dx: 10, dy: 0 }), true);
+assert.equal(photoArea.props.onStartShouldSetPanResponder(), true, 'Photo drag wins over parent scrolling');
 photoArea.props.onPanResponderGrant();
 photoArea.props.onPanResponderMove(null, { dx: 500, dy: 0 }); tree = render();
+assert.equal(nodes(card()).find(n => n.type === 'Image' && n.props.resizeMode === 'stretch').props.style.left, 0,
+  'Dragging visibly shifts the original photo to the crop edge');
 photoArea.props.onPanResponderRelease(); await Promise.resolve(); tree = render();
 cover = nodes(card()).find(n => n.type === 'Image' && n.props.source?.uri === 'file:///cropped-2.jpg');
 assert.ok(cover);
