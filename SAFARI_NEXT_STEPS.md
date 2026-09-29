@@ -189,6 +189,8 @@ last working preview, while a prepared crop loads invisibly on top. The crop
 appears only after its image load event. A direct enlarged image above the base
 shows live drag movement; touch capture prevents the parent scroll view from
 stealing the gesture. Share remains disabled until the processed crop loads.
+The already used gallery thumbnail is rendered below the original full image,
+which replaces it only after loading, to avoid a beige gap when switching photos.
 Physical Android acceptance is still needed for the preview and drag gesture.
 
 Further sharing ideas from Miroslav: sharing a complete visit would require a

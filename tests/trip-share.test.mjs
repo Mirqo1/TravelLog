@@ -24,7 +24,7 @@ const mocks = { React, ...hooks,
   StyleSheet: { create: data => data }, captureRef: async ref => { assert.deepEqual(ref, { card: true }); captured++; return 'file:///share.jpg'; },
   Sharing: { isAvailableAsync: async () => true, shareAsync: async (uri, options) => { shared.push([uri, options]); } },
   displayVisitDate: trip => trip.date, photoList: photos => photos || [], photoKey: photo => photo.id,
-  photoUri: photo => photo.uri,
+  photoUri: (photo, thumbnail) => thumbnail ? photo.thumbUri || photo.uri : photo.uri,
   prepareSharePhoto: async (uri, rect) => { crops.push([uri, rect]); return `file:///cropped-${crops.length}.jpg`; },
   removeSharePhoto: async () => {},
   coverGeometry: (sourceWidth, sourceHeight, frameWidth, frameHeight) => {
@@ -44,7 +44,8 @@ const transformed = transformSync(raw, { configFile: false, babelrc: false, plug
 const mod = await import('data:text/javascript;base64,' + Buffer.from(`const {${Object.keys(mocks).join(',')}}=globalThis.shareMocks;\n` + transformed).toString('base64'));
 const trip = { id: 'one', name: 'Zoo Košice', locationName: 'Košice, Slovensko', date: '2026-09-28',
   notes: 'private diary', rating: 1, location: { latitude: 48.1, longitude: 21.3 },
-  photos: [{ id: 'p1', uri: 'file:///p1.jpg' }, { id: 'p2', uri: 'file:///p2.jpg' }] };
+  photos: [{ id: 'p1', uri: 'file:///p1.jpg', thumbUri: 'file:///p1-thumb.jpg' },
+    { id: 'p2', uri: 'file:///p2.jpg', thumbUri: 'file:///p2-thumb.jpg' }] };
 const cropUtils = await import('data:text/javascript;base64,' + Buffer.from(await readFile('app/utils/shareCrop.js', 'utf8')).toString('base64'));
 assert.deepEqual(cropUtils.cropRect(800, 400, 320, 400, { x: 500, y: 0 }),
   { originX: 0, originY: 0, width: 320, height: 400 });
@@ -65,8 +66,11 @@ assert.ok(!labels().includes('rating'));
 assert.equal(card().props.style.borderWidth, undefined);
 assert.equal(card().props.style.borderRadius, undefined);
 let cover = nodes(card()).find(n => n.type === 'Image' && n.props.source?.uri === 'file:///p1.jpg');
-assert.equal(cover.props.style.width, '100%');
-assert.equal(cover.props.style.height, '100%');
+assert.equal(cover.props.style[0].width, '100%');
+assert.equal(cover.props.style[0].height, '100%');
+assert.equal(cover.props.style[1].opacity, 0);
+assert.ok(nodes(card()).some(n => n.type === 'Image' && n.props.source?.uri === 'file:///p1-thumb.jpg'),
+  'Thumbnail fills the card while the full photo loads');
 const caption = nodes(card()).find(n => n.type === 'View' && n.props.style?.backgroundColor?.startsWith('rgba('));
 assert.equal(caption.props.style.bottom, 0);
 assert.ok(nodes(caption).some(n => n.type === 'Image' && n.props.source === 'COMPASS_IMAGE'));
@@ -74,7 +78,7 @@ let share = nodes(tree).find(n => n.type === 'Pressable' && n.children.some(c =>
 assert.equal(share.props.disabled, true);
 cover.props.onLoad({ nativeEvent: { source: { width: 800, height: 400 } } }); tree = render();
 await Promise.resolve(); tree = render();
-assert.ok(nodes(card()).some(n => n.type === 'Image' && n.props.source?.uri === 'file:///p1.jpg' && n.props.style.width === '100%'),
+assert.ok(nodes(card()).some(n => n.type === 'Image' && n.props.source?.uri === 'file:///p1.jpg' && n.props.style[0]?.width === '100%'),
   'Original photo remains visible while a crop is prepared');
 cover = nodes(card()).find(n => n.type === 'Image' && n.props.source?.uri === 'file:///cropped-1.jpg');
 assert.ok(cover, 'The prepared crop appears above the original photo');

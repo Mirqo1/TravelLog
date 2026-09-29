@@ -20,6 +20,7 @@ export default function TripShareModal({ visible, trip, onClose }) {
   const [includePlace, setIncludePlace] = useState(true);
   const [includeDate, setIncludeDate] = useState(true);
   const [readyPhoto, setReadyPhoto] = useState(null);
+  const [originalReady, setOriginalReady] = useState(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [frameWidth, setFrameWidth] = useState(320);
@@ -52,7 +53,7 @@ export default function TripShareModal({ visible, trip, onClose }) {
     if (!visible) return;
     cropGeneration.current++;
     setSelected(photos.length ? photoKey(photos[0]) : null);
-    setIncludePlace(true); setIncludeDate(true); setReadyPhoto(null); setMessage('');
+    setIncludePlace(true); setIncludeDate(true); setReadyPhoto(null); setOriginalReady(null); setMessage('');
     setSourceSize(null); setCroppedUri(null); setCropError(''); setDragging(false);
     setOffset({ x: 0, y: 0 }); offsetRef.current = { x: 0, y: 0 };
   }, [visible, trip?.id]);
@@ -100,7 +101,7 @@ export default function TripShareModal({ visible, trip, onClose }) {
   })).current;
   const selectPhoto = value => {
     cropGeneration.current++;
-    setSelected(value); setReadyPhoto(null); setSourceSize(null); setCroppedUri(null); setCropError(''); setDragging(false);
+    setSelected(value); setReadyPhoto(null); setOriginalReady(null); setSourceSize(null); setCroppedUri(null); setCropError(''); setDragging(false);
     const zero = { x: 0, y: 0 }; offsetRef.current = zero; setOffset(zero);
   };
   const available = !photo || (!!croppedUri && readyPhoto === selected && !cropError);
@@ -131,8 +132,11 @@ export default function TripShareModal({ visible, trip, onClose }) {
         <View ref={card} collapsable={false} style={styles.card}
           onLayout={event => setFrameWidth(event.nativeEvent.layout.width)}>
           {photo ? <>
-            <Image source={{ uri }} resizeMode="cover" style={styles.photo}
+            <Image source={{ uri: photoUri(photo, true) || uri }} resizeMode="cover" style={styles.photo} />
+            <Image source={{ uri }} resizeMode="cover"
+              style={[styles.photo, { opacity: originalReady === selected ? 1 : 0 }]}
               onLoad={event => {
+                setOriginalReady(selected);
                 const source = event?.nativeEvent?.source;
                 if (!size && source?.width > 0 && source?.height > 0) setSourceSize({ width: source.width, height: source.height });
               }} onError={() => { setReadyPhoto(null); setCropError('Fotografia sa nepodarila načítať.'); }} />
