@@ -47,6 +47,15 @@ const {default:Details}=await load(`const {${Object.keys(mocks).join(',')}}=glob
 const render=()=>{index=0;const tree=Details({visible:true,trip:old,onClose:()=>closed++,onEdit(){},onDelete(){}});const jobs=effects;effects=[];jobs.forEach(fn=>fn());return tree;};
 const walk=(node)=>node&&typeof node==='object'?[node,...(node.children||[]).flatMap(walk)]:[];
 let tree=render();
+const mapFrame = () => walk(tree).find(n => n.type === 'View' && n.props.onTouchStart);
+const detailScroll = () => walk(tree).find(n => n.type === 'ScrollView');
+assert.equal(detailScroll().props.scrollEnabled,true);
+mapFrame().props.onTouchStart(); tree=render(); assert.equal(detailScroll().props.scrollEnabled,false);
+mapFrame().props.onTouchEnd({nativeEvent:{touches:[{}]}}); tree=render();
+assert.equal(detailScroll().props.scrollEnabled,false,'Keep parent still while a finger remains on the map');
+mapFrame().props.onTouchEnd({nativeEvent:{touches:[]}}); tree=render(); assert.equal(detailScroll().props.scrollEnabled,true);
+mapFrame().props.onTouchStart(); tree=render(); mapFrame().props.onTouchCancel(); tree=render();
+assert.equal(detailScroll().props.scrollEnabled,true,'Cancelled map gestures restore detail scrolling');
 const action=walk(tree).find(n=>n.type==='Pressable'&&walk(n).some(child=>child.type==='Text'&&child.children.includes('Navštívil som znova')));
 assert.ok(action,'Repeat action is available in Free'); action.props.onPress(); tree=render();
 const modal=walk(tree).find(n=>n.type==='AddPlaceModal'); assert.equal(modal.props.visible,true);

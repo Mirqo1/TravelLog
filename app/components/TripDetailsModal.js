@@ -23,9 +23,10 @@ export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDel
   useLanguage();
   const { addTrip } = useTrips();
   const [repeatDraft, setRepeatDraft] = useState(null);
+  const [mapTouching, setMapTouching] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const { canAddPhotos: canShare } = usePhotoAccess();
-  useEffect(() => { if (!visible) { setShareOpen(false); setRepeatDraft(null); } }, [visible]);
+  useEffect(() => { if (!visible) { setShareOpen(false); setRepeatDraft(null); setMapTouching(false); } }, [visible]);
   if (!trip) return null;
   const hasLocation = validLocation(trip.location);
   return <><Modal visible={visible && !repeatDraft} animationType="slide" onRequestClose={onClose}>
@@ -36,7 +37,7 @@ export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDel
           <Text style={styles.link}>{t("Zavrieť")}</Text>
         </Pressable>
       </View>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
+      <ScrollView scrollEnabled={!mapTouching} style={styles.scroll} contentContainerStyle={styles.container}>
         <View style={styles.titleRow}>
           <Text accessibilityRole="header" style={styles.title}>{trip.name}</Text>
         </View>
@@ -53,11 +54,13 @@ export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDel
         <VisitPhotoGallery photos={trip.photos} title={trip.name} />
         {hasLocation ? <View style={styles.card}>
           <Text style={styles.heading}>{t("Navštívené miesto")}</Text>
-          {visible ? <View style={styles.mapFrame}>
+          {visible ? <View style={styles.mapFrame} onTouchStart={() => setMapTouching(true)}
+            onTouchEnd={event => setMapTouching(Boolean(event.nativeEvent.touches?.length))}
+            onTouchCancel={() => setMapTouching(false)}>
             <MapView key={trip.id} style={styles.map}
               initialRegion={{ ...trip.location, latitudeDelta: 0.025, longitudeDelta: 0.025 }}
-              scrollEnabled={false} zoomEnabled={false} rotateEnabled={false} pitchEnabled={false}
-              toolbarEnabled={false} zoomControlEnabled={false}>
+              scrollEnabled zoomEnabled rotateEnabled pitchEnabled
+              toolbarEnabled={false} zoomControlEnabled>
               <Marker coordinate={trip.location} />
             </MapView>
           </View> : null}
