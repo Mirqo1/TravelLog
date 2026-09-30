@@ -18,9 +18,10 @@ const hooks = {
    const old = slots[i]; slots[i] = { deps }; effects.push(() => { old?.cleanup?.(); slots[i].cleanup = fn(); });
  } },
 };
-const hostNames = ['MaterialIcons','WishlistModal','WishlistEditor','Modal','Pressable','ScrollView','Text','TextInput','View',
+const hostNames = ['PlaceHistory','MaterialIcons','WishlistModal','WishlistEditor','Modal','Pressable','ScrollView','Text','TextInput','View',
   'SafeAreaProvider','SafeAreaView','MapView','Heatmap','Marker','AddPlaceModal','TripDetailsModal','MapTypeToggle'];
-const mocks = { t, useLanguage, ...hooks, ...map, ...Object.fromEntries(hostNames.map(n => [n,n])),
+const repeat = await load((await read('app/utils/repeatVisits.js')).replace("import { localDate, localTime } from './visitDate';", 'const localDate = () => \'2026-09-30\', localTime = () => \'10:00\';'));
+const mocks = { ...repeat, t, useLanguage, ...hooks, ...map, ...Object.fromEntries(hostNames.map(n => [n,n])),
  React: { createElement: (type, props, ...children) => ({ type, props: props || {}, children: children.flat(Infinity).filter(x => x !== null && x !== false && x !== undefined) }) },
  theme: {}, StyleSheet: { create: x => x }, useIsFocused: () => true,
  useWishlist: () => ({ premium, items: [wish] }), useTrips: () => ({ trips: [], addTrip: async () => {}, updateTrip: async () => {}, deleteTrip: async () => {} }),

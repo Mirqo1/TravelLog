@@ -38,6 +38,6 @@ export function parsePlaces(data) {
     if (seen.has(id)) return [];
     seen.add(id);
     const locationName = [...new Set([p.city || p.district || p.county, p.state, p.country].filter(Boolean))].join(', ');
-    return [{ id, name, latitude, longitude, locationName, countryCode: (p.countrycode || '').toUpperCase() }];
+    return [{ id, placeId: p.osm_id ? `osm:${p.osm_type}:${p.osm_id}` : '', name, latitude, longitude, locationName, countryCode: (p.countrycode || '').toUpperCase() }];
   }).slice(0, 5);
 }

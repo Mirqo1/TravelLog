@@ -27,6 +27,7 @@ const normalizeTrip = (trip = {}, id = trip.id) => ({
   id: String(id || `mock-${Date.now()}`),
   userId: String(trip.userId || ''),
   name: String(trip.name || '').trim(),
+  ...(typeof trip.placeId === 'string' && trip.placeId ? { placeId: trip.placeId.slice(0, 200) } : {}),
   description: String(trip.description || '').trim(),
   locationName: String(trip.locationName || '').trim(),
   countryCode: String(trip.countryCode || '').trim().toUpperCase(),

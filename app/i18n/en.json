@@ -482,5 +482,11 @@
   "Oprávnenia sa nepodarilo obnoviť. Skontroluj internet.": "Access could not be refreshed. Check your internet connection.",
   "Testovací režim sa nepodarilo načítať.": "The test mode could not be loaded.",
   "Testovací režim sa nepodarilo uložiť.": "The test mode could not be saved.",
-  "Neplatný testovací režim.": "Invalid test mode."
+  "Neplatný testovací režim.": "Invalid test mode.",
+  "Navštívil som znova": "Visit again",
+  "Nová návšteva tohto miesta": "New visit to this place",
+  "Tu si už bol · {0} návštev": "You have been here · {0} visits",
+  "História návštev": "Visit history",
+  "Tu si už bol · 1 návšteva": "You have been here · 1 visit",
+  "Tu si už bol · {0} návštevy": "You have been here · {0} visits"
 }

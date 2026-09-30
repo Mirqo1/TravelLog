@@ -7,6 +7,7 @@ export const applyLocationSelection = (current, previous, next) => {
   const unchangedCoordinates = Number(current.latitude) === next.latitude && Number(current.longitude) === next.longitude;
   return {
     ...current,
+    placeId: sameSelection ? current.placeId : next.placeId || '',
     name: sameSelection ? current.name : next.name || '',
     countryCode: sameSelection
       ? current.countryCode || (unchangedCoordinates && !current.locationName ? next.countryCode || '' : '')

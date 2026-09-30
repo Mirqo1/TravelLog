@@ -1,3 +1,5 @@
+import PlaceHistory from '../components/PlaceHistory';
+import { placeMarkers, visitsAtPlace } from '../utils/repeatVisits';
 import { t } from '../i18n';
 import { useLanguage } from '../context/LanguageContext';
 import { WishlistEditor } from '../components/WishlistModal';
@@ -80,7 +82,7 @@ export default function MapScreen({ route, navigation }) {
   const heatPoints = useMemo(() => trips.filter((trip) => validLocation(trip.location))
     .map((trip) => ({ ...trip.location, weight: 1 })), [trips]);
   const countryPins = useMemo(() => countryMarkers(trips), [trips]);
-  const markers = useMemo(() => mode === 'countries' ? [] : groupMarkers(trips, region, zoom, mode === 'places'),
+  const markers = useMemo(() => mode === 'countries' ? [] : mode === 'places' ? placeMarkers(trips, region) : groupMarkers(trips, region, zoom),
     [trips, region, zoom, mode]);
 
   const wishMarkers = useMemo(() => mode === 'countries' ? [] : groupMarkers(wishes, region, zoom, mode === 'places'),
@@ -107,7 +109,7 @@ export default function MapScreen({ route, navigation }) {
       Math.abs(trip.location.latitude - group.coordinate.latitude),
       Math.abs(trip.location.longitude - group.coordinate.longitude))));
     if (mode === 'places' || spread < 0.0001) {
-      showGroup(t("Návštevy na tomto mieste"), group.trips);
+      showGroup(t("Návštevy na tomto mieste"), visitsAtPlace(group.trips, group.trips[0]).length === group.trips.length ? visitsAtPlace(group.trips, group.trips[0]) : group.trips);
       return;
     }
     mapRef.current?.animateToRegion({ ...group.coordinate,
@@ -202,7 +204,7 @@ export default function MapScreen({ route, navigation }) {
         {isFocused ? <MapView ref={mapRef} style={styles.map} initialRegion={region}
           mapType={mapType} onMapReady={() => { mapReady.current = true; showOverview(); showWish(); }}
           onRegionChangeComplete={setRegion} onPress={selectPoint}
-          onPoiClick={(event) => selectCoordinate({ ...event.nativeEvent.coordinate, name: event.nativeEvent.name })}>
+          onPoiClick={(event) => selectCoordinate({ ...event.nativeEvent.coordinate, name: event.nativeEvent.name, placeId: event.nativeEvent.placeId ? `google:${event.nativeEvent.placeId}` : '' })}>
           {heatPoints.length > 0 ? <Heatmap points={heatPoints} radius={28} opacity={0.55} /> : null}
           {mode === 'countries' ? countryPins.map((group) => <Marker key={'country:' + group.country.code}
             coordinate={group.coordinate} anchor={{ x: 0.5, y: 0.5 }}
@@ -229,6 +231,7 @@ export default function MapScreen({ route, navigation }) {
       </View>
       {selectedCoordinate ? <Text numberOfLines={2} style={styles.hint}>{t("Vybrané:")}{' '}{selectedCoordinate.name ||
         selectedCoordinate.latitude.toFixed(4) + ', ' + selectedCoordinate.longitude.toFixed(4)}</Text> : null}
+      {selectedCoordinate ? <PlaceHistory visits={visitsAtPlace(trips, selectedCoordinate)} /> : null}
       <View style={styles.mapActions}>
       <Pressable accessibilityRole="button" style={[styles.button, styles.mapAction]} onPress={() => { setPickingWish(false); setModalVisible(true); }}>
         <Text style={styles.buttonText}>{t("+ Pridať návštevu")}</Text>

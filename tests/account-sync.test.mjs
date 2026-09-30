@@ -195,3 +195,13 @@ assert.deepEqual(normalizeTags(' rodina, Rodina, , turistika '), ['rodina', 'tur
 assert.equal(normalizeTags(Array.from({length: 12}, (_, i) => String(i))).length, 8);
 assert.equal(normalizeTags(['a'.repeat(50)])[0].length, 30);
 console.log('PASS: tags persist across edits, backup/restore and sync; legacy visits remain compatible; labels bounded and deduplicated.');
+const repeatSource = await service.addTrip('repeat-user', { ...t('ignored'), placeId: 'google:zoo', photos: ['file:///original.jpg'], notes: 'original' });
+const repeatAdded = await service.addTrip('repeat-user', { ...t('ignored'), placeId: 'google:zoo', photos: [], notes: 'second visit', date: '2026-09-30' });
+assert.notEqual(repeatSource.id, repeatAdded.id);
+const repeatSaved = await service.getTrips('repeat-user');
+assert.equal(repeatSaved.length,2); assert.ok(repeatSaved.every(visit => visit.placeId === 'google:zoo'));
+assert.deepEqual(repeatSaved.find(v => v.id === repeatSource.id).photos,['file:///original.jpg']);
+assert.deepEqual(repeatSaved.find(v => v.id === repeatAdded.id).photos,[]);
+await service.restoreTripsBackup('repeat-second-device',portableTrips(repeatSaved));
+assert.equal((await service.getTrips('repeat-second-device')).filter(v => v.placeId === 'google:zoo').length,2);
+console.log('PASS: repeated visits have independent IDs/photos and place identity survives storage and another-device restore.');

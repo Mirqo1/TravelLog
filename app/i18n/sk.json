@@ -482,5 +482,11 @@
   "Oprávnenia sa nepodarilo obnoviť. Skontroluj internet.": "Oprávnenia sa nepodarilo obnoviť. Skontroluj internet.",
   "Testovací režim sa nepodarilo načítať.": "Testovací režim sa nepodarilo načítať.",
   "Testovací režim sa nepodarilo uložiť.": "Testovací režim sa nepodarilo uložiť.",
-  "Neplatný testovací režim.": "Neplatný testovací režim."
+  "Neplatný testovací režim.": "Neplatný testovací režim.",
+  "Navštívil som znova": "Navštívil som znova",
+  "Nová návšteva tohto miesta": "Nová návšteva tohto miesta",
+  "Tu si už bol · {0} návštev": "Tu si už bol · {0} návštev",
+  "História návštev": "História návštev",
+  "Tu si už bol · 1 návšteva": "Tu si už bol · 1 návšteva",
+  "Tu si už bol · {0} návštevy": "Tu si už bol · {0} návštevy"
 }

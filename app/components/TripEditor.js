@@ -29,9 +29,9 @@ export default function TripEditor({ initialValues, coordinates, title = t("Nov�
   const inputFocused = (event) => { focusedInput.current = event.nativeEvent.target; revealInput(); };
   const start = coordinates || initialValues?.location || { latitude: 48.1486, longitude: 17.1077 };
   useEffect(() => () => { request.current += 1; }, []);
-  const selectLocation = async (coordinate, name) => {
+  const selectLocation = async (coordinate, name, placeId = '') => {
     const id = ++request.current;
-    const next = { ...coordinate, name: name || '', locationName: '', countryCode: '', selectionId: id };
+    const next = { ...coordinate, placeId, name: name || '', locationName: '', countryCode: '', selectionId: id };
     setSelection(next);
     setHint(t("Dohľadávam obec a krajinu…"));
     try {
@@ -48,7 +48,7 @@ export default function TripEditor({ initialValues, coordinates, title = t("Nov�
       request.current += 1;
       setSelection({ ...coordinates, selectionId: request.current });
       setHint(t("Poloha vybraná. Skontroluj názov a lokalitu pred uložením."));
-    } else if (coordinates) selectLocation(coordinates, coordinates.name);
+    } else if (coordinates) selectLocation(coordinates, coordinates.name, coordinates.placeId);
   }, [coordinates]);
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -64,7 +64,7 @@ export default function TripEditor({ initialValues, coordinates, title = t("Nov�
             onPress={(event) => {
               if (event.nativeEvent.action !== 'marker-press') selectLocation(event.nativeEvent.coordinate);
             }}
-            onPoiClick={(event) => selectLocation(event.nativeEvent.coordinate, event.nativeEvent.name)}>
+            onPoiClick={(event) => selectLocation(event.nativeEvent.coordinate, event.nativeEvent.name, event.nativeEvent.placeId ? `google:${event.nativeEvent.placeId}` : '')}>
             {(selection || initialValues?.location) ? (
               <Marker coordinate={selection || initialValues.location} draggable
                 onDragEnd={(event) => selectLocation(event.nativeEvent.coordinate)} />

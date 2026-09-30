@@ -1,3 +1,6 @@
+import AddPlaceModal from './AddPlaceModal';
+import { repeatVisitDraft } from '../utils/repeatVisits';
+import { useTrips } from '../context/TripsContext';
 import { t } from '../i18n';
 import { useLanguage } from '../context/LanguageContext';
 import { normalizeTags } from '../utils/backup';
@@ -18,12 +21,14 @@ const ratingText = (value) => {
 };
 export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDelete }) {
   useLanguage();
+  const { addTrip } = useTrips();
+  const [repeatDraft, setRepeatDraft] = useState(null);
   const [shareOpen, setShareOpen] = useState(false);
   const { canAddPhotos: canShare } = usePhotoAccess();
-  useEffect(() => { if (!visible) setShareOpen(false); }, [visible]);
+  useEffect(() => { if (!visible) { setShareOpen(false); setRepeatDraft(null); } }, [visible]);
   if (!trip) return null;
   const hasLocation = validLocation(trip.location);
-  return <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+  return <><Modal visible={visible && !repeatDraft} animationType="slide" onRequestClose={onClose}>
     <SafeAreaProvider><SafeAreaView style={styles.screen}>
       <View style={styles.toolbar}>
         <Text style={styles.eyebrow}>{t("MOJA NÁVŠTEVA")}</Text>
@@ -66,6 +71,9 @@ export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDel
         {canShare ? <Pressable accessibilityRole="button" onPress={() => setShareOpen(true)} style={styles.share}>
           <Text style={styles.shareText}>{t("Zdieľať kartu návštevy")}</Text>
         </Pressable> : null}
+        {hasLocation ? <Pressable accessibilityRole="button" onPress={() => { setShareOpen(false); setRepeatDraft(repeatVisitDraft(trip)); }} style={styles.share}>
+          <Text style={styles.shareText}>{t('Navštívil som znova')}</Text>
+        </Pressable> : null}
         <Pressable accessibilityRole="button" onPress={onEdit} style={styles.edit}>
           <Text style={styles.editText}>{t("Upraviť návštevu")}</Text>
         </Pressable>
@@ -75,7 +83,11 @@ export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDel
       </ScrollView>
       <TripShareModal visible={shareOpen && visible} trip={trip} onClose={() => setShareOpen(false)} />
     </SafeAreaView></SafeAreaProvider>
-  </Modal>;
+  </Modal>
+    <AddPlaceModal visible={Boolean(repeatDraft) && visible} initialTrip={repeatDraft} title={t('Nová návšteva tohto miesta')}
+      submitLabel={t('Uložiť návštevu')} onClose={() => setRepeatDraft(null)}
+      onSave={async draft => { await addTrip(draft); setRepeatDraft(null); onClose(); }} />
+  </>;
 }
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.background },

@@ -1,3 +1,5 @@
+import PlaceHistory from './PlaceHistory';
+import { visitsAtPlace } from '../utils/repeatVisits';
 import { t } from '../i18n';
 import { useLanguage } from '../context/LanguageContext';
 import { normalizeTags } from '../utils/backup';
@@ -20,6 +22,7 @@ const today = localDate;
 
 const toDraft = (trip = {}) => ({
   name: trip.name || '',
+  placeId: trip.placeId || '',
   description: trip.description || '',
   locationName: trip.locationName || '',
   countryCode: trip.countryCode || '',
@@ -53,7 +56,7 @@ export default function TripForm({
   onInputFocus,
 }) {
   useLanguage();
-  const { notebookId } = useTrips();
+  const { notebookId, trips } = useTrips();
   const { canAddPhotos: canEditTags } = usePhotoAccess();
   const draftOwner = useRef(notebookId);
   const mounted = useRef(true);
@@ -110,7 +113,7 @@ export default function TripForm({
   }, [form.latitude, form.longitude]);
 
   const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value,
-    ...(['latitude', 'longitude', 'locationName'].includes(field) ? { countryCode: '' } : {}),
+    ...(['latitude', 'longitude', 'locationName'].includes(field) ? { countryCode: '', placeId: '' } : {}),
   }));
 
   const handleSubmit = async () => {
@@ -136,6 +139,7 @@ export default function TripForm({
 
       await onSubmit({
         name: form.name.trim(),
+        placeId: form.placeId,
         description: form.description.trim(),
         locationName: form.locationName.trim(),
         countryCode: form.countryCode.toUpperCase(),
@@ -155,9 +159,11 @@ export default function TripForm({
     }
   };
 
+  const history = visitsAtPlace(trips, { ...form, location: { latitude: Number(form.latitude), longitude: Number(form.longitude) } }, initialValues?.id);
   return (
     <View style={styles.card}>
       <Text style={styles.title}>{title}</Text>
+      <PlaceHistory visits={history} />
       <TextInput
         onFocus={onInputFocus}
         style={styles.input}
