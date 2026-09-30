@@ -231,3 +231,9 @@ been verified. Second-device account/photo restore is still deferred.
 ## Admin/test access (2026-09-29)
 
 Profile has a collapsed Version testing section with per-notebook saved simulation. All Premium consumers share the same access state. Existing data is preserved. Trusted Firebase role tooling is separate from the app; no live role was granted without a target UID and credential. Production billing is not implemented.
+
+## Deferred final-stage task: broad language support (2026-09-30)
+
+Miroslav approved expanding common world languages, but explicitly deferred implementation until the application name, features, terminology and all UI texts are finalized. Keep the existing English/Slovak support meanwhile.
+
+Use reviewed translation dictionaries bundled with the app for instant offline UI, rather than translating UI live via Google/DeepL. English is the source language. Prepare translations with AI/service assistance, keep terminology consistent, validate missing keys and interpolation, and review layouts, dates and plural forms. Additional right-to-left languages require a separate layout review. Detect the phone language on first launch, allow Profile override and fall back to English. Personal visit names and notes remain as entered. Roll out languages in checked groups; do not claim native-speaker quality without review.
