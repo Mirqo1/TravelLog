@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+import { useLanguage } from '../context/LanguageContext';
 import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { listPlacesByUser } from '../services/placesService';
@@ -10,6 +12,7 @@ const MOCK_PLACES = [
 ];
 
 export default function StatsScreen() {
+  useLanguage();
   const { user } = useAuth();
   const [places, setPlaces] = useState(MOCK_PLACES);
 
@@ -62,12 +65,12 @@ export default function StatsScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Štatistiky</Text>
-      <Text style={styles.item}>Počet miest: {stats.totalPlaces}</Text>
-      <Text style={styles.item}>Počet krajín: {stats.countriesCount}</Text>
-      <Text style={styles.item}>Posledne navštívené: {stats.lastVisited}</Text>
-      <Text style={styles.item}>Najčastejšia krajina: {stats.mostVisitedCountry}</Text>
-      <Text style={styles.section}>Rozdelenie podľa typu</Text>
+      <Text style={styles.header}>{t("Štatistiky")}</Text>
+      <Text style={styles.item}>{t("Počet miest:")}{' '}{stats.totalPlaces}</Text>
+      <Text style={styles.item}>{t("Počet krajín:")}{' '}{stats.countriesCount}</Text>
+      <Text style={styles.item}>{t("Posledne navštívené:")}{' '}{stats.lastVisited}</Text>
+      <Text style={styles.item}>{t("Najčastejšia krajina:")}{' '}{stats.mostVisitedCountry}</Text>
+      <Text style={styles.section}>{t("Rozdelenie podľa typu")}</Text>
       {Object.entries(stats.typeCount).map(([type, count]) => (
         <Text key={type} style={styles.item}>
           {type}: {count}

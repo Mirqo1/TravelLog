@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+import { useLanguage } from '../context/LanguageContext';
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import HeatMapVisualization from '../components/HeatMapVisualization';
@@ -11,13 +13,14 @@ const PLACE_COUNTS = [
 ];
 
 export default function HeatMapScreen() {
+  useLanguage();
   const [selectedCountry, setSelectedCountry] = useState(null);
 
   const selectedDetails = useMemo(() => {
     if (!selectedCountry) {
-      return 'Vyber krajinu na mape pre detail.';
+      return t("Vyber krajinu na mape pre detail.");
     }
-    return `${selectedCountry.country}: ${selectedCountry.count} navštívených miest`;
+    return t("{0}: {1} navštívených miest", {0: selectedCountry.country, 1: selectedCountry.count});
   }, [selectedCountry]);
 
   return (
