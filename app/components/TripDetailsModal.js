@@ -14,6 +14,8 @@ import { validLocation } from '../utils/mapVisits';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { usePhotoAccess } from '../hooks/usePhotoAccess';
 import TripShareModal from './TripShareModal';
+import VisitShareActions from './VisitShareActions';
+import VisitTransferModal from './VisitTransferModal';
 
 const ratingText = (value) => {
   const rating = Math.max(0, Math.min(5, Math.round(Number(value) || 0)));
@@ -72,7 +74,7 @@ export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDel
           <Text style={styles.body}>{trip.notes}</Text></View> : null}
         {!trip.description && !trip.notes ? <Text style={styles.empty}>{t("Pridaj pár slov, aby ti táto návšteva ožila aj po rokoch.")}</Text> : null}
         {canShare ? <Pressable accessibilityRole="button" onPress={() => setShareOpen(true)} style={styles.share}>
-          <Text style={styles.shareText}>{t("Zdieľať kartu návštevy")}</Text>
+          <Text style={styles.shareText}>{t("Zdieľať návštevu")}</Text>
         </Pressable> : null}
         {hasLocation ? <Pressable accessibilityRole="button" onPress={() => { setShareOpen(false); setRepeatDraft(repeatVisitDraft(trip)); }} style={styles.share}>
           <Text style={styles.shareText}>{t('Navštívil som znova')}</Text>
@@ -84,7 +86,9 @@ export default function TripDetailsModal({ visible, trip, onClose, onEdit, onDel
           <Text style={styles.deleteText}>{t("Vymazať návštevu")}</Text>
         </Pressable>
       </ScrollView>
-      <TripShareModal visible={shareOpen && visible} trip={trip} onClose={() => setShareOpen(false)} />
+      <VisitShareActions visible={shareOpen === true && visible} onChoose={setShareOpen} onClose={() => setShareOpen(false)} />
+      <VisitTransferModal visible={Boolean(visible && (shareOpen === 'copy' || shareOpen === 'invitation'))} kind={shareOpen === 'invitation' ? 'invitation' : 'copy'} trip={trip} onClose={() => setShareOpen(false)} />
+      <TripShareModal visible={shareOpen === 'card' && visible} trip={trip} onClose={() => setShareOpen(false)} />
     </SafeAreaView></SafeAreaProvider>
   </Modal>
     <AddPlaceModal visible={Boolean(repeatDraft) && visible} initialTrip={repeatDraft} title={t('Nová návšteva tohto miesta')}

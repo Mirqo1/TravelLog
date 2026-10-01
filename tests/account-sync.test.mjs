@@ -230,3 +230,29 @@ await service.deleteTrip(owner, shared.id);
 assert.ok((await service.getPhotoDeletions(owner)).some(e => e.tripId === shared.id && e.photoId === null));
 assert.deepEqual(await service.getPhotoDeletions('cloud-empty-new-phone'), []);
 console.log('PASS: atomic offline photo/visit deletions, restore race guard, account cancellation, shared image in another visit retained, empty new phone never infers deletion.');
+
+// Receiving the same source is idempotent even across concurrent taps and a
+// different phone restored through portable notebook sync.
+const sharedSourceId = 'a'.repeat(64);
+const recipient = 'cloud-share-recipient';
+const incomingTrip = { ...t('ignored', 'Shared Zoo'), notes: 'My own note', photos: [localPhoto] };
+const [firstShared, secondShared] = await Promise.all([
+  service.importSharedVisit(recipient, sharedSourceId, incomingTrip, () => true),
+  service.importSharedVisit(recipient, sharedSourceId, { ...incomingTrip, notes: 'Should not overwrite' }, () => true),
+]);
+assert.equal(firstShared.already, false); assert.equal(secondShared.already, true);
+assert.equal(firstShared.trip.id, secondShared.trip.id);
+assert.equal((await service.getTrips(recipient)).length, 1);
+assert.equal(secondShared.trip.notes, 'My own note');
+assert.deepEqual(secondShared.trip.photos, [localPhoto]);
+const sharedPacked = portableTrips(await service.getTrips(recipient));
+assert.equal(sharedPacked[0].sharedSourceId, sharedSourceId);
+await service.restoreTripsBackup('cloud-share-second-phone', sharedPacked);
+assert.equal((await service.importSharedVisit('cloud-share-second-phone', sharedSourceId, incomingTrip, () => true)).already, true);
+await assert.rejects(service.importSharedVisit(recipient, 'b'.repeat(64), incomingTrip, () => false));
+assert.equal((await service.getTrips(recipient)).length, 1);
+const beforeAccept = memory.get('travellog/mock-trips/' + recipient);
+failWrite = true;
+await assert.rejects(service.importSharedVisit(recipient, 'c'.repeat(64), incomingTrip, () => true));
+assert.equal(memory.get('travellog/mock-trips/' + recipient), beforeAccept); failWrite = false;
+console.log('PASS: real atomic acceptance, concurrent duplicate protection, personal edits/photos preserved, source identity through another-device backup, cancellation and failed-write rollback.');

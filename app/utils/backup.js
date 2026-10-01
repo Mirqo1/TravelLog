@@ -13,8 +13,8 @@ export function normalizeTags(value) {
 // Backup only portable visit fields. Device-local photo URIs are deliberately
 // excluded here; Google Drive photo backup has its own private manifests.
 export function portableTrips(trips) {
-  return trips.map(({ id, name, placeId, locationName, countryCode, location, date, visitTime, rating, description, notes, tags, createdAt, updatedAt }) => ({
-    id, name, ...(placeId ? { placeId } : {}), locationName: locationName || '', countryCode: countryCode || '', location,
+  return trips.map(({ id, name, placeId, sharedSourceId, locationName, countryCode, location, date, visitTime, rating, description, notes, tags, createdAt, updatedAt }) => ({
+    id, name, ...(placeId ? { placeId } : {}), ...(sharedSourceId ? { sharedSourceId } : {}), locationName: locationName || '', countryCode: countryCode || '', location,
     date, visitTime: visitTime || '', rating: rating || 0, description: description || '', notes: notes || '', tags: normalizeTags(tags),
     createdAt: createdAt || '', updatedAt: updatedAt || '',
   }));
@@ -27,6 +27,7 @@ export function validateBackup(data) {
   for (const trip of data.trips) {
     if (!trip || typeof trip.id !== 'string' || !trip.id || seen.has(trip.id)
       || (trip.placeId != null && (typeof trip.placeId !== 'string' || trip.placeId.length > 200))
+      || (trip.sharedSourceId != null && !/^[a-f0-9]{64}$/.test(trip.sharedSourceId))
       || typeof trip.name !== 'string' || !trip.name.trim()
       || !Number.isFinite(trip.location?.latitude) || Math.abs(trip.location.latitude) > 90
       || !Number.isFinite(trip.location?.longitude) || Math.abs(trip.location.longitude) > 180

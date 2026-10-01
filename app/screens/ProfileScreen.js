@@ -13,6 +13,7 @@ import { usePhotoAccess } from '../hooks/usePhotoAccess';
 import { useAuth } from '../context/AuthContext';
 import { useTrips } from '../context/TripsContext';
 import DriveBackupPanel from '../components/DriveBackupPanel';
+import VisitTransferPanel from '../components/VisitTransferPanel';
 import CloudBackupPanel from '../components/CloudBackupPanel';
 
 export default function ProfileScreen({ navigation }) {
@@ -166,6 +167,10 @@ export default function ProfileScreen({ navigation }) {
     <SettingsSection title={t("Fotografie a Google Disk")} summary={photoSummary} icon="photo-library"
       expanded={openSection === 'photos'} onPress={() => toggleSection('photos')}>
       <DriveBackupPanel />
+    </SettingsSection>
+    <SettingsSection title={t('Zdieľané návštevy')} summary={t('Otvoriť kópiu alebo pozvánku zo súboru')} icon="move-to-inbox"
+      expanded={openSection === 'received'} onPress={() => toggleSection('received')}>
+      <VisitTransferPanel />
     </SettingsSection>
     <SettingsSection title={t("Ukladanie a offline režim")} summary={t("Ako sú chránené tvoje údaje")} icon="phone-android"
       expanded={openSection === 'storage'} onPress={() => toggleSection('storage')}>

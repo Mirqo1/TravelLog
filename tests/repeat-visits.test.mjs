@@ -33,7 +33,7 @@ assert.equal(backup.validateBackup({version:1,revision:'r',trips:backup.portable
 assert.equal(backup.mergeBackup([old],[later],'user').length,2);
 // Real detail action opens a clean new draft and calls add, never update.
 let slots=[], index=0, effects=[], added=[],closed=0;
-const names=['Modal','Pressable','ScrollView','Text','View','SafeAreaProvider','SafeAreaView','MapView','Marker','VisitPhotoGallery','TripShareModal','AddPlaceModal'];
+const names=['Modal','Pressable','ScrollView','Text','View','SafeAreaProvider','SafeAreaView','MapView','Marker','VisitPhotoGallery','TripShareModal','VisitShareActions','VisitTransferModal','AddPlaceModal'];
 const mocks={...repeat,...dates,...Object.fromEntries(names.map(n=>[n,n])),t:x=>x,useLanguage(){},theme:{},
  React:{createElement:(type,props,...children)=>({type,props:props||{},children:children.flat(Infinity)})},
  StyleSheet:{create:x=>x},useState(initial){const i=index++; if(!(i in slots))slots[i]=initial;return[slots[i],v=>slots[i]=v];},

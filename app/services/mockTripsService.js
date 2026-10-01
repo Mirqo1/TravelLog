@@ -29,6 +29,7 @@ const normalizeTrip = (trip = {}, id = trip.id) => ({
   userId: String(trip.userId || ''),
   name: String(trip.name || '').trim(),
   ...(typeof trip.placeId === 'string' && trip.placeId ? { placeId: trip.placeId.slice(0, 200) } : {}),
+  ...(/^[a-f0-9]{64}$/.test(trip.sharedSourceId || '') ? { sharedSourceId: trip.sharedSourceId } : {}),
   description: String(trip.description || '').trim(),
   locationName: String(trip.locationName || '').trim(),
   countryCode: String(trip.countryCode || '').trim().toUpperCase(),
@@ -186,6 +187,21 @@ export const addTrip = (userId, tripData, wishlistId = null) => exclusive(userId
   );
   await saveTrips(userId, [...trips, created]);
   return created;
+});
+
+// Acceptance is explicit and atomic. Reopening the same received copy never
+// overwrites personal edits or duplicates an already accepted source visit.
+export const importSharedVisit = (userId, sourceId, tripData, isCurrent) => exclusive(userId, async () => {
+  if (!/^[a-f0-9]{64}$/.test(sourceId || '')) throw new Error('Neplatný zdieľaný záznam.');
+  const state = await readNotebook(userId);
+  if (!isCurrent()) throw new Error('Účet sa zmenil. Skús to znova.');
+  const existing = state.trips.find(trip => trip.sharedSourceId === sourceId);
+  if (existing) return { trip: existing, already: true };
+  const created = normalizeTrip({ ...tripData, sharedSourceId: sourceId, userId,
+    createdAt: today(), updatedAt: today(), syncStatus: 'local' },
+    `mock-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  await writeNotebook(userId, { ...state, trips: [...state.trips, created] });
+  return { trip: created, already: false };
 });
 
 export const updateTrip = (userId, tripId, tripData) => exclusive(userId, async () => {

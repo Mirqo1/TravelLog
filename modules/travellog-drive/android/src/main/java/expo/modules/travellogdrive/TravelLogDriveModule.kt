@@ -25,6 +25,8 @@ import java.security.MessageDigest
 import java.io.File
 
 class TravelLogDriveModule : Module() {
+  private var filePicker: Promise? = null
+  private val fileRequestCode = 48050
   private val scope = "https://www.googleapis.com/auth/drive.appdata"
   private var pending: Promise? = null
   private var requestCode = 47000
@@ -78,7 +80,52 @@ class TravelLogDriveModule : Module() {
       }
     }.runOnQueue(Queues.MAIN)
 
+    AsyncFunction("createVisitPackage") { manifest: String, photos: List<String> ->
+      VisitPackageIO(appContext.reactContext!!).create(manifest, photos)
+    }
+    AsyncFunction("discardVisitPackage") { url: String ->
+      VisitPackageIO(appContext.reactContext!!).discard(url)
+    }
+    AsyncFunction("pickVisitPackage") { promise: Promise ->
+      val activity = appContext.currentActivity
+      if (activity == null || filePicker != null) {
+        promise.reject("PACKAGE_BUSY", "Výber súboru už prebieha alebo aplikácia nie je otvorená.", null)
+      } else {
+        filePicker = promise
+        try {
+          activity.startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*"
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+          }, fileRequestCode)
+        } catch (error: Exception) {
+          filePicker = null
+          promise.reject("PACKAGE_FAILED", "Výber súboru sa nepodarilo otvoriť.", error)
+        }
+      }
+    }.runOnQueue(Queues.MAIN)
+
     OnActivityResult { _, result ->
+      if (result.requestCode == fileRequestCode) {
+        val promise = filePicker
+        filePicker = null
+        if (promise != null) {
+          val uri = result.data?.data
+          if (result.resultCode != Activity.RESULT_OK || uri == null) promise.resolve(null)
+          else {
+            // ZIP parsing/checksums must not block the UI thread.
+            val context = appContext.reactContext
+            Thread {
+              try {
+                if (context == null) throw IllegalStateException("Aplikácia nie je otvorená.")
+                promise.resolve(VisitPackageIO(context).read(uri))
+              } catch (error: Exception) {
+                promise.reject("INVALID_PACKAGE", "Súbor návštevy je neplatný, poškodený alebo príliš veľký.", error)
+              }
+            }.start()
+          }
+        }
+      }
       if (pending != null && result.requestCode == requestCode) {
         if (result.resultCode != Activity.RESULT_OK) fail("CANCELLED", "Pripojenie bolo zrušené.")
         else try {
@@ -133,6 +180,10 @@ class TravelLogDriveModule : Module() {
         promise.reject("SHARE_FAILED", error.message ?: "Zdieľanie zlyhalo.", error)
       }
     }.runOnQueue(Queues.MAIN)
-    OnDestroy { handler.post { fail("CANCELLED", "Pripojenie bolo ukončené.") } }
+    OnDestroy { handler.post {
+      fail("CANCELLED", "Pripojenie bolo ukončené.")
+      filePicker?.reject("CANCELLED", "Výber súboru bol ukončený.", null)
+      filePicker = null
+    } }
   }
 }
