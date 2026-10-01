@@ -253,3 +253,13 @@ Verified repeat-detail add flow, conservative matching, map grouping, independen
 ## Interactive visit detail map (2026-09-30)
 
 At Miroslav's request the detail mini-map now supports pan, pinch zoom, rotation, pitch and Android zoom controls. Touching the map temporarily stops the surrounding detail ScrollView; final touch release or cancellation restores scrolling. This supersedes the original static-map requirement. Stored coordinates and the marker are unchanged. JS export and existing detail flow/gesture lifecycle checks pass; native phone behavior remains to be checked.
+
+## Safe photo deletion and Drive cleanup (2026-10-01)
+
+Implemented explicit deletion decisions stored atomically with the notebook and published to private Drive app data. Saved gallery removals and deleted visits invalidate their stale album references across updated devices. Empty galleries on new devices are not deletions. Restore and stale-device uploads respect retained decisions; shared blobs referenced by other visits or current local galleries are protected. Deletion sync works in Free as well as Premium, in the foreground after network/Wi-Fi returns. Profile previews count/MB and confirms permanent reclamation; files younger than 7 days remain excluded. No native/dependency changes.
+
+Verified real service flows with simulated Drive, two-device stale albums, interrupted/offline deletion, idempotent retry, shared checksums, malformed records, cancelled accounts, atomic storage failures and restore guards. English/Slovak strings and Android JS export passed. Physical second-phone restore/deletion and native APK acceptance remain pending.
+
+## Whole-visit sharing proposal (pending approval; not implemented)
+
+Keep the existing branded share image. Add a separate whole-visit copy action with a preview and an explicit choice of fields/photos; private notes excluded by default. A recipient gets a snapshot and can choose to save their own visit or a dream, never modify the sender's diary. A portable package of visit JSON and reduced JPEGs avoids developer-hosted photo storage, but requires an import-capable app and a transport that accepts files. Once sent, a copy cannot be revoked. A read-only web link would be easier for recipients but needs separate hosting/storage, access controls, cost limits and a branding/domain decision. Current Drive appDataFolder backups are private and cannot directly serve shared links. Groups and accepted participant invitations are a later step with separate personal photos/notes and explicit access, not automatic exposure of a user's diary. Miroslav requested a proposal, not implementation of sharing/groups in this task.

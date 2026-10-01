@@ -31,9 +31,9 @@ export default function DriveBackupPanel() {
           {button(t("Obnoviť pripojenie"), drive.connect)}
           {button(t("Vyhľadať nepotrebné nahrané fotky"), drive.cleanupPreview)}
           {drive.cleanupPlan?.count > 0 ? <View style={styles.cleanup}>
-            <Text style={styles.note}>{t("Našli sme")}{' '}{drive.cleanupPlan.count}{' '}{t("nahraných fotiek bez odkazu z galérie (")}{(drive.cleanupPlan.bytes / (1024 * 1024)).toFixed(1)}{' '}{t("MB). Fotky, ktoré niektorý telefón stále eviduje v zálohe, sa nemažú.")}</Text>
+            <Text style={styles.note}>{t("Našli sme")}{' '}{drive.cleanupPlan.count}{' '}{t("nahraných fotiek bez odkazu z galérie (")}{(drive.cleanupPlan.bytes / (1024 * 1024)).toFixed(1)}{' '}{t("MB). Fotky používané v iných návštevách sa nemažú. Súbory mladšie ako 7 dní zatiaľ ponechávame.")}</Text>
             {button(t("Uvoľniť toto miesto"), () => Alert.alert(t("Natrvalo vymazať nepotrebné súbory?"),
-              t("Fotky bez odkazu z akejkoľvek zálohovanej galérie sa vymažú z Google Disku. Pred vymazaním ich aplikácia znovu skontroluje."),
+              t("Nepoužívané fotky sa natrvalo vymažú z Google Disku. Odstránené fotky sa neobnovia zo starších galérií. Pred vymazaním znovu overíme, či ich nepoužíva iná návšteva."),
               [{ text: t("Zrušiť"), style: 'cancel' }, { text: t("Vymazať"), style: 'destructive', onPress: action(drive.cleanup) }]))}
           </View> : null}
           {button(t("Odpojiť Disk"), () => Alert.alert(t("Odpojiť Google Disk?"), t("Zastaví sa zálohovanie v tomto telefóne. Fotky v telefóne aj zálohy na Disku zostanú zachované."),
@@ -45,7 +45,7 @@ export default function DriveBackupPanel() {
           {!!drive.message && <Text style={styles.note}>{t(drive.message)}</Text>}
         </>}
         <Text style={styles.note}>{t("Automatické zálohovanie funguje vo všetkých záložkách, kým je aplikácia otvorená. Po jej zatvorení alebo bez siete fotky čakajú na ďalšie otvorenie. Stav „zálohované“ sa zobrazí až po dokončení prenosu.")}</Text>
-        <Text style={styles.note}>{t("Odstránenie fotky v aplikácii môže ponechať jej staršiu zálohu na inom zariadení. Kontrola miesta bezpečne vymaže iba súbory, na ktoré už neodkazuje žiadna uložená galéria. Odpojenie Disku zálohu nevymaže.")}</Text>
+        <Text style={styles.note}>{t("Uložené odstránenie fotky alebo návštevy sa po pripojení prenesie na Disk aj ostatné telefóny s touto verziou aplikácie. Platí to aj bez Premium. Fotka sa nevráti pri obnove. Miesto na Disku uvoľníš po kontrole a potvrdení; odpojenie Disku zálohu nevymaže.")}</Text>
       </>}
   </View>;
 }

@@ -4,6 +4,7 @@ const raw = await readFile('app/context/DriveBackupContext.js', 'utf8');
 const memory = new Map(), listeners = [], timers = new Map();
 let account = { uid: 'alice' }, premium = true, index = 0, slots = [], pendingEffects = [], timerId = 0;
 let backupCalls = 0, restoreCalls = 0, stopCalls = 0, heldBackup = null;
+let deletionCalls = 0;
 let previewCalls = 0, cleanupCalls = 0;
 const hooks = {
   createContext: () => ({}), useContext: () => {},
@@ -22,12 +23,13 @@ globalThis.driveContextDouble = { ...hooks, AppState: appState,
   storage: { getItem: async k => memory.get(k) ?? null, setItem: async (k,v) => memory.set(k,v), removeItem: async k => memory.delete(k) },
   useAuth: () => ({ account }), getCloudAccount: () => account,
   useTrips: () => ({ trips: [], loading: false, notebookId: `cloud-${account?.uid}`, refreshAfterSync: async () => {} }),
-  usePhotoAccess: () => ({ canAddPhotos: premium }), getTrips: async () => [], restoreVisitPhotos: async () => true,
+  usePhotoAccess: () => ({ canAddPhotos: premium }), getTrips: async () => [], restoreVisitPhotos: async () => true, getPhotoDeletions: async () => [], applyPhotoDeletions: async () => true,
   createDriveSession: ({ uid, isCurrent }) => ({
     authorize: async () => bind, check: () => { if (!isCurrent()) throw Object.assign(new Error('stopped'), { code: 'STOPPED' }); },
     stop: () => { stopCalls++; },
     backup: async ({ report }) => { backupCalls++; if (heldBackup) await heldBackup.promise;
       if (isCurrent()) report({ status: 'saved', message: uid }); return '2026-09-23T10:00:00Z'; },
+    syncDeletions: async () => { deletionCalls++; },
     restore: async ({ report }) => { restoreCalls++; report({ status: 'restored', message: uid }); },
     cleanupPreview: async () => { previewCalls++; return { count: 1, bytes: 300, ids: ['orphan1'] }; },
     cleanup: async plan => { cleanupCalls++; assert.deepEqual(plan.ids, ['orphan1']); return { count: 1, bytes: 300 }; },
@@ -61,6 +63,8 @@ assert.equal(JSON.parse(memory.get(stateKey('alice'))).lastSaved, '2026-09-23T10
 appState.currentState = 'background'; for (const fn of timers.values()) fn(); await tick(); assert.equal(backupCalls, 1);
 appState.currentState = 'active'; listeners.forEach(fn => fn('active')); await tick(); assert.equal(backupCalls, 2);
 premium = false; value = render(); await value.backup(); assert.equal(backupCalls, 2);
+for (const fn of timers.values()) fn(); await tick(); value = render();
+assert.equal(deletionCalls, 1); assert.equal(backupCalls, 2);
 await value.restore(); assert.equal(restoreCalls, 1);
 await value.cleanupPreview(); value = render(); assert.equal(previewCalls, 1); assert.equal(value.cleanupPlan.count, 1);
 await value.cleanup(); value = render(); assert.equal(cleanupCalls, 1); assert.equal(value.cleanupPlan, null);

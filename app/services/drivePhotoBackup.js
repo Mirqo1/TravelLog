@@ -4,6 +4,8 @@ import { requireOptionalNativeModule } from 'expo-modules-core';
 import { photoUri } from './visitPhotoService';
 import { managedName, MAX_PHOTO_BYTES, MAX_VISIT_PHOTOS, photoList } from '../utils/visitPhotos';
 
+import { deletionKey, mergePhotoDeletions, photoDeletionFilter } from '../utils/photoDeletions';
+
 const Native = requireOptionalNativeModule('TravelLogDrive');
 const API = 'https://www.googleapis.com/drive/v3';
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
@@ -17,6 +19,7 @@ const fileFields = 'id,name,size,md5Checksum,modifiedTime,appProperties';
 const metadataPhotos = photos => photoList(photos).filter(p => typeof p === 'object');
 const albumQuery = owner => `appProperties has { key='owner' and value='${owner}' } and appProperties has { key='kind' and value='album' }`;
 const photoQuery = owner => `appProperties has { key='owner' and value='${owner}' } and appProperties has { key='kind' and value='photo' }`;
+const deletionQuery = owner => `appProperties has { key='owner' and value='${owner}' } and appProperties has { key='kind' and value='deletion' }`;
 const CLEANUP_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const albumName = (owner, tripId, deviceId) => `tl-${owner}-${Native.sha256(tripId)}-${deviceId}.json`;
 export function validatePhotoManifest(data, owner) {
@@ -38,7 +41,8 @@ export function validatePhotoManifest(data, owner) {
 
 // Each run is tied to both a Firebase UID and a Drive permissionId. No OAuth
 // tokens are persisted; Play Services obtains them again after process restart.
-export function createDriveSession({ uid, binding, isCurrent, wifiOnly = () => true }) {
+export function createDriveSession({ uid, binding, isCurrent, wifiOnly = () => true,
+  readDeletions = async () => [], applyDeletions = async () => {}, readLocalTrips = async () => [] }) {
   if (!Native) throw fault('UNAVAILABLE', 'Nainštaluj nový Android build s podporou Google Disku.');
   const owner = Native.sha256(uid);
   let stopped = false, token = null;
@@ -145,8 +149,67 @@ export function createDriveSession({ uid, binding, isCurrent, wifiOnly = () => t
       await request(`${UPLOAD}?uploadType=multipart`, { method: 'POST', headers: { 'Content-Type': `multipart/related; boundary=${boundary}` }, body });
     }
   }
+  async function remoteDeletions() {
+    const entries = [];
+    const cacheKey = `travellog/drive/deletion-cache/${uid}/${binding.permissionId}`;
+    let cache = {};
+    try { cache = JSON.parse(await AsyncStorage.getItem(cacheKey) || '{}'); } catch { /* Refetch malformed cache. */ }
+    const nextCache = {};
+    for (const file of await list(deletionQuery(owner))) {
+      if (!/^[\w-]+$/.test(file.id) || !Number.isFinite(Number(file.size)) || Number(file.size) < 1 || Number(file.size) > 10000
+          || file.appProperties?.owner !== owner || file.appProperties?.kind !== 'deletion')
+        throw fault('INVALID_BACKUP', 'Záznam odstránenia na Disku sa nedá bezpečne skontrolovať.');
+      let data;
+      const cached = cache?.[file.id];
+      if (cached?.modifiedTime === file.modifiedTime && cached?.name === file.name) {
+        try {
+          const entry = mergePhotoDeletions([cached.data?.entry])[0];
+          if (cached.data.version === 1 && cached.data.owner === owner && deletionName(entry) === file.name) data = cached.data;
+        } catch { /* A cache is only an optimization, never authoritative. */ }
+      }
+      if (!data) data = (await request(`${API}/files/${file.id}?alt=media`)).data;
+      if (data?.version !== 1 || data.owner !== owner)
+        throw fault('INVALID_BACKUP', 'Záznam odstránenia na Disku má neplatný formát.');
+      let validated;
+      try { validated = mergePhotoDeletions([data.entry]); }
+      catch { throw fault('INVALID_BACKUP', 'Záznam odstránenia na Disku má neplatný formát.'); }
+      if (file.name !== deletionName(validated[0]))
+        throw fault('INVALID_BACKUP', 'Záznam odstránenia na Disku má neplatný názov.');
+      entries.push(...validated);
+      nextCache[file.id] = { modifiedTime: file.modifiedTime, name: file.name, data };
+    }
+    check();
+    await AsyncStorage.setItem(cacheKey, JSON.stringify(nextCache)).catch(() => {}); check();
+    return mergePhotoDeletions(entries);
+  }
+  const deletionName = entry => `tl-${owner}-deleted-${Native.sha256(deletionKey(entry))}.json`;
+  async function synchronizeDeletions() {
+    check(true);
+    const remote = await remoteDeletions();
+    const known = new Set(remote.map(deletionKey));
+    const local = mergePhotoDeletions(await readDeletions()); check();
+    for (const entry of local) {
+      if (known.has(deletionKey(entry))) continue;
+      // Immutable, deterministic individual decisions: simultaneous devices cannot
+      // replace each other's deletion list. Lost responses are safe to retry.
+      const boundary = 'tl_deletion';
+      const metadata = { name: deletionName(entry), parents: ['appDataFolder'], mimeType: 'application/json',
+        appProperties: { owner, kind: 'deletion' } };
+      const content = { version: 1, owner, entry };
+      const body = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(content)}\r\n--${boundary}--`;
+      await request(`${UPLOAD}?uploadType=multipart`, { method: 'POST', headers: { 'Content-Type': `multipart/related; boundary=${boundary}` }, body });
+    }
+    const merged = mergePhotoDeletions(remote, local);
+    await applyDeletions(merged); check();
+    return merged;
+  }
+  async function syncDeletions() {
+    check(true); await authorize();
+    await synchronizeDeletions();
+  }
   async function backup({ readTrips, report }) {
     check(true); await authorize(); check(true);
+    const survives = photoDeletionFilter(await synchronizeDeletions());
     const key = `travellog/drive/journal/${uid}/${binding.permissionId}`;
     const raw = await AsyncStorage.getItem(key); check();
     const journal = raw ? JSON.parse(raw) : { deviceId: Native.sha256(`${Date.now()}-${Math.random()}`).slice(0, 24), albums: {} };
@@ -158,7 +221,7 @@ export function createDriveSession({ uid, binding, isCurrent, wifiOnly = () => t
     const remoteAlbums = new Set((await list(albumQuery(owner))).map(file => file.name));
     let count = 0;
     for (const trip of trips) {
-      const photos = metadataPhotos(trip.photos);
+      const photos = metadataPhotos(trip.photos).filter(photo => survives(trip.id, photo));
       const fingerprint = galleryFingerprint(trip.photos);
       if (!photos.length && !journal.albums[trip.id]) continue;
       if (journal.albums[trip.id] === fingerprint && remoteAlbums.has(albumName(owner, trip.id, journal.deviceId))) { count += photos.length; continue; }
@@ -173,6 +236,8 @@ export function createDriveSession({ uid, binding, isCurrent, wifiOnly = () => t
       journal.albums[trip.id] = fingerprint;
       await AsyncStorage.setItem(key, JSON.stringify(journal)); check();
     }
+    // Deletions saved while a JPEG was in flight are published before success.
+    await synchronizeDeletions();
     const current = await readTrips(); check();
     const pending = current.some(t => (metadataPhotos(t.photos).length || journal.albums[t.id]) && journal.albums[t.id] !== galleryFingerprint(t.photos));
     const unsupported = current.some(t => photoList(t.photos).some(p => typeof p === 'string'));
@@ -183,6 +248,7 @@ export function createDriveSession({ uid, binding, isCurrent, wifiOnly = () => t
   }
   async function restore({ readTrips, attachPhotos, report }) {
     check(true); await authorize();
+    const survives = photoDeletionFilter(await synchronizeDeletions());
     const files = await list(albumQuery(owner));
     files.sort((a, b) => String(b.modifiedTime).localeCompare(String(a.modifiedTime)));
     const seen = new Set(); let restored = 0, skipped = 0;
@@ -199,7 +265,7 @@ export function createDriveSession({ uid, binding, isCurrent, wifiOnly = () => t
       const expected = galleryFingerprint(trip.photos);
       if (photoList(trip.photos).length) { skipped++; continue; }
       const photos = [];
-      for (const photo of album.photos) {
+      for (const photo of album.photos.filter(photo => survives(album.tripId, photo))) {
         // Check server metadata before downloading and the checksum afterwards.
         const { data: meta } = await request(`${API}/files/${photo.driveId}?fields=${encodeURIComponent(fileFields)}`);
         if (meta.appProperties?.owner !== owner || meta.appProperties?.kind !== 'photo'
@@ -233,10 +299,11 @@ export function createDriveSession({ uid, binding, isCurrent, wifiOnly = () => t
     }
     report({ status: 'restored', message: `Obnovené fotografie: ${restored}.${skipped ? ` Preskočené návštevy: ${skipped} (už majú fotky alebo nie sú v tomto účte).` : ''}` });
   }
-  // Only collect completed uploads that no album on ANY device references.
-  // Old album manifests remain authoritative even if this phone has no photos.
+  // A deletion decision invalidates stale references for that visit only.
+  // Albums from other visits/devices still protect a shared checksum blob.
   async function findUnreferencedPhotos() {
     check(true);
+    const survives = photoDeletionFilter(await remoteDeletions());
     const albums = await list(albumQuery(owner));
     const referenced = new Set();
     for (const file of albums) {
@@ -244,11 +311,19 @@ export function createDriveSession({ uid, binding, isCurrent, wifiOnly = () => t
         throw fault('INVALID_BACKUP', 'Niektorú zálohu sa nedá bezpečne skontrolovať. Nič sme nezmazali.');
       const { data } = await request(`${API}/files/${file.id}?alt=media`);
       const album = validatePhotoManifest(data, owner);
-      for (const p of album.photos) referenced.add(p.driveId);
+      for (const p of album.photos) if (survives(album.tripId, p)) referenced.add(p.driveId);
+    }
+    // Protect locally saved photos awaiting their first album upload too.
+    const localChecksums = new Set();
+    for (const trip of await readLocalTrips()) {
+      for (const photo of metadataPhotos(trip.photos).filter(photo => survives(trip.id, photo))) {
+        const info = await FileSystem.getInfoAsync(photoUri(photo), { md5: true }); check();
+        if (info.exists && info.md5) localChecksums.add(info.md5);
+      }
     }
     const files = await list(photoQuery(owner));
     const cutoff = Date.now() - CLEANUP_AGE_MS;
-    return files.filter(file => /^[\w-]+$/.test(file.id) && !referenced.has(file.id)
+    return files.filter(file => /^[\w-]+$/.test(file.id) && !referenced.has(file.id) && !localChecksums.has(file.md5Checksum)
       && file.appProperties?.owner === owner && file.appProperties?.kind === 'photo'
       && file.name === `tl-${owner}-${file.md5Checksum}.jpg`
       && /^[a-f0-9]{32}$/.test(file.md5Checksum || '')
@@ -257,12 +332,14 @@ export function createDriveSession({ uid, binding, isCurrent, wifiOnly = () => t
   }
   async function cleanupPreview() {
     check(true); await authorize();
+    await synchronizeDeletions();
     const files = await findUnreferencedPhotos();
     return { count: files.length, bytes: files.reduce((sum, file) => sum + Number(file.size), 0),
       ids: files.map(file => file.id) };
   }
   async function cleanup(preview) {
     check(true); await authorize();
+    await synchronizeDeletions();
     if (!preview || !Array.isArray(preview.ids) || !preview.ids.length) return { count: 0, bytes: 0 };
     let removed = 0, bytes = 0;
     // Always recalculate after confirmation: a second device might have published
@@ -275,5 +352,5 @@ export function createDriveSession({ uid, binding, isCurrent, wifiOnly = () => t
     }
     return { count: removed, bytes };
   }
-  return { authorize, backup, restore, cleanupPreview, cleanup, stop, check };
+  return { authorize, syncDeletions, backup, restore, cleanupPreview, cleanup, stop, check };
 }

@@ -488,5 +488,15 @@
   "Tu si už bol · {0} návštev": "You have been here · {0} visits",
   "História návštev": "Visit history",
   "Tu si už bol · 1 návšteva": "You have been here · 1 visit",
-  "Tu si už bol · {0} návštevy": "You have been here · {0} visits"
+  "Tu si už bol · {0} návštevy": "You have been here · {0} visits",
+  "Záznam odstránených fotografií má neplatný formát.": "The photo deletion record has an invalid format.",
+  "Záznam odstránenia na Disku sa nedá bezpečne skontrolovať.": "The deletion record on Drive cannot be safely checked.",
+  "Záznam odstránenia na Disku má neplatný formát.": "The deletion record on Drive has an invalid format.",
+  "Záznam odstránenia na Disku má neplatný názov.": "The deletion record on Drive has an invalid name.",
+  "Odstránenia fotografií sú synchronizované. Nové zálohy vyžadujú Premium.": "Photo deletions are synced. New photo backups require Premium.",
+  "Uvoľnené: {0} súborov ({1} MB). Ostatné fotografie ostali v zálohe.": "Freed: {0} files ({1} MB). Other photos remain backed up.",
+  "Po uložení návštevy sa odstránenie prenesie aj do pripojenej zálohy a ostatných telefónov. Originál v galérii telefónu zostane zachovaný.": "After saving the visit, the deletion will also sync to the connected backup and other phones. The original in your phone gallery will remain.",
+  "MB). Fotky používané v iných návštevách sa nemažú. Súbory mladšie ako 7 dní zatiaľ ponechávame.": "MB). Photos used in other visits will be kept. Files less than 7 days old are kept for now.",
+  "Nepoužívané fotky sa natrvalo vymažú z Google Disku. Odstránené fotky sa neobnovia zo starších galérií. Pred vymazaním znovu overíme, či ich nepoužíva iná návšteva.": "Unused photos will be permanently deleted from Google Drive. Deleted photos will not be restored from older galleries. Before deleting, we check again whether another visit uses them.",
+  "Uložené odstránenie fotky alebo návštevy sa po pripojení prenesie na Disk aj ostatné telefóny s touto verziou aplikácie. Platí to aj bez Premium. Fotka sa nevráti pri obnove. Miesto na Disku uvoľníš po kontrole a potvrdení; odpojenie Disku zálohu nevymaže.": "Once connected, saved photo or visit deletions sync to Drive and other phones running this app version, even without Premium. Deleted photos will not return on restore. Reclaim Drive space after reviewing and confirming; disconnecting Drive does not delete the backup."
 }

@@ -36,7 +36,7 @@ export default function VisitPhotoEditor({ photos, onChange, onImport, disabled,
           <Text style={[styles.actionText, i === 0 && { fontWeight: '800' }]}>{i === 0 ? t("★ Titulná fotografia") : t("Nastaviť ako titulnú")}</Text>
         </Pressable>
         <Pressable accessibilityRole="button" disabled={disabled || busy} style={styles.action} onPress={() => Alert.alert(t("Odobrať fotografiu?"),
-          t("Odoberie sa z tejto návštevy. Originál v galérii telefónu zostane zachovaný."),
+          t("Po uložení návštevy sa odstránenie prenesie aj do pripojenej zálohy a ostatných telefónov. Originál v galérii telefónu zostane zachovaný."),
           [{ text: t("Zrušiť"), style: 'cancel' }, { text: t("Odobrať"), style: 'destructive', onPress: () => onChange(items.filter(item => photoKey(item) !== photoKey(photo))) }])}>
           <Text style={styles.remove}>{t("Odobrať")}</Text></Pressable>
       </View>)}

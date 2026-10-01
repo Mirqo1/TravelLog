@@ -12,10 +12,12 @@ globalThis.syncStorage = {
   async getItem(key) { await Promise.resolve(); return memory.get(key) ?? null; },
   async setItem(key, value) { await Promise.resolve(); if (failWrite) throw new Error('disk full'); memory.set(key, value); },
 };
+const deletions = await read('app/utils/photoDeletions.js');
 const source = (await read('app/services/mockTripsService.js'))
   .replace("import AsyncStorage from '@react-native-async-storage/async-storage';", 'const AsyncStorage = globalThis.syncStorage;')
   .replace("import { compareTripsNewest } from '../utils/tripOrder';", 'const compareTripsNewest = (a,b) => b.date.localeCompare(a.date);')
   .replace("import { mergeBackup, normalizeTags } from '../utils/backup';", '')
+  .replace("import { mergePhotoDeletions, photoDeletionFilter } from '../utils/photoDeletions';", deletions.replace(/export /g, ''))
   .replace("import { mergeSync, sameVisitContent } from '../utils/syncMerge';", merge.replace(/export /g, ''));
 const service = await moduleOf(source);
 const { createNotebookSync } = await moduleOf((await read('app/services/notebookSync.js'))
@@ -61,6 +63,7 @@ runner = makeRunner('alice'); await runner.request();
 assert.equal(remote.trips.length, 0); // restarting and reconnecting must not resurrect the deletion
 runner.stop();
 console.log('PASS: offline deletion survives restart and uploads after reconnect.');
+memory.delete('travellog/mock-trips/cloud-alice'); // independent notebook for the following scenarios
 
 // Offline edit on phone A must coexist with an independent edit on phone B.
 remote = snapshot([t('a'), t('b')], 'server');
@@ -205,3 +208,25 @@ assert.deepEqual(repeatSaved.find(v => v.id === repeatAdded.id).photos,[]);
 await service.restoreTripsBackup('repeat-second-device',portableTrips(repeatSaved));
 assert.equal((await service.getTrips('repeat-second-device')).filter(v => v.placeId === 'google:zoo').length,2);
 console.log('PASS: repeated visits have independent IDs/photos and place identity survives storage and another-device restore.');
+
+// Removal intent is atomic with the gallery and survives offline restarts.
+const owner = 'cloud-deletion-test';
+const original = await service.addTrip(owner, { ...t('photo-delete'), photos: [localPhoto] });
+const deletionBefore = memory.get('travellog/mock-trips/' + owner);
+failWrite = true;
+await assert.rejects(service.updateTrip(owner, original.id, { photos: [] }));
+assert.equal(memory.get('travellog/mock-trips/' + owner), deletionBefore);
+failWrite = false;
+await service.updateTrip(owner, original.id, { photos: [] });
+assert.deepEqual(await service.getPhotoDeletions(owner), [{ tripId: original.id, photoId: localPhoto.id }]);
+assert.equal(await service.restoreVisitPhotos(owner, original.id, [localPhoto], '[]', () => true), false);
+assert.deepEqual((await service.getTrips(owner))[0].photos, []);
+const shared = await service.addTrip(owner, { ...t('shared'), photos: [localPhoto] });
+await service.applyPhotoDeletions(owner, [{ tripId: original.id, photoId: null }], () => true);
+assert.deepEqual((await service.getTrips(owner)).find(v => v.id === shared.id).photos, [localPhoto]);
+await service.applyPhotoDeletions(owner, [{ tripId: shared.id, photoId: localPhoto.id }], () => false);
+assert.deepEqual((await service.getTrips(owner)).find(v => v.id === shared.id).photos, [localPhoto]);
+await service.deleteTrip(owner, shared.id);
+assert.ok((await service.getPhotoDeletions(owner)).some(e => e.tripId === shared.id && e.photoId === null));
+assert.deepEqual(await service.getPhotoDeletions('cloud-empty-new-phone'), []);
+console.log('PASS: atomic offline photo/visit deletions, restore race guard, account cancellation, shared image in another visit retained, empty new phone never infers deletion.');

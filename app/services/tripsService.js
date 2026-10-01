@@ -1,1 +1,1 @@
-export { restoreVisitPhotos, addTrip, deleteTrip, getTrips, getUserProfile, updateTrip, restoreTripsBackup, mergeRemoteNotebook, acknowledgeNotebook, getNotebookState, importGuestNotebook } from './mockTripsService';
+export { getPhotoDeletions, applyPhotoDeletions, restoreVisitPhotos, addTrip, deleteTrip, getTrips, getUserProfile, updateTrip, restoreTripsBackup, mergeRemoteNotebook, acknowledgeNotebook, getNotebookState, importGuestNotebook } from './mockTripsService';

@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { compareTripsNewest } from '../utils/tripOrder';
 import { mergeBackup, normalizeTags } from '../utils/backup';
 import { mergeSync, sameVisitContent } from '../utils/syncMerge';
+import { mergePhotoDeletions, photoDeletionFilter } from '../utils/photoDeletions';
 
 const TRIPS_STORAGE_PREFIX = 'travellog/mock-trips/';
 const PROFILE_STORAGE_PREFIX = 'travellog/mock-profile/';
@@ -120,7 +121,8 @@ const readNotebook = async (userId) => {
     const parsed = JSON.parse(raw);
     const state = Array.isArray(parsed) ? { trips: parsed, base: [], imports: [] } : parsed;
     if (!Array.isArray(state.trips) || !Array.isArray(state.base) || !Array.isArray(state.imports)) throw new Error('format');
-    return { ...state, trips: state.trips.map(trip => normalizeTrip(trip, trip.id)) };
+    return { ...state, photoDeletions: mergePhotoDeletions(state.photoDeletions || []),
+      trips: state.trips.map(trip => normalizeTrip(trip, trip.id)) };
   } catch (error) {
     throw new Error('Uložené návštevy sa nepodarilo načítať. Pôvodné dáta zostali zachované.');
   }
@@ -187,7 +189,8 @@ export const addTrip = (userId, tripData, wishlistId = null) => exclusive(userId
 });
 
 export const updateTrip = (userId, tripId, tripData) => exclusive(userId, async () => {
-  const trips = await readTrips(userId);
+  const state = await readNotebook(userId);
+  const trips = state.trips;
   const existing = trips.find((trip) => trip.id === tripId);
 
   if (!existing) {
@@ -214,19 +217,38 @@ export const updateTrip = (userId, tripId, tripData) => exclusive(userId, async 
   // shared visit text as a new remote edit.
   if (sameVisitContent(existing, updated)) updated.updatedAt = existing.updatedAt;
 
-  await saveTrips(
-    userId,
-    trips.map((trip) => (trip.id === tripId ? updated : trip)),
-  );
+  const kept = new Set(updated.photos.map(photo => photo?.id));
+  const removed = existing.photos.filter(photo => photo && typeof photo === 'object' && /^photo-[a-z0-9-]+$/.test(photo.id) && !kept.has(photo.id))
+    .map(photo => ({ tripId, photoId: photo.id }));
+  const photoDeletions = mergePhotoDeletions(state.photoDeletions || [], removed);
+  const survives = photoDeletionFilter(photoDeletions);
+  updated.photos = updated.photos.filter(photo => survives(tripId, photo));
+  // Gallery and deletion intent survive a restart together in one atomic write.
+  await writeNotebook(userId, { ...state, photoDeletions,
+    trips: trips.map(trip => trip.id === tripId ? updated : trip) });
   return updated;
 });
 
 export const deleteTrip = (userId, tripId) => exclusive(userId, async () => {
-  const trips = await readTrips(userId);
-  await saveTrips(
-    userId,
-    trips.filter((trip) => trip.id !== tripId),
-  );
+  const state = await readNotebook(userId);
+  if (!state.trips.some(trip => trip.id === tripId)) return;
+  await writeNotebook(userId, { ...state,
+    photoDeletions: mergePhotoDeletions(state.photoDeletions || [], [{ tripId, photoId: null }]),
+    trips: state.trips.filter(trip => trip.id !== tripId) });
+});
+
+export const getPhotoDeletions = userId => exclusive(userId, async () =>
+  (await readNotebook(userId)).photoDeletions || []);
+export const applyPhotoDeletions = (userId, incoming, isCurrent) => exclusive(userId, async () => {
+  const state = await readNotebook(userId);
+  if (!isCurrent()) return false;
+  const photoDeletions = mergePhotoDeletions(state.photoDeletions || [], incoming);
+  const survives = photoDeletionFilter(photoDeletions);
+  const trips = state.trips.map(trip => ({ ...trip, photos: trip.photos.filter(photo => survives(trip.id, photo)) }));
+  if (JSON.stringify(photoDeletions) !== JSON.stringify(state.photoDeletions || [])
+      || JSON.stringify(trips) !== JSON.stringify(state.trips))
+    await writeNotebook(userId, { ...state, photoDeletions, trips });
+  return true;
 });
 
 export const getUserProfile = async (userId) => {
@@ -252,10 +274,14 @@ export const getUserProfile = async (userId) => {
 
 // Atomic, photo-only restore. A form edit or deletion during a download wins.
 export const restoreVisitPhotos = (userId, tripId, photos, expected, isCurrent) => exclusive(userId, async () => {
-  const trips = await readTrips(userId);
+  const state = await readNotebook(userId);
+  const trips = state.trips;
   if (!isCurrent()) return false;
   const trip = trips.find(item => item.id === tripId);
   if (!trip || (trip.photos || []).length || expected !== '[]') return false;
-  await saveTrips(userId, trips.map(item => item.id === tripId ? { ...item, photos } : item));
+  const survives = photoDeletionFilter(state.photoDeletions || []);
+  const kept = photos.filter(photo => survives(tripId, photo));
+  if (photos.length && !kept.length) return false;
+  await writeNotebook(userId, { ...state, trips: trips.map(item => item.id === tripId ? { ...item, photos: kept } : item) });
   return true;
 });

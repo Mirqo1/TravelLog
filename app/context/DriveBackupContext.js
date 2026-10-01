@@ -5,7 +5,7 @@ import { useAuth } from './AuthContext';
 import { useTrips } from './TripsContext';
 import { usePhotoAccess } from '../hooks/usePhotoAccess';
 import { getCloudAccount } from '../services/cloudBackupService';
-import { getTrips, restoreVisitPhotos } from '../services/tripsService';
+import { getTrips, restoreVisitPhotos, getPhotoDeletions, applyPhotoDeletions } from '../services/tripsService';
 import { createDriveSession, driveAvailable, driveSettingsKey, galleryFingerprint } from '../services/drivePhotoBackup';
 
 const Context = createContext(null);
@@ -54,7 +54,10 @@ export function DriveBackupProvider({ children }) {
     const runUid = current.uid, runEpoch = epoch.current;
     const valid = () => live.current.uid === runUid && getCloudAccount()?.uid === runUid && epoch.current === runEpoch;
     const session = createDriveSession({ uid: runUid, binding: current.config, isCurrent: valid,
-      wifiOnly: () => live.current.config?.wifiOnly !== false });
+      wifiOnly: () => live.current.config?.wifiOnly !== false,
+      readLocalTrips: () => getTrips(`cloud-${runUid}`),
+      readDeletions: () => getPhotoDeletions(`cloud-${runUid}`),
+      applyDeletions: entries => applyPhotoDeletions(`cloud-${runUid}`, entries, valid) });
     operation.current = session; setBusy(true);
     const report = update => { if (valid()) setState(previous => ({ ...previous, ...update })); };
     report({ status: mode === 'connect' ? 'connecting' : mode === 'restore' ? 'restoring' : mode.startsWith('cleanup') ? 'checking' : 'uploading', message: 'Pripájam Google Disk…' });
@@ -65,22 +68,27 @@ export function DriveBackupProvider({ children }) {
         await AsyncStorage.setItem(driveSettingsKey(runUid), JSON.stringify(next)); session.check();
         setSaved({ uid: runUid, config: next });
         report({ status: 'pending', message: 'Disk je pripojený. Fotky čakajú na zálohovanie.' });
+      } else if (mode === 'deletions') {
+        await session.syncDeletions(); session.check();
+        await refreshAfterSync();
+        report({ status: 'checked', message: 'Odstránenia fotografií sú synchronizované. Nové zálohy vyžadujú Premium.' });
       } else if (mode === 'cleanupPreview') {
         const plan = await session.cleanupPreview(); session.check();
+        await refreshAfterSync();
         setCleanupPlan(plan);
         report({ status: 'checked', message: plan.count ? `Nájdených nepotrebných súborov: ${plan.count}.` : 'Bez nepotrebných súborov.' });
       } else if (mode === 'cleanup') {
         if (!cleanupPlan?.count) return;
         setCleanupPlan(null);
         const result = await session.cleanup(cleanupPlan); session.check();
-        report({ status: 'cleaned', message: `Uvoľnené: ${result.count} súborov. Ostatné fotografie ostali v zálohe.` });
+        report({ status: 'cleaned', message: `Uvoľnené: ${result.count} súborov (${(result.bytes / (1024 * 1024)).toFixed(1)} MB). Ostatné fotografie ostali v zálohe.` });
       } else if (mode === 'restore') {
         await session.restore({ readTrips: () => getTrips(`cloud-${runUid}`), report,
           attachPhotos: (id, photos, expected) => restoreVisitPhotos(`cloud-${runUid}`, id, photos, expected, valid) });
         session.check(); await refreshAfterSync();
       } else {
         const lastSaved = await session.backup({ readTrips: () => getTrips(`cloud-${runUid}`), report });
-        session.check();
+        session.check(); await refreshAfterSync(); session.check();
         const next = { ...current.config, lastSaved };
         await AsyncStorage.setItem(driveSettingsKey(runUid), JSON.stringify(next)); session.check();
         setSaved({ uid: runUid, config: next });
@@ -101,7 +109,7 @@ export function DriveBackupProvider({ children }) {
   const identity = config?.permissionId;
   useEffect(() => {
     if (!uid || !ready || !identity || loading) return;
-    const trigger = () => { if (AppState.currentState === 'active') run.current('backup'); };
+    const trigger = () => { if (AppState.currentState === 'active') run.current(live.current.canAddPhotos ? 'backup' : 'deletions'); };
     const timer = setInterval(trigger, 60000);
     const subscription = AppState.addEventListener('change', value => {
       if (value === 'active') trigger();
@@ -111,7 +119,7 @@ export function DriveBackupProvider({ children }) {
   }, [uid, identity, ready, loading]);
   useEffect(() => {
     if (!uid || !identity || loading || !ready) return;
-    const timer = setTimeout(() => { if (AppState.currentState === 'active') run.current('backup'); }, 1200);
+    const timer = setTimeout(() => { if (AppState.currentState === 'active') run.current(live.current.canAddPhotos ? 'backup' : 'deletions'); }, 1200);
     return () => clearTimeout(timer);
   }, [uid, identity, fingerprint, loading, ready, canAddPhotos]);
   async function disconnect() {

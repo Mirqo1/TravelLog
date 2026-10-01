@@ -69,16 +69,29 @@ The existing Maps API key is not a replacement for user authorization to Drive.
   Interrupted restores can be rerun; verified downloaded files are reused.
 - New uploads require Premium/admin or this preview app's test access. Connecting
   and restoring existing backups remain available without Premium.
-- The Profile offers a confirmed cleanup preview for completed uploads older
-  than 7 days that NO device album manifest references. It rechecks every
-  album before each deletion and stops on an unreadable manifest. Deleted-visit
-  photos still referenced by old albums are deliberately retained; this is NOT
-  a full per-photo deletion or a substitute for coordinated device sync.
-  Drive files belong to the linked Firebase UID and Drive permissionId; the
-  cleanup never deletes another account's files or the phone's local photos.
-  Disconnect stops this installation's transfers and preserves data; it does not
-  revoke Google's app grant or delete the hidden backup. Google account settings
-  can revoke the grant. Profile avatars and legacy URL/string images are excluded.
+- Explicit saved photo removal and visit deletion are recorded atomically with the
+  local notebook. They are not inferred from an empty gallery on a new phone.
+  Immutable Drive deletion decisions are scoped to visit/photo IDs and merged
+  across devices. Upload, restore and cleanup ignore obsolete references.
+  Deletion sync is available without Premium, while new JPEG uploads stay gated.
+  Decisions are retained after cleanup so old albums cannot resurrect photos.
+- Foreground automatic sync publishes offline decisions after network/Wi-Fi returns,
+  regardless of the selected screen. Other phones apply them on their next check.
+  Update all devices to this version; older app builds do not understand decisions.
+  Restore still fills only empty galleries and never recreates deleted visits.
+- Profile cleanup previews file count and total bytes and asks for confirmation.
+  It only deletes completed files older than 7 days with no surviving remote album
+  reference or locally saved checksum reference. A shared blob used by another
+  visit survives. References are checked again before each deletion; invalid
+  albums/decisions stop cleanup. Unchanged decisions are cached by server modified
+  time to avoid downloading every historical decision on each foreground check.
+  This is eventual synchronization, not a distributed Drive transaction: a device
+  editing a gallery at exactly the same moment as cleanup can still need an upload
+  retry. There is no guarantee about edits never published from an offline phone.
+  Drive files belong to the linked Firebase UID and Drive permissionId. Cleanup
+  preserves local images and deletion records. Disconnect stops transfers and keeps
+  the backup; it does not revoke Google's app grant. Profile avatars and legacy
+  URL/string images remain excluded.
 
 ## Local Windows build (existing signed native project)
 
@@ -116,8 +129,7 @@ retry, and check quota/revocation messages if applicable. On a SECOND phone sign
 into the SAME Firebase account, wait for text visits, connect the SAME Google
 account, then Restore photographs. Also check Moje sny and visit tags after
 automatic text sync. Check cover order and full-size export. Try the cleanup
-preview before deleting anything: photographs still linked in any album must
-remain excluded. The emulator tests confirm separate device journals and
+preview before deleting anything: photographs still linked to a surviving visit\nmust remain excluded. Remove and save a photo, then verify an old-device album\ncannot restore it. Delete a visit from a phone with no local photos and verify\nits old gallery is excluded. Repeat while offline, then reconnect. Verify another\nvisit using the same JPEG still protects it. Test cleanup also in Free mode. The emulator tests confirm separate device journals and
 protection of referenced files; the real second-phone path still needs user
 acceptance. Do not
 uninstall the only copy to simulate loss before this acceptance test succeeds.

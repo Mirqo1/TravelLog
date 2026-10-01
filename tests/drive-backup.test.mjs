@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 const moduleOf = source => import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+const deletions = await readFile('app/utils/photoDeletions.js', 'utf8');
 const utils = await readFile('app/utils/visitPhotos.js', 'utf8');
 const memory = new Map(), disk = new Map(), remote = new Map();
 const hash = (s, kind = 'sha256') => createHash(kind).update(s).digest('hex');
@@ -36,6 +37,7 @@ const fs = {
 };
 globalThis.driveDouble = { native, fs, storage: { getItem: async k => memory.get(k) ?? null, setItem: async (k, v) => memory.set(k, v) }, photoUri };
 const source = (await readFile('app/services/drivePhotoBackup.js', 'utf8'))
+ .replace("import { deletionKey, mergePhotoDeletions, photoDeletionFilter } from '../utils/photoDeletions';", deletions.replace(/export /g, ''))
  .replace("import AsyncStorage from '@react-native-async-storage/async-storage';", 'const AsyncStorage = globalThis.driveDouble.storage;')
  .replace("import * as FileSystem from 'expo-file-system/legacy';", 'const FileSystem = globalThis.driveDouble.fs;')
  .replace("import { requireOptionalNativeModule } from 'expo-modules-core';", 'const requireOptionalNativeModule = () => globalThis.driveDouble.native;')
@@ -74,7 +76,7 @@ globalThis.fetch = async (url, opts) => {
   const q = u.searchParams.get('q');
   if (changeAccountOnList) active = false;
   const match = q.match(/name = '([^']+)'/);
-  const kind = q?.includes("value='photo'") ? 'photo' : 'album';
+  const kind = q?.match(/key='kind' and value='([^']+)'/)?.[1] || 'album';
   return response({ files: [...remote.values()].filter(f => f.complete && (match ? f.name === match[1] : f.appProperties.kind === kind && f.appProperties.owner === hash('alice'))) });
 };
 let trips = [{ id: 'visit-1', photos: [photo] }];
@@ -148,4 +150,45 @@ try {
   await assert.rejects(operation, e => e.code === 'STOPPED'); assert.equal(canceled, 1);
   assert.ok(![...remote.values()].some(f => f.complete));
   console.log('PASS: cleared cloud data repaired; in-flight native transfer is cancelled without acknowledging an album.');
+
+  holdUpload = false; remote.clear(); memory.clear(); disk.set(photoUri(photo), image);
+  trips = [{ id: 'deleted-gallery', photos: [photo] }];
+  await backup(make());
+  const blob = [...remote.values()].find(f => f.appProperties.kind === 'photo');
+  const oldAlbum = [...remote.values()].find(f => f.appProperties.kind === 'album');
+  remote.set('old-phone-album', { ...oldAlbum, id: 'old-phone-album' });
+  let decisions = [{ tripId: 'deleted-gallery', photoId: photo.id }];
+  const deleting = () => make({ readDeletions: async () => decisions,
+    applyDeletions: async list => { decisions = list; } });
+  online = false; await assert.rejects(deleting().syncDeletions(), e => e.code === 'OFFLINE'); online = true;
+  assert.equal([...remote.values()].filter(f => f.appProperties.kind === 'deletion').length, 0);
+  await deleting().syncDeletions();
+  await deleting().syncDeletions();
+  assert.equal([...remote.values()].filter(f => f.appProperties.kind === 'deletion').length, 1, 'Idempotent decision upload');
+  trips = [{ id: 'deleted-gallery', photos: [] }]; disk.clear();
+  await restore(make());
+  assert.deepEqual(trips[0].photos, [], 'Old-device albums cannot resurrect a deliberately removed photo');
+  assert.equal((await make().cleanupPreview()).count, 1, 'Stale album references no longer block reclaim');
+  const shares = { ...oldAlbum, id: 'shared-album', content: { ...oldAlbum.content, tripId: 'surviving-visit' } };
+  remote.set(shares.id, shares);
+  assert.equal((await make().cleanupPreview()).count, 0, 'Same blob used by another visit stays protected');
+  decisions.push({ tripId: 'surviving-visit', photoId: null });
+  await deleting().syncDeletions();
+  const localOnly = make({ readLocalTrips: async () => [{ id: 'new-local-visit', photos: [photo] }] });
+  disk.set(photoUri(photo), image);
+  assert.equal((await localOnly.cleanupPreview()).count, 0, 'New local visit protects checksum before its album upload');
+  const deletionPlan = await make().cleanupPreview();
+  assert.deepEqual(deletionPlan, { count: 1, bytes: 300, ids: [blob.id] });
+  const marker = [...remote.values()].find(f => f.appProperties.kind === 'deletion');
+  remote.set('bad-deletion', { ...marker, id: 'bad-deletion', content: { version: 1, owner, entry: { tripId: 'a', photoId: '../invalid' } } });
+  await assert.rejects(make().cleanup(deletionPlan), e => e.code === 'INVALID_BACKUP');
+  assert.ok(remote.has(blob.id)); remote.delete('bad-deletion');
+  assert.deepEqual(await make().cleanup(deletionPlan), { count: 1, bytes: 300 });
+  assert.equal(remote.has(blob.id), false);
+  assert.ok([...remote.values()].some(f => f.appProperties.kind === 'deletion'), 'Keep decisions after deleting blobs');
+  // A stale phone still holding the JPEG cannot upload it into the deleted gallery again.
+  trips = [{ id: 'deleted-gallery', photos: [photo] }]; disk.set(photoUri(photo), image); memory.clear();
+  const uploadsBeforeDeleted = uploads;
+  await backup(make()); assert.equal(uploads, uploadsBeforeDeleted);
+  console.log('PASS: offline/idempotent global deletions, old-device restore/upload suppression, shared-blob protection, invalid decision abort, reclaimed bytes and retained deletion records.');
 } finally { globalThis.fetch = originalFetch; }

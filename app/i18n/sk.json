@@ -488,5 +488,15 @@
   "Tu si už bol · {0} návštev": "Tu si už bol · {0} návštev",
   "História návštev": "História návštev",
   "Tu si už bol · 1 návšteva": "Tu si už bol · 1 návšteva",
-  "Tu si už bol · {0} návštevy": "Tu si už bol · {0} návštevy"
+  "Tu si už bol · {0} návštevy": "Tu si už bol · {0} návštevy",
+  "Záznam odstránených fotografií má neplatný formát.": "Záznam odstránených fotografií má neplatný formát.",
+  "Záznam odstránenia na Disku sa nedá bezpečne skontrolovať.": "Záznam odstránenia na Disku sa nedá bezpečne skontrolovať.",
+  "Záznam odstránenia na Disku má neplatný formát.": "Záznam odstránenia na Disku má neplatný formát.",
+  "Záznam odstránenia na Disku má neplatný názov.": "Záznam odstránenia na Disku má neplatný názov.",
+  "Odstránenia fotografií sú synchronizované. Nové zálohy vyžadujú Premium.": "Odstránenia fotografií sú synchronizované. Nové zálohy vyžadujú Premium.",
+  "Uvoľnené: {0} súborov ({1} MB). Ostatné fotografie ostali v zálohe.": "Uvoľnené: {0} súborov ({1} MB). Ostatné fotografie ostali v zálohe.",
+  "Po uložení návštevy sa odstránenie prenesie aj do pripojenej zálohy a ostatných telefónov. Originál v galérii telefónu zostane zachovaný.": "Po uložení návštevy sa odstránenie prenesie aj do pripojenej zálohy a ostatných telefónov. Originál v galérii telefónu zostane zachovaný.",
+  "MB). Fotky používané v iných návštevách sa nemažú. Súbory mladšie ako 7 dní zatiaľ ponechávame.": "MB). Fotky používané v iných návštevách sa nemažú. Súbory mladšie ako 7 dní zatiaľ ponechávame.",
+  "Nepoužívané fotky sa natrvalo vymažú z Google Disku. Odstránené fotky sa neobnovia zo starších galérií. Pred vymazaním znovu overíme, či ich nepoužíva iná návšteva.": "Nepoužívané fotky sa natrvalo vymažú z Google Disku. Odstránené fotky sa neobnovia zo starších galérií. Pred vymazaním znovu overíme, či ich nepoužíva iná návšteva.",
+  "Uložené odstránenie fotky alebo návštevy sa po pripojení prenesie na Disk aj ostatné telefóny s touto verziou aplikácie. Platí to aj bez Premium. Fotka sa nevráti pri obnove. Miesto na Disku uvoľníš po kontrole a potvrdení; odpojenie Disku zálohu nevymaže.": "Uložené odstránenie fotky alebo návštevy sa po pripojení prenesie na Disk aj ostatné telefóny s touto verziou aplikácie. Platí to aj bez Premium. Fotka sa nevráti pri obnove. Miesto na Disku uvoľníš po kontrole a potvrdení; odpojenie Disku zálohu nevymaže."
 }
